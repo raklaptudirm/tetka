@@ -1,0 +1,278 @@
+// Copyright © 2023 Rak Laptudirm <rak@laptudirm.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use std::fmt;
+use std::str::FromStr;
+use crate::ataxx::zobrist::Hash;
+use super::{BitBoard, Move, Color, zobrist, Square, File, Rank, FEN, MoveList};
+use strum::IntoEnumIterator;
+
+
+pub struct Board {
+    history: [Position; 1024],
+    current: usize,
+    full_moves: u16,
+    side_to_move: Color,
+}
+
+impl Board {
+    pub fn make_move(&mut self, m: Move) {
+        let stm = self.side_to_move();
+        let xtm = !stm;
+
+        let position = self.current_pos();
+
+        let stm_pieces = position.bitboard(stm);
+        let xtm_pieces = position.bitboard(xtm);
+
+        let captured = BitBoard::SINGLES[m.target() as usize] & xtm_pieces;
+
+        let mut new_stm = stm_pieces | captured | BitBoard::from(m.target());
+        let new_xtm = xtm_pieces ^ captured;
+
+        if !m.is_single() {
+            new_stm ^= BitBoard::from(m.source())
+        }
+
+        if stm == Color::White {
+            self.history[self.current+1] = Position::new(new_stm, new_xtm);
+        } else {
+            self.history[self.current+1] = Position::new(new_xtm, new_stm);
+        }
+
+        self.full_moves += 1;
+        self.side_to_move = xtm;
+        self.current += 1;
+    }
+
+    pub fn undo_move(&mut self) {
+        self.full_moves -= 1;
+        self.current -= 1;
+        self.side_to_move = !self.side_to_move;
+    }
+
+    pub fn current_pos(&self) -> Position {
+        self.history[self.current]
+    }
+
+    pub fn side_to_move(&self) -> Color {
+        self.side_to_move
+    }
+
+    pub fn full_moves(&self) -> u16 {
+        self.full_moves
+    }
+
+    pub fn zobrist_hash(&self) -> Hash {
+        if self.side_to_move == Color::White {
+            self.history[self.current].zobrist_hash
+        } else {
+            self.history[self.current].zobrist_hash + zobrist::side_to_move_key()
+        }
+    }
+}
+
+impl From<&FEN> for Board {
+    fn from(fen: &FEN) -> Self {
+        let mut board = Board {
+            history: [Position::new(BitBoard::EMPTY, BitBoard::EMPTY); 1024],
+            current: 0,
+            full_moves: fen.full_move_count,
+            side_to_move: fen.side_to_move,
+        };
+
+        board.history[0] = fen.position;
+        board
+    }
+}
+
+impl Board {
+    pub fn generate_moves(&self) -> MoveList {
+        let mut movelist = MoveList::new();
+        let position = self.current_pos();
+
+        let stm = position.bitboard(self.side_to_move);
+        let xtm = position.bitboard(!self.side_to_move);
+
+        let allowed = !stm & !xtm;
+
+        let mut single = BitBoard::EMPTY;
+        for piece in stm {
+            single |= BitBoard::SINGLES[piece as usize];
+
+            let double = BitBoard::DOUBLES[piece as usize] & allowed;
+            for target in double {
+                movelist.push(Move::new(piece, target));
+            }
+        }
+
+        single &= allowed;
+        for target in single {
+            movelist.push(Move::new_single(target));
+        }
+
+        movelist
+    }
+
+    pub fn count_moves(&self) -> usize {
+        let mut moves: usize = 0;
+        let position = self.current_pos();
+
+        let stm = position.bitboard(self.side_to_move);
+        let xtm = position.bitboard(!self.side_to_move);
+
+        let allowed = !stm & !xtm;
+
+        let mut single = BitBoard::EMPTY;
+        for piece in stm {
+            single |= BitBoard::SINGLES[piece as usize];
+
+            let double = BitBoard::DOUBLES[piece as usize] & allowed;
+            moves += double.popcount() as usize;
+        }
+
+        moves + (single & allowed).popcount() as usize
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct Position {
+    pub bitboards: [BitBoard; Color::N],
+    pub zobrist_hash: Hash,
+}
+
+impl Position {
+    pub fn new(white: BitBoard, black: BitBoard) -> Position {
+        let mut hash = Hash(0);
+        for square in white {
+            hash += zobrist::piece_square_key(Color::White, square);
+        }
+        for square in black {
+            hash += zobrist::piece_square_key(Color::Black, square);
+        }
+
+        Position {
+            bitboards: [white, black],
+            //zobrist_hash: Hash(0),
+            zobrist_hash: hash
+        }
+    }
+
+    pub const fn bitboard(&self, color: Color) -> BitBoard {
+        self.bitboards[color as usize]
+    }
+
+    pub fn put(&mut self, sq: Square, color: Color) {
+        match color {
+            Color::White => self.bitboards[Color::White as usize].insert(sq),
+            Color::Black => self.bitboards[Color::Black as usize].insert(sq),
+            Color::None => panic!(""),
+        };
+    }
+
+    pub const fn at(&self, sq: Square) -> Color {
+        if self.bitboard(Color::White).contains(sq) {
+            Color::White
+        } else if self.bitboard(Color::Black).contains(sq) {
+            Color::Black
+        } else {
+            Color::None
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum PositionParseErr {
+    JumpTooLong,
+    InvalidColorIdent,
+    FileDataIncomplete,
+    TooManyFields,
+}
+
+impl FromStr for Position {
+    type Err = PositionParseErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut position = Position::new(BitBoard::EMPTY, BitBoard::EMPTY);
+
+        let ranks: Vec<&str> = s.split('/').collect();
+
+        let mut rank = Rank::Seventh;
+        let mut file = File::A;
+        for rank_data in ranks {
+            // Rank pointer ran out, but data carried on.
+            if rank == Rank::None {
+                return Err(PositionParseErr::TooManyFields);
+            }
+
+            for data in rank_data.chars() {
+                let square = Square::new(file, rank);
+                match data {
+                    'O' | 'o' | 'w' => position.put(square, Color::White),
+                    'X' | 'x' | 'b' => position.put(square, Color::Black),
+
+                    '1'..='8' => {
+                        file = File::from(file as usize + data as usize - '1' as usize);
+
+                        if file == File::None {
+                            return Err(PositionParseErr::JumpTooLong);
+                        }
+                    }
+
+                    _ => return Err(PositionParseErr::InvalidColorIdent),
+                }
+
+                file = File::from(file as usize + 1);
+            }
+
+            // After rank data runs out, file pointer should be
+            // at the last file, i.e, rank is completely filled.
+            if file != File::None {
+                return Err(PositionParseErr::FileDataIncomplete);
+            }
+
+            // Switch rank pointer and reset file pointer.
+            rank = if rank != Rank::First { Rank::from(rank as usize - 1) } else { Rank::None };
+            file = File::A;
+        }
+
+        Ok(position)
+    }
+}
+
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let board = self;
+        let mut string_rep = String::from(" ");
+
+        for rank in Rank::iter().rev() {
+            if rank == Rank::None {
+                continue
+            }
+
+            for file in File::iter() {
+                if file == File::None {
+                    continue
+                }
+                let square = Square::new(file, rank);
+                string_rep += &format!("{} ", board.at(square));
+            }
+
+            string_rep += &format!(" {} \n ", rank);
+        }
+
+        string_rep += "a b c d e f g\n";
+
+        write!(f, "{}", string_rep)
+    }
+}
