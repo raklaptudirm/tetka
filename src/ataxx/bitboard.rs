@@ -1,4 +1,4 @@
-// Copyright © 2023 Rak Laptudirm <rak@laptudirm.com>
+// Copyright © 2024 Rak Laptudirm <rak@laptudirm.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,11 @@
 use std::fmt;
 use std::ops;
 
-use num_derive::FromPrimitive;
+use super::{ Square, File, Rank };
 
-use crate::ataxx;
 use crate::util::type_macros;
 
-use super::{Color, File, Rank};
-use super::Square;
+use num_derive::FromPrimitive;
 use strum::IntoEnumIterator;
 
 /// BitBoard represents a set of squares as a 64 bit bitset.
@@ -31,98 +29,88 @@ impl BitBoard {
     /// EMPTY represents an empty BitBoard.
     pub const EMPTY: BitBoard = BitBoard(0);
 
+    // UNIVERSE represents a filled BitBoard.
     pub const UNIVERSE: BitBoard = BitBoard(!0);
 
+    // is_disjoint checks if the two BitBoards don't have any squares in common.
     #[inline(always)]
     pub const fn is_disjoint(self, other: BitBoard) -> bool {
         self.0 & other.0 == BitBoard::EMPTY.0
     }
 
+    // is_subset checks if the given BitBoard is a subset of the target.
     #[inline(always)]
     pub const fn is_subset(self, other: BitBoard) -> bool {
         other.0 & !self.0 == BitBoard::EMPTY.0
     }
 
+    // is_superset checks if the given BitBoard is a superset of the target.
     #[inline(always)]
     pub const fn is_superset(self, other: BitBoard) -> bool {
         other.is_subset(self)
     }
 
+    // is_empty checks if the target BitBoard is empty.
     #[inline(always)]
     pub const fn is_empty(self) -> bool {
         self.0 == BitBoard::EMPTY.0
     }
 
-    pub const fn popcount(self) -> u32 {
+    // cardinality returns the number of elements in the BitBoard.
+    pub const fn cardinality(self) -> u32 {
         self.0.count_ones()
     }
 
     /// contains checks if the BitBoard contains the given Square.
     #[inline(always)]
-    pub const fn contains(self, square: ataxx::Square) -> bool {
+    pub const fn contains(self, square: Square) -> bool {
         self.0 & (1 << square as u64) != BitBoard::EMPTY.0
     }
 
-    pub const fn up(self, us: Color) -> Self {
-        match us {
-            Color::White => self.north(),
-            Color::Black => self.south(),
-            Color::None => self,
-        }
-    }
-
-    pub const fn down(self, us: Color) -> Self {
-        match us {
-            Color::White => self.south(),
-            Color::Black => self.north(),
-            Color::None => self,
-        }
-    }
-
+    // north returns a new BitBoard with all the squares shifted to the north.
     pub const fn north(self) -> BitBoard {
         BitBoard((self.0 << 8) & 0x7f7f7f7f7f7f7f)
     }
 
+    // south returns a new BitBoard with all the squares shifted to the south.
     pub const fn south(self) -> BitBoard {
         BitBoard(self.0  >> 8)
     }
 
+    // east returns a new BitBoard with all the squares shifted to the east.
     pub const fn east(self) -> BitBoard {
         BitBoard((self.0 << 1) & 0x7e7e7e7e7e7e7e)
     }
 
+    // west returns a new BitBoard with all the squares shifted to the west.
     pub const fn west(self) -> BitBoard {
         BitBoard((self.0 >> 1) & 0x3f3f3f3f3f3f3f)
     }
 
-    pub fn reverse(self) -> BitBoard {
-        BitBoard(self.0.reverse_bits())
-    }
-
     /// insert puts the given Square into the BitBoard.
     #[inline(always)]
-    pub fn insert(&mut self, square: ataxx::Square) {
+    pub fn insert(&mut self, square: Square) {
         self.0 |= BitBoard::from(square).0
     }
 
     /// remove removes the given Square from the BitBoard.
     #[inline(always)]
-    pub fn remove(&mut self, square: ataxx::Square) {
+    pub fn remove(&mut self, square: Square) {
         self.0 &= !BitBoard::from(square).0
     }
 
     /// pop_lsb pops the least significant Square from the BitBoard.
     #[inline(always)]
-    pub fn pop_lsb(&mut self) -> ataxx::Square {
+    pub fn pop_lsb(&mut self) -> Square {
         let lsb = self.lsb();
-        self.0 ^= BitBoard::from(lsb).0;
+        self.0 &= self.0 - 1;
 
         lsb
     }
 
     /// pop_msb pops the most significant Square from the BitBoard.
     #[inline(always)]
-    pub fn pop_msb(&mut self) -> ataxx::Square {
+    pub fn pop_msb(&mut self) -> Square {
         let msb = self.msb();
         self.0 ^= BitBoard::from(msb).0;
 
@@ -131,24 +119,24 @@ impl BitBoard {
 
     /// get_lsb returns the least significant Square from the BitBoard.
     #[inline(always)]
-    pub fn lsb(self) -> ataxx::Square {
-        ataxx::Square::from(self.0.trailing_zeros())
+    pub fn lsb(self) -> Square {
+        Square::try_from(self.0.trailing_zeros()).unwrap()
     }
 
     /// get_msb returns the most significant Square from the BitBoard.
     #[inline(always)]
-    pub fn msb(self) -> ataxx::Square {
-        ataxx::Square::from(63 - self.0.leading_zeros())
+    pub fn msb(self) -> Square {
+        Square::try_from(63 - self.0.leading_zeros()).unwrap()
     }
 }
 
 // various trait implementations
 
 impl Iterator for BitBoard {
-    type Item = ataxx::Square;
+    type Item = Square;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if *self == BitBoard::EMPTY {
+        if self.is_empty() {
             None
         } else {
             Some(self.pop_lsb())
@@ -156,8 +144,8 @@ impl Iterator for BitBoard {
     }
 }
 
-impl From<ataxx::Square> for BitBoard {
-    fn from(square: ataxx::Square) -> Self {
+impl From<Square> for BitBoard {
+    fn from(square: Square) -> Self {
         BitBoard(1 << square as u64)
     }
 }
@@ -165,13 +153,13 @@ impl From<ataxx::Square> for BitBoard {
 // operation implementations
 
 // implement unary operations
-type_macros::impl_unary_ops_for_enum! {
+type_macros::impl_unary_ops_for_tuple! {
     for BitBoard:
     ops::Not, not, !;
 }
 
 // implement binary operations
-type_macros::impl_binary_ops_for_enum! {
+type_macros::impl_binary_ops_for_tuple! {
     for BitBoard:
 
     ops::BitOr, bitor, |;
@@ -183,11 +171,8 @@ type_macros::impl_binary_ops_for_enum! {
 }
 
 // implement assignment operations
-type_macros::impl_assign_ops_for_enum! {
+type_macros::impl_assign_ops_for_tuple! {
     for BitBoard:
-
-    ops::AddAssign, add_assign, +;
-    ops::SubAssign, sub_assign, -;
 
     ops::BitOrAssign, bitor_assign, |;
     ops::BitXorAssign, bitxor_assign, ^;
@@ -207,23 +192,6 @@ type_macros::impl_from_integer_for_tuple! {
     isize, i8, i16, i32, i64,
 }
 
-impl Default for BitBoard {
-    fn default() -> Self {
-        BitBoard::EMPTY
-    }
-}
-
-// implement set operations as + and - operators
-
-#[allow(clippy::suspicious_arithmetic_impl)]
-impl ops::Add for BitBoard {
-    type Output = BitBoard;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        self | rhs
-    }
-}
-
 #[allow(clippy::suspicious_arithmetic_impl)]
 impl ops::Sub for BitBoard {
     type Output = BitBoard;
@@ -234,18 +202,18 @@ impl ops::Sub for BitBoard {
 }
 
 #[allow(clippy::suspicious_arithmetic_impl)]
-impl ops::Add<ataxx::Square> for BitBoard {
+impl ops::BitOr<Square> for BitBoard {
     type Output = BitBoard;
 
-    fn add(self, rhs: ataxx::Square) -> Self::Output {
+    fn bitor(self, rhs: Square) -> Self::Output {
         self | BitBoard::from(rhs)
     }
 }
 
-impl ops::Sub<ataxx::Square> for BitBoard {
+impl ops::Sub<Square> for BitBoard {
     type Output = BitBoard;
 
-    fn sub(self, rhs: ataxx::Square) -> Self::Output {
+    fn sub(self, rhs: Square) -> Self::Output {
         self & !BitBoard::from(rhs)
     }
 }
@@ -254,13 +222,7 @@ impl fmt::Display for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut string_rep = String::from("");
         for rank in Rank::iter().rev() {
-            if rank == Rank::None {
-                continue
-            }
             for file in File::iter() {
-                if file == File::None {
-                    continue
-                }
                 let square = Square::new(file, rank);
                 string_rep += if self.contains(square) { "1 " } else { "0 " };
             }
@@ -312,11 +274,11 @@ impl BitBoard {
 }
 
 impl BitBoard {
-    pub const fn file(file: ataxx::File) -> BitBoard {
+    pub const fn file(file: File) -> BitBoard {
         BitBoard(BitBoard::FILE[file as usize])
     }
 
-    pub const fn rank(rank: ataxx::Rank) -> BitBoard {
+    pub const fn rank(rank: Rank) -> BitBoard {
         BitBoard(BitBoard::RANK[rank as usize])
     }
 

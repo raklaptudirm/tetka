@@ -49,12 +49,12 @@ impl Move {
 
     #[inline(always)]
     pub fn source(self) -> ataxx::Square {
-        ataxx::Square::from((self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK)
+        ataxx::Square::try_from((self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK).unwrap()
     }
 
     #[inline(always)]
     pub fn target(self) -> ataxx::Square {
-        ataxx::Square::from((self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK)
+        ataxx::Square::try_from((self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK).unwrap()
     }
 
     #[inline(always)]

@@ -45,7 +45,7 @@ impl Color {
 impl ops::Not for Color {
     type Output = Color;
     fn not(self) -> Self::Output {
-        Color::from(self as usize ^ 1)
+        Color::try_from(self as usize ^ 1).unwrap()
     }
 }
 

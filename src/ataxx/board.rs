@@ -17,7 +17,6 @@ use crate::ataxx::zobrist::Hash;
 use super::{BitBoard, Move, Color, zobrist, Square, File, Rank, FEN, MoveList};
 use strum::IntoEnumIterator;
 
-
 pub struct Board {
     history: [Position; 1024],
     current: usize,
@@ -44,11 +43,11 @@ impl Board {
             new_stm ^= BitBoard::from(m.source())
         }
 
-        if stm == Color::White {
-            self.history[self.current+1] = Position::new(new_stm, new_xtm);
+        self.history[self.current+1] = if stm == Color::White {
+            Position::new(new_stm, new_xtm)
         } else {
-            self.history[self.current+1] = Position::new(new_xtm, new_stm);
-        }
+            Position::new(new_xtm, new_stm)
+        };
 
         self.full_moves += 1;
         self.side_to_move = xtm;
@@ -61,8 +60,8 @@ impl Board {
         self.side_to_move = !self.side_to_move;
     }
 
-    pub fn current_pos(&self) -> Position {
-        self.history[self.current]
+    pub fn current_pos(&self) -> &Position {
+        &self.history[self.current]
     }
 
     pub fn side_to_move(&self) -> Color {
@@ -104,7 +103,7 @@ impl Board {
         let stm = position.bitboard(self.side_to_move);
         let xtm = position.bitboard(!self.side_to_move);
 
-        let allowed = !stm & !xtm;
+        let allowed = !(stm | xtm);
 
         let mut single = BitBoard::EMPTY;
         for piece in stm {
@@ -131,17 +130,17 @@ impl Board {
         let stm = position.bitboard(self.side_to_move);
         let xtm = position.bitboard(!self.side_to_move);
 
-        let allowed = !stm & !xtm;
+        let allowed = !(stm | xtm);
 
         let mut single = BitBoard::EMPTY;
         for piece in stm {
             single |= BitBoard::SINGLES[piece as usize];
 
             let double = BitBoard::DOUBLES[piece as usize] & allowed;
-            moves += double.popcount() as usize;
+            moves += double.cardinality() as usize;
         }
 
-        moves + (single & allowed).popcount() as usize
+        moves + (single & allowed).cardinality() as usize
     }
 }
 
@@ -207,24 +206,26 @@ impl FromStr for Position {
 
         let ranks: Vec<&str> = s.split('/').collect();
 
-        let mut rank = Rank::Seventh;
-        let mut file = File::A;
+        let mut rank = Ok(Rank::Seventh);
+        let mut file = Ok(File::A);
         for rank_data in ranks {
             // Rank pointer ran out, but data carried on.
-            if rank == Rank::None {
+            if rank.is_err() {
                 return Err(PositionParseErr::TooManyFields);
             }
 
             for data in rank_data.chars() {
-                let square = Square::new(file, rank);
+                if file.is_err() {
+                    return Err(PositionParseErr::JumpTooLong);
+                }
+                let square = Square::new(file.unwrap(), rank.unwrap());
                 match data {
                     'O' | 'o' | 'w' => position.put(square, Color::White),
                     'X' | 'x' | 'b' => position.put(square, Color::Black),
 
                     '1'..='8' => {
-                        file = File::from(file as usize + data as usize - '1' as usize);
-
-                        if file == File::None {
+                        file = File::try_from(file.unwrap() as usize + data as usize - '1' as usize);
+                        if file.is_err() {
                             return Err(PositionParseErr::JumpTooLong);
                         }
                     }
@@ -232,18 +233,18 @@ impl FromStr for Position {
                     _ => return Err(PositionParseErr::InvalidColorIdent),
                 }
 
-                file = File::from(file as usize + 1);
+                file = File::try_from(file.unwrap() as usize + 1);
             }
 
             // After rank data runs out, file pointer should be
             // at the last file, i.e, rank is completely filled.
-            if file != File::None {
+            if file.is_ok() {
                 return Err(PositionParseErr::FileDataIncomplete);
             }
 
             // Switch rank pointer and reset file pointer.
-            rank = if rank != Rank::First { Rank::from(rank as usize - 1) } else { Rank::None };
-            file = File::A;
+            rank = Rank::try_from(rank.unwrap() as usize - 1);
+            file = Ok(File::A);
         }
 
         Ok(position)
@@ -256,14 +257,7 @@ impl fmt::Display for Position {
         let mut string_rep = String::from(" ");
 
         for rank in Rank::iter().rev() {
-            if rank == Rank::None {
-                continue
-            }
-
             for file in File::iter() {
-                if file == File::None {
-                    continue
-                }
                 let square = Square::new(file, rank);
                 string_rep += &format!("{} ", board.at(square));
             }

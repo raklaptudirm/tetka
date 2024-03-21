@@ -60,10 +60,10 @@ pub const fn side_to_move_key() -> Hash {
     STM_KEY
 }
 
-type_macros::impl_binary_ops_for_enum! {
+type_macros::impl_binary_ops_for_tuple! {
     for Hash: ops::Add, add, ^;
 }
 
-type_macros::impl_assign_ops_for_enum! {
+type_macros::impl_assign_ops_for_tuple! {
     for Hash: ops::AddAssign, add_assign, ^;
 }
