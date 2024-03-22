@@ -7,7 +7,7 @@ mod fen;
 mod r#move;
 
 // Namespaced modules.
-pub mod zobrist;
+pub mod hash;
 
 // Make the contents of the non-namespaced
 // modules public, so they can be accessed

@@ -13,8 +13,8 @@
 
 use std::fmt;
 use std::str::FromStr;
-use crate::ataxx::zobrist::Hash;
-use super::{BitBoard, Move, Color, zobrist, Square, File, Rank, FEN, MoveList};
+use crate::ataxx::hash::Hash;
+use super::{BitBoard, Move, Color, Square, File, Rank, FEN, MoveList};
 use strum::IntoEnumIterator;
 
 pub struct Board {
@@ -72,12 +72,8 @@ impl Board {
         self.full_moves
     }
 
-    pub fn zobrist_hash(&self) -> Hash {
-        if self.side_to_move == Color::White {
-            self.history[self.current].zobrist_hash
-        } else {
-            self.history[self.current].zobrist_hash + zobrist::side_to_move_key()
-        }
+    pub fn checksum(&self) -> Hash {
+        self.checksum().perspective(self.side_to_move)
     }
 }
 
@@ -147,23 +143,14 @@ impl Board {
 #[derive(Copy, Clone)]
 pub struct Position {
     pub bitboards: [BitBoard; Color::N],
-    pub zobrist_hash: Hash,
+    pub checksum: Hash,
 }
 
 impl Position {
     pub fn new(white: BitBoard, black: BitBoard) -> Position {
-        let mut hash = Hash(0);
-        for square in white {
-            hash += zobrist::piece_square_key(Color::White, square);
-        }
-        for square in black {
-            hash += zobrist::piece_square_key(Color::Black, square);
-        }
-
         Position {
             bitboards: [white, black],
-            //zobrist_hash: Hash(0),
-            zobrist_hash: hash
+            checksum: Hash::new(white.0, black.0),
         }
     }
 
