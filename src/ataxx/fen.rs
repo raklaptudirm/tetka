@@ -34,7 +34,7 @@ impl FEN {
 impl From<&Board> for FEN {
     fn from(board: &Board) -> Self {
         FEN {
-            position: board.current_pos().clone(),
+            position: board.position(),
             side_to_move: board.side_to_move(),
             half_move_clock: 0,
             full_move_count: board.full_moves(),

@@ -18,10 +18,48 @@ use super::{BitBoard, Move, Color, Square, File, Rank, FEN, MoveList};
 use strum::IntoEnumIterator;
 
 pub struct Board {
-    history: [Position; 1024],
+    history: [Position; Board::MAX_PLY],
     current: usize,
     full_moves: u16,
     side_to_move: Color,
+}
+
+impl Board {
+    // MAX_PLY is the maximum number of plys than can be in a game.
+    const MAX_PLY: usize = 1024;
+
+    const fn current_pos(&self) -> &Position {
+        &self.history[self.current]
+    }
+
+    // Position returns a copy of the current Position on the Board.
+    pub fn position(&self) -> Position { self.history[self.current] }
+
+    // side_to_move returns the current Color to move on the Board.
+    pub fn side_to_move(&self) -> Color {
+        self.side_to_move
+    }
+
+    pub fn full_moves(&self) -> u16 {
+        self.full_moves
+    }
+
+    // Checksum returns a semi-unique Hash to identify the Position by.
+    pub fn checksum(&self) -> Hash {
+        self.current_pos().checksum.perspective(self.side_to_move)
+    }
+
+    ////////////////////////////////////////////
+    // Reimplementation of Position's methods //
+    ////////////////////////////////////////////
+
+    pub const fn bitboard(&self, color: Color) -> BitBoard {
+        self.current_pos().bitboard(color)
+    }
+
+    pub const fn at(&self, sq: Square) -> Color {
+        self.current_pos().at(sq)
+    }
 }
 
 impl Board {
@@ -36,12 +74,17 @@ impl Board {
 
         let captured = BitBoard::SINGLES[m.target() as usize] & xtm_pieces;
 
-        let mut new_stm = stm_pieces | captured | BitBoard::from(m.target());
+        // Move the captured pieces from xtm to stm.
         let new_xtm = xtm_pieces ^ captured;
+        let new_stm = stm_pieces ^ captured;
 
+        // Add a stm piece to the target square.
+        let mut new_stm = new_stm | BitBoard::from(m.target());
+
+        // Remove the piece from the source square if the move is non-singular.
         if !m.is_single() {
             new_stm ^= BitBoard::from(m.source())
-        }
+        };
 
         self.history[self.current+1] = if stm == Color::White {
             Position::new(new_stm, new_xtm)
@@ -49,6 +92,7 @@ impl Board {
             Position::new(new_xtm, new_stm)
         };
 
+        // Update other board stuff.
         self.full_moves += 1;
         self.side_to_move = xtm;
         self.current += 1;
@@ -59,28 +103,12 @@ impl Board {
         self.current -= 1;
         self.side_to_move = !self.side_to_move;
     }
-
-    pub fn current_pos(&self) -> &Position {
-        &self.history[self.current]
-    }
-
-    pub fn side_to_move(&self) -> Color {
-        self.side_to_move
-    }
-
-    pub fn full_moves(&self) -> u16 {
-        self.full_moves
-    }
-
-    pub fn checksum(&self) -> Hash {
-        self.current_pos().checksum.perspective(self.side_to_move)
-    }
 }
 
 impl From<&FEN> for Board {
     fn from(fen: &FEN) -> Self {
         let mut board = Board {
-            history: [Position::new(BitBoard::EMPTY, BitBoard::EMPTY); 1024],
+            history: [Position::new(BitBoard::EMPTY, BitBoard::EMPTY); Board::MAX_PLY],
             current: 0,
             full_moves: fen.full_move_count,
             side_to_move: fen.side_to_move,
@@ -233,6 +261,11 @@ impl FromStr for Position {
             rank = Rank::try_from(rank.unwrap() as usize - 1);
             file = Ok(File::A);
         }
+
+        position.checksum = Hash::new(
+            position.bitboard(Color::White).0,
+            position.bitboard(Color::Black).0,
+        );
 
         Ok(position)
     }
