@@ -73,7 +73,7 @@ impl Board {
     }
 
     pub fn checksum(&self) -> Hash {
-        self.checksum().perspective(self.side_to_move)
+        self.current_pos().checksum.perspective(self.side_to_move)
     }
 }
 
