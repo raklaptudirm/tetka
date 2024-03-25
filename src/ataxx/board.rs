@@ -127,6 +127,36 @@ impl Position {
             Color::None
         }
     }
+
+    pub fn is_game_over(&self) -> bool {
+        let white = self.bitboard(Color::White);
+        let black = self.bitboard(Color::Black);
+        white | black == BitBoard::UNIVERSE || white == BitBoard::EMPTY || black == BitBoard::EMPTY
+    }
+
+    pub fn winner(&self) -> Color {
+        let white = self.bitboard(Color::White);
+        let black = self.bitboard(Color::Black);
+
+        if white == BitBoard::EMPTY {
+            return Color::Black;
+        } else if black == BitBoard::EMPTY {
+            return Color::White;
+        } else if white | black != BitBoard::UNIVERSE {
+            return Color::None;
+        }
+
+        let white_n = white.cardinality();
+        let black_n = black.cardinality();
+
+        if white_n > black_n {
+            Color::White
+        } else if black_n > white_n {
+            Color::Black
+        } else {
+            Color::None
+        }
+    }
 }
 
 impl Position {
