@@ -15,10 +15,6 @@ use std::{fmt};
 use std::mem::MaybeUninit;
 
 use crate::ataxx;
-use crate::util::type_macros;
-
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
 pub struct Move(u16);
@@ -61,26 +57,6 @@ impl Move {
     pub fn is_single(self) -> bool {
         self.source() == self.target()
     }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Default, FromPrimitive)]
-#[rustfmt::skip]
-pub enum MoveFlag {
-    #[default] Normal, Castle, Promotion, EnPassant
-}
-
-type_macros::impl_from_integer_for_enum! {
-    for MoveFlag:
-
-    // Unsigned Integers.
-    usize, MoveFlag::from_usize;
-    u8, MoveFlag::from_u8; u16, MoveFlag::from_u16;
-    u32, MoveFlag::from_u32; u64, MoveFlag::from_u64;
-
-    // Signed Integers.
-    isize, MoveFlag::from_isize;
-    i8, MoveFlag::from_i8; i16, MoveFlag::from_i16;
-    i32, MoveFlag::from_i32; i64, MoveFlag::from_i64;
 }
 
 impl fmt::Display for Move {
