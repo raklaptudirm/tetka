@@ -20,8 +20,6 @@ use strum::IntoEnumIterator;
 pub struct Board {
     history: [Position; Board::MAX_PLY],
     current: usize,
-    full_moves: u16,
-    side_to_move: Color,
 }
 
 impl Board {
@@ -37,16 +35,12 @@ impl Board {
 
     // side_to_move returns the current Color to move on the Board.
     pub fn side_to_move(&self) -> Color {
-        self.side_to_move
-    }
-
-    pub fn full_moves(&self) -> u16 {
-        self.full_moves
+        self.current_pos().side_to_move
     }
 
     // Checksum returns a semi-unique Hash to identify the Position by.
     pub fn checksum(&self) -> Hash {
-        self.current_pos().checksum.perspective(self.side_to_move)
+        self.current_pos().checksum
     }
 
     ////////////////////////////////////////////
@@ -64,54 +58,21 @@ impl Board {
 
 impl Board {
     pub fn make_move(&mut self, m: Move) {
-        let stm = self.side_to_move();
-        let xtm = !stm;
-
-        let position = self.current_pos();
-
-        let stm_pieces = position.bitboard(stm);
-        let xtm_pieces = position.bitboard(xtm);
-
-        let captured = BitBoard::SINGLES[m.target() as usize] & xtm_pieces;
-
-        // Move the captured pieces from xtm to stm.
-        let new_xtm = xtm_pieces ^ captured;
-        let new_stm = stm_pieces ^ captured;
-
-        // Add a stm piece to the target square.
-        let mut new_stm = new_stm | BitBoard::from(m.target());
-
-        // Remove the piece from the source square if the move is non-singular.
-        if !m.is_single() {
-            new_stm ^= BitBoard::from(m.source())
-        };
-
-        self.history[self.current+1] = if stm == Color::White {
-            Position::new(new_stm, new_xtm)
-        } else {
-            Position::new(new_xtm, new_stm)
-        };
-
-        // Update other board stuff.
-        self.full_moves += 1;
-        self.side_to_move = xtm;
+        self.history[self.current + 1] = self.current_pos().after_move(m);
         self.current += 1;
     }
 
     pub fn undo_move(&mut self) {
-        self.full_moves -= 1;
         self.current -= 1;
-        self.side_to_move = !self.side_to_move;
     }
 }
 
 impl From<&FEN> for Board {
     fn from(fen: &FEN) -> Self {
+        println!("{}", fen);
         let mut board = Board {
-            history: [Position::new(BitBoard::EMPTY, BitBoard::EMPTY); Board::MAX_PLY],
+            history: [Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Color::None); Board::MAX_PLY],
             current: 0,
-            full_moves: fen.full_move_count,
-            side_to_move: fen.side_to_move,
         };
 
         board.history[0] = fen.position;
@@ -121,50 +82,11 @@ impl From<&FEN> for Board {
 
 impl Board {
     pub fn generate_moves(&self) -> MoveList {
-        let mut movelist = MoveList::new();
-        let position = self.current_pos();
-
-        let stm = position.bitboard(self.side_to_move);
-        let xtm = position.bitboard(!self.side_to_move);
-
-        let allowed = !(stm | xtm);
-
-        let mut single = BitBoard::EMPTY;
-        for piece in stm {
-            single |= BitBoard::SINGLES[piece as usize];
-
-            let double = BitBoard::DOUBLES[piece as usize] & allowed;
-            for target in double {
-                movelist.push(Move::new(piece, target));
-            }
-        }
-
-        single &= allowed;
-        for target in single {
-            movelist.push(Move::new_single(target));
-        }
-
-        movelist
+        self.current_pos().generate_moves()
     }
 
     pub fn count_moves(&self) -> usize {
-        let mut moves: usize = 0;
-        let position = self.current_pos();
-
-        let stm = position.bitboard(self.side_to_move);
-        let xtm = position.bitboard(!self.side_to_move);
-
-        let allowed = !(stm | xtm);
-
-        let mut single = BitBoard::EMPTY;
-        for piece in stm {
-            single |= BitBoard::SINGLES[piece as usize];
-
-            let double = BitBoard::DOUBLES[piece as usize] & allowed;
-            moves += double.cardinality() as usize;
-        }
-
-        moves + (single & allowed).cardinality() as usize
+        self.current_pos().count_moves()
     }
 }
 
@@ -172,13 +94,15 @@ impl Board {
 pub struct Position {
     pub bitboards: [BitBoard; Color::N],
     pub checksum: Hash,
+    pub side_to_move: Color,
 }
 
 impl Position {
-    pub fn new(white: BitBoard, black: BitBoard) -> Position {
+    pub fn new(white: BitBoard, black: BitBoard, stm: Color) -> Position {
         Position {
             bitboards: [white, black],
-            checksum: Hash::new(white.0, black.0),
+            checksum: Hash::new(white.0, black.0).perspective(stm),
+            side_to_move: stm,
         }
     }
 
@@ -205,6 +129,82 @@ impl Position {
     }
 }
 
+impl Position {
+    pub fn after_move(&self, m: Move) -> Position {
+        let stm = self.side_to_move;
+
+        let stm_pieces = self.bitboard(stm);
+        let xtm_pieces = self.bitboard(!stm);
+
+        let captured = BitBoard::SINGLES[m.target() as usize] & xtm_pieces;
+
+        // Move the captured pieces from xtm to stm.
+        let new_xtm = xtm_pieces ^ captured;
+        let new_stm = stm_pieces ^ captured;
+
+        // Add a stm piece to the target square.
+        let mut new_stm = new_stm | BitBoard::from(m.target());
+
+        // Remove the piece from the source square if the move is non-singular.
+        if !m.is_single() {
+            new_stm ^= BitBoard::from(m.source())
+        };
+
+        if stm == Color::White {
+            Position::new(new_stm, new_xtm, !stm)
+        } else {
+            Position::new(new_xtm, new_stm, !stm)
+        }
+    }
+}
+
+impl Position {
+    pub fn generate_moves(&self) -> MoveList {
+        let mut movelist = MoveList::new();
+
+        let stm = self.bitboard(self.side_to_move);
+        let xtm = self.bitboard(!self.side_to_move);
+
+        let allowed = !(stm | xtm);
+
+        let mut single = BitBoard::EMPTY;
+        for piece in stm {
+            single |= BitBoard::SINGLES[piece as usize];
+
+            let double = BitBoard::DOUBLES[piece as usize] & allowed;
+            for target in double {
+                movelist.push(Move::new(piece, target));
+            }
+        }
+
+        single &= allowed;
+        for target in single {
+            movelist.push(Move::new_single(target));
+        }
+
+        movelist
+    }
+
+    pub fn count_moves(&self) -> usize {
+        let mut moves: usize = 0;
+
+        let stm = self.bitboard(self.side_to_move);
+        let xtm = self.bitboard(!self.side_to_move);
+
+        let allowed = !(stm | xtm);
+
+        let mut single = BitBoard::EMPTY;
+        for piece in stm {
+            single |= BitBoard::SINGLES[piece as usize];
+
+            let double = BitBoard::DOUBLES[piece as usize] & allowed;
+            moves += double.cardinality() as usize;
+        }
+
+        moves + (single & allowed).cardinality() as usize
+    }
+}
+
 #[derive(Debug)]
 pub enum PositionParseErr {
     JumpTooLong,
@@ -217,7 +217,7 @@ impl FromStr for Position {
     type Err = PositionParseErr;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut position = Position::new(BitBoard::EMPTY, BitBoard::EMPTY);
+        let mut position = Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Color::None);
 
         let ranks: Vec<&str> = s.split('/').collect();
 
@@ -258,7 +258,7 @@ impl FromStr for Position {
             }
 
             // Switch rank pointer and reset file pointer.
-            rank = Rank::try_from(rank.unwrap() as usize - 1);
+            rank = Rank::try_from((rank.unwrap() as usize).wrapping_sub(1));
             file = Ok(File::A);
         }
 
@@ -287,6 +287,7 @@ impl fmt::Display for Position {
 
         string_rep += "a b c d e f g\n";
 
-        write!(f, "{}", string_rep)
+        write!(f, "{}\n", string_rep).unwrap();
+        write!(f, "Side To Move: {}\n", self.side_to_move)
     }
 }

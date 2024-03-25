@@ -19,7 +19,6 @@ use super::{
 
 pub struct FEN {
     pub position: Position,
-    pub side_to_move: Color,
     pub half_move_clock: u8,
     pub full_move_count: u16,
 }
@@ -35,9 +34,8 @@ impl From<&Board> for FEN {
     fn from(board: &Board) -> Self {
         FEN {
             position: board.position(),
-            side_to_move: board.side_to_move(),
             half_move_clock: 0,
-            full_move_count: board.full_moves(),
+            full_move_count: 0,//board.full_moves(),
         }
     }
 }
@@ -46,9 +44,8 @@ impl Display for FEN {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} {} {} {}",
+            "{} {} {}",
             self.position,
-            self.side_to_move,
             self.half_move_clock,
             self.full_move_count
         )
@@ -77,13 +74,13 @@ impl FromStr for FEN {
         }
 
         // Parse mailbox position representation.
-        let position = match Position::from_str(fields[FEN::MAILBOX_OFFSET]) {
+        let mut position = match Position::from_str(fields[FEN::MAILBOX_OFFSET]) {
             Ok(position) => position,
             Err(err) => return Err(FENParseError::PositionParseError(err)),
         };
 
         // Parse side to move.
-        let side_to_move = match Color::from_str(fields[FEN::SIDE_TM_OFFSET]) {
+        position.side_to_move = match Color::from_str(fields[FEN::SIDE_TM_OFFSET]) {
             Ok(stm) => stm,
             Err(err) => return Err(FENParseError::SideToMoveParseError(err)),
         };
@@ -102,7 +99,6 @@ impl FromStr for FEN {
 
         Ok(FEN {
             position,
-            side_to_move,
             half_move_clock,
             full_move_count,
         })
