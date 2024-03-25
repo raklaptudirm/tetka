@@ -30,7 +30,7 @@ impl BitBoard {
     pub const EMPTY: BitBoard = BitBoard(0);
 
     // UNIVERSE represents a filled BitBoard.
-    pub const UNIVERSE: BitBoard = BitBoard(!0);
+    pub const UNIVERSE: BitBoard = BitBoard(0x7f7f7f7f7f7f7f);
 
     // is_disjoint checks if the two BitBoards don't have any squares in common.
     #[inline(always)]
