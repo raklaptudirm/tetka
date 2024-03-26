@@ -33,6 +33,7 @@ impl Move {
     const TARGET_OFFSET: u16 = Move::SOURCE_OFFSET + Move::SOURCE_WIDTH;
 
     pub const NULL: Move = Move(1 << 15);
+    pub const PASS: Move = Move(1 << 15 | 1 << 14);
 
     #[inline(always)]
     pub fn new_single(square: ataxx::Square) -> Move {

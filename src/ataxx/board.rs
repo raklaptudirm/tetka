@@ -163,6 +163,10 @@ impl Position {
     pub fn after_move(&self, m: Move) -> Position {
         let stm = self.side_to_move;
 
+        if m == Move::PASS {
+            return Position::new(self.bitboard(Color::White), self.bitboard(Color::Black), !stm);
+        }
+
         let stm_pieces = self.bitboard(stm);
         let xtm_pieces = self.bitboard(!stm);
 
@@ -210,6 +214,10 @@ impl Position {
         single &= allowed;
         for target in single {
             movelist.push(Move::new_single(target));
+        }
+
+        if movelist.len() == 0 && !self.is_game_over() {
+            movelist.push(Move::PASS);
         }
 
         movelist
