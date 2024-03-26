@@ -69,7 +69,6 @@ impl Board {
 
 impl From<&FEN> for Board {
     fn from(fen: &FEN) -> Self {
-        println!("{}", fen);
         let mut board = Board {
             history: [Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Color::None); Board::MAX_PLY],
             current: 0,
