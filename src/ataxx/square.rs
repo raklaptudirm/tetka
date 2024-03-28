@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt::Display;
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
 use crate::ataxx::{self, Color};
@@ -37,7 +37,7 @@ pub enum Square {
 
 impl Square {
     /// N is the number of different squares.
-    pub const N: usize = 64;
+    pub const N: usize = File::N * Rank::N;
 
     pub fn new(file: File, rank: Rank) -> Square {
         Square::try_from(rank as usize * 8 + file as usize).unwrap()
@@ -160,6 +160,12 @@ impl Display for Square {
     }
 }
 
+impl Debug for Square {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, PartialOrd, FromPrimitive, EnumIter)]
 #[rustfmt::skip]
 pub enum File {
@@ -167,7 +173,7 @@ pub enum File {
 }
 
 impl File {
-    pub const N: usize = 8;
+    pub const N: usize = 7;
     pub fn relative(self, color: ataxx::Color) -> File {
         match color {
             ataxx::Color::White => self,
@@ -229,7 +235,7 @@ pub enum Rank {
 }
 
 impl Rank {
-    pub const N: usize = 8;
+    pub const N: usize = 7;
     pub fn relative(self, color: ataxx::Color) -> Rank {
         match color {
             ataxx::Color::White => self,
