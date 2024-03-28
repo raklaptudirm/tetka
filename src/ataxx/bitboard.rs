@@ -51,6 +51,19 @@ pub struct BitBoard(pub u64);
 
 /// bitboard is a macro which allows creation of BitBoard values from their
 /// graphical representation with (.)s and (X)s inside the macro call.
+/// ```
+/// use mexx::ataxx::*;
+///
+/// assert_eq!(BitBoard::file(File::B) | Square::G7, bitboard! {
+///     . X . . . . X
+///     . X . . . . .
+///     . X . . . . .
+///     . X . . . . .
+///     . X . . . . .
+///     . X . . . . .
+///     . X . . . . .
+/// });
+/// ```
 // Implementation derived from: https://github.com/analog-hors/cozy-chess
 #[macro_export]
 macro_rules! bitboard {
