@@ -14,7 +14,7 @@
 use std::fmt;
 use std::str::FromStr;
 use crate::ataxx::hash::Hash;
-use super::{BitBoard, Move, Color, Square, File, Rank, FEN, MoveList};
+use super::{BitBoard, Move, Color, Square, File, Rank, FEN, MoveList, MoveStore};
 use strum::IntoEnumIterator;
 
 pub struct Board {
@@ -82,6 +82,9 @@ impl From<&FEN> for Board {
 impl Board {
     pub fn generate_moves(&self) -> MoveList {
         self.current_pos().generate_moves()
+    }
+    pub fn generate_moves_into<T: MoveStore>(&self, movelist: &mut T) {
+        self.current_pos().generate_moves_into(movelist);
     }
 
     pub fn count_moves(&self) -> usize {
@@ -194,7 +197,10 @@ impl Position {
 impl Position {
     pub fn generate_moves(&self) -> MoveList {
         let mut movelist = MoveList::new();
-
+        self.generate_moves_into(&mut movelist);
+        movelist
+    }
+    pub fn generate_moves_into<T: MoveStore>(&self, movelist: &mut T) {
         let stm = self.bitboard(self.side_to_move);
         let xtm = self.bitboard(!self.side_to_move);
 
@@ -218,8 +224,6 @@ impl Position {
         if movelist.len() == 0 && !self.is_game_over() {
             movelist.push(Move::PASS);
         }
-
-        movelist
     }
 
     pub fn count_moves(&self) -> usize {

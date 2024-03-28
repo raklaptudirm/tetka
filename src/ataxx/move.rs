@@ -72,6 +72,11 @@ impl fmt::Display for Move {
     }
 }
 
+pub trait MoveStore {
+    fn push(&mut self, m: Move);
+    fn len(&self) -> usize;
+}
+
 pub struct MoveList {
     list: [MaybeUninit<Move>; 256],
     length: usize,
@@ -79,13 +84,10 @@ pub struct MoveList {
 
 impl MoveList {
     pub fn new() -> MoveList {
-            MoveList {
-                list: [MaybeUninit::uninit(); 256],
-                length: 0,
-            }
-    }
-    pub const fn len(&self) -> usize {
-        self.length
+        MoveList {
+            list: [MaybeUninit::uninit(); 256],
+            length: 0,
+        }
     }
 
     pub const fn at(&self, n: usize) -> Move {
@@ -94,16 +96,22 @@ impl MoveList {
         }
     }
 
-    pub fn push(&mut self, m: Move) {
-        self.list[self.length] = MaybeUninit::new(m);
-        self.length += 1;
-    }
-
     pub fn iter(&self) -> MoveListIterator {
         MoveListIterator {
             list: &self,
             current: 0,
         }
+    }
+}
+
+impl MoveStore for MoveList {
+    fn push(&mut self, m: Move) {
+        self.list[self.length] = MaybeUninit::new(m);
+        self.length += 1;
+    }
+
+    fn len(&self) -> usize {
+        self.length
     }
 }
 
