@@ -17,4 +17,3 @@ mod board;
 mod fen;
 mod r#move;
 mod hash;
-
