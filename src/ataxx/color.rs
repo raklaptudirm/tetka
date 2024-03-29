@@ -1,4 +1,4 @@
-// Copyright © 2023 Rak Laptudirm <rak@laptudirm.com>
+// Copyright © 2024 Rak Laptudirm <rak@laptudirm.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,19 +11,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{fmt::Display, ops, str::FromStr};
-
-use crate::util::type_macros;
+use std::fmt;
+use std::ops;
+use std::str::FromStr;
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+use crate::util::type_macros;
+
+/// Color represents all the possible colors that an ataxx piece can have,
+/// specifically White, Black, and None(no Color/no piece).
 #[derive(Copy, Clone, PartialEq, Eq, Default, FromPrimitive)]
-#[rustfmt::skip]
 pub enum Color {
-    White, Black, #[default] None,
+	White,
+	Black,
+	#[default] None,
 }
 
+// Implement conversions from numerical types.
 type_macros::impl_from_integer_for_enum! {
     for Color:
 
@@ -39,48 +45,51 @@ type_macros::impl_from_integer_for_enum! {
 }
 
 impl Color {
-    pub const N: usize = 2;
+	/// N is the number of possible Colors, excluding None.
+	pub const N: usize = 2;
 }
 
+// Implement not(!) operation to switch to the other Color.
 impl ops::Not for Color {
-    type Output = Color;
-    fn not(self) -> Self::Output {
-        Color::try_from(self as usize ^ 1).unwrap()
-    }
+	type Output = Color;
+	fn not(self) -> Self::Output {
+		Color::try_from(self as usize ^ 1).unwrap()
+	}
 }
 
 #[derive(Debug)]
 pub enum ColorParseError {
-    StringTooLong,
-    StringFormatInvalid,
+	StringTooLong,
+	StringFormatInvalid,
 }
 
-impl Display for Color {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                Self::White => "o",
-                Self::Black => "x",
-                Self::None => "-",
-            }
-        )
-    }
+impl fmt::Display for Color {
+	/// Implements displaying the Color in a human-readable form.
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(
+			f,
+			"{}",
+			match *self {
+				Self::White => "o",
+				Self::Black => "x",
+				Self::None => "-",
+			}
+		)
+	}
 }
 
 impl FromStr for Color {
-    type Err = ColorParseError;
+	type Err = ColorParseError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 1 {
-            return Err(ColorParseError::StringTooLong);
-        }
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		if s.len() != 1 {
+			return Err(ColorParseError::StringTooLong);
+		}
 
-        match s {
-            "o" | "O" | "w" => Ok(Color::White),
-            "x" | "X" | "b" => Ok(Color::Black),
-            _ => Err(ColorParseError::StringFormatInvalid),
-        }
-    }
+		match s {
+			"o" | "O" | "w" | "W" => Ok(Color::White),
+			"x" | "X" | "b" | "B" => Ok(Color::Black),
+			_ => Err(ColorParseError::StringFormatInvalid),
+		}
+	}
 }

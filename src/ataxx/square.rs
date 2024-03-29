@@ -1,4 +1,4 @@
-// Copyright © 2023 Rak Laptudirm <rak@laptudirm.com>
+// Copyright © 2024 Rak Laptudirm <rak@laptudirm.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +14,15 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
-use crate::ataxx::{self, Color};
-use crate::util::type_macros;
-
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-
 use strum_macros::EnumIter;
+
+use crate::util::type_macros;
 
 /// Enum Square represents all the different squares on an ataxxboard.
 #[derive(Copy, Clone, PartialEq, PartialOrd, FromPrimitive, EnumIter)]
-#[rustfmt::skip]
+// @formatter:off
 pub enum Square {
     A1 = 0x00, B1, C1, D1, E1, F1, G1,
     A2 = 0x08, B2, C2, D2, E2, F2, G2,
@@ -34,109 +32,86 @@ pub enum Square {
     A6 = 0x28, B6, C6, D6, E6, F6, G6,
     A7 = 0x30, B7, C7, D7, E7, F7, G7,
 }
+// @formatter:on
 
 impl Square {
-    /// N is the number of different squares.
-    pub const N: usize = File::N * Rank::N;
+	/// N is the number of different squares.
+	pub const N: usize = File::N * Rank::N;
 
-    pub fn new(file: File, rank: Rank) -> Square {
-        Square::try_from(rank as usize * 8 + file as usize).unwrap()
-    }
+	pub fn new(file: File, rank: Rank) -> Square {
+		Square::try_from(rank as usize * 8 + file as usize).unwrap()
+	}
 
-    #[inline(always)]
-    pub fn file(self) -> File {
-        File::try_from(self as usize % 8).unwrap()
-    }
+	#[inline(always)]
+	pub fn file(self) -> File {
+		File::try_from(self as usize % 8).unwrap()
+	}
 
-    #[inline(always)]
-    pub fn rank(self) -> Rank {
-        Rank::try_from(self as usize / 8).unwrap()
-    }
+	#[inline(always)]
+	pub fn rank(self) -> Rank {
+		Rank::try_from(self as usize / 8).unwrap()
+	}
 
-    pub fn relative(self, color: ataxx::Color) -> Self {
-        if color == ataxx::Color::White {
-            self
-        } else {
-            self.flip_rank()
-        }
-    }
+	pub fn flip_file(self) -> Self {
+		// Flip the file bits.
+		Self::try_from(self as usize ^ 0b_000_111).unwrap()
+	}
 
-    pub fn flip_file(self) -> Self {
-        // Flip the file bits.
-        Self::try_from(self as usize ^ 0b_000_111).unwrap()
-    }
+	pub fn flip_rank(self) -> Self {
+		// Flip the rank bits.
+		Self::try_from(self as usize ^ 0b_111_000).unwrap()
+	}
 
-    pub fn flip_rank(self) -> Self {
-        // Flip the rank bits.
-        Self::try_from(self as usize ^ 0b_111_000).unwrap()
-    }
+	pub fn north(self) -> Self {
+		Square::try_from(self as usize - 8).unwrap()
+	}
 
-    pub fn up(self, us: Color) -> Self {
-        match us {
-            Color::White => self.north(),
-            Color::Black => self.south(),
-            Color::None => self,
-        }
-    }
+	pub fn south(self) -> Self {
+		Square::try_from(self as usize + 8).unwrap()
+	}
 
-    pub fn down(self, us: Color) -> Self {
-        match us {
-            Color::White => self.south(),
-            Color::Black => self.north(),
-            Color::None => self,
-        }
-    }
+	pub fn east(self) -> Self {
+		Square::try_from(self as usize + 1).unwrap()
+	}
 
-    pub fn north(self) -> Self {
-        Square::try_from(self as usize - 8).unwrap()
-    }
+	pub fn west(self) -> Self {
+		Square::try_from(self as usize - 1).unwrap()
+	}
 
-    pub fn south(self) -> Self {
-        Square::try_from(self as usize + 8).unwrap()
-    }
+	pub fn distance(self, rhs: Square) -> usize {
+		let rank_dist = (self.rank() as i32 - rhs.rank() as i32).unsigned_abs() as usize;
+		let file_dist = (self.file() as i32 - rhs.file() as i32).unsigned_abs() as usize;
 
-    pub fn east(self) -> Self {
-        Square::try_from(self as usize + 1).unwrap()
-    }
-
-    pub fn west(self) -> Self {
-        Square::try_from(self as usize - 1).unwrap()
-    }
-
-    pub fn distance(self, rhs: Square) -> usize {
-        let rank_dist = (self.rank() as i32 - rhs.rank() as i32).unsigned_abs() as usize;
-        let file_dist = (self.file() as i32 - rhs.file() as i32).unsigned_abs() as usize;
-
-        rank_dist.max(file_dist)
-    }
+		rank_dist.max(file_dist)
+	}
 }
 
 pub enum SquareParseError {
-    WrongStringSize,
-    FileParseError(FileParseError),
-    RankParseError(RankParseError),
+	WrongStringSize,
+	FileParseError(FileParseError),
+	RankParseError(RankParseError),
 }
 
 impl FromStr for Square {
-    type Err = SquareParseError;
+	type Err = SquareParseError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 2 {
-            return Err(SquareParseError::WrongStringSize);
-        }
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		if s.len() != 2 {
+			return Err(SquareParseError::WrongStringSize);
+		}
 
-        let file = match File::from_str(&s[..=0]) {
-            Ok(file) => file,
-            Err(err) => return Err(SquareParseError::FileParseError(err)),
-        };
+		let file = match File::from_str(&s[..=0]) {
+			Ok(file) => file,
+			Err(err) => return Err(SquareParseError::FileParseError(err)),
+		};
 
-        let rank = match Rank::from_str(&s[1..]) {
-            Ok(rank) => rank,
-            Err(err) => return Err(SquareParseError::RankParseError(err)),
-        };
+		let rank = match Rank::from_str(&s[1..]) {
+			Ok(rank) => rank,
+			Err(err) => return Err(SquareParseError::RankParseError(err)),
+		};
 
-        Ok(Square::new(file, rank))
-    }
+		Ok(Square::new(file, rank))
+	}
 }
 
 // Implement from and into traits for all primitive integer types.
@@ -155,56 +130,50 @@ type_macros::impl_from_integer_for_enum! {
 }
 
 impl Display for Square {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.file(), self.rank())
-    }
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}{}", self.file(), self.rank())
+	}
 }
 
 impl Debug for Square {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
-    }
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self)
+	}
 }
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, FromPrimitive, EnumIter)]
-#[rustfmt::skip]
+// @formatter:off
 pub enum File {
     A, B, C, D, E, F, G
 }
+// @formatter:on
 
 impl File {
-    pub const N: usize = 7;
-    pub fn relative(self, color: ataxx::Color) -> File {
-        match color {
-            ataxx::Color::White => self,
-            ataxx::Color::Black => File::try_from(6 - self as usize).unwrap(),
-            ataxx::Color::None => panic!("Color::None"),
-        }
-    }
+	pub const N: usize = 7;
 }
 
 pub enum FileParseError {
-    WrongStringSize,
-    InvalidFileString,
+	WrongStringSize,
+	InvalidFileString,
 }
 
 impl FromStr for File {
-    type Err = FileParseError;
+	type Err = FileParseError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 1 {
-            return Err(FileParseError::WrongStringSize);
-        }
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		if s.len() != 1 {
+			return Err(FileParseError::WrongStringSize);
+		}
 
-        let ident = s.chars().next().unwrap() as u8;
+		let ident = s.chars().next().unwrap() as u8;
 
-        // File identifier should be one of a..h.
-        if !(b'a'..=b'h').contains(&ident) {
-            return Err(FileParseError::InvalidFileString);
-        }
+		// File identifier should be one of a..h.
+		if !(b'a'..=b'h').contains(&ident) {
+			return Err(FileParseError::InvalidFileString);
+		}
 
-        Ok(File::try_from(ident - b'a').unwrap())
-    }
+		Ok(File::try_from(ident - b'a').unwrap())
+	}
 }
 
 // Implement from and into traits for all primitive integer types.
@@ -223,50 +192,44 @@ type_macros::impl_from_integer_for_enum! {
 }
 
 impl Display for File {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", (b'a' + *self as u8) as char)
-    }
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", (b'a' + *self as u8) as char)
+	}
 }
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, FromPrimitive, EnumIter)]
-#[rustfmt::skip]
+// @formatter:off
 pub enum Rank {
     First, Second, Third, Fourth, Fifth, Sixth, Seventh
 }
+// @formatter:on
 
 impl Rank {
-    pub const N: usize = 7;
-    pub fn relative(self, color: ataxx::Color) -> Rank {
-        match color {
-            ataxx::Color::White => self,
-            ataxx::Color::Black => Rank::try_from(7 - self as usize).unwrap(),
-            ataxx::Color::None => panic!("Color::None"),
-        }
-    }
+	pub const N: usize = 7;
 }
 
 pub enum RankParseError {
-    WrongStringSize,
-    InvalidRankString,
+	WrongStringSize,
+	InvalidRankString,
 }
 
 impl FromStr for Rank {
-    type Err = RankParseError;
+	type Err = RankParseError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 1 {
-            return Err(RankParseError::WrongStringSize);
-        }
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		if s.len() != 1 {
+			return Err(RankParseError::WrongStringSize);
+		}
 
-        let ident = s.chars().next().unwrap() as u8;
+		let ident = s.chars().next().unwrap() as u8;
 
-        // Rank identifier should be one of 1..8.
-        if !(b'1'..=b'8').contains(&ident) {
-            return Err(RankParseError::InvalidRankString);
-        }
+		// Rank identifier should be one of 1..8.
+		if !(b'1'..=b'8').contains(&ident) {
+			return Err(RankParseError::InvalidRankString);
+		}
 
-        Ok(Rank::try_from(7 - (ident - b'1')).unwrap())
-    }
+		Ok(Rank::try_from(7 - (ident - b'1')).unwrap())
+	}
 }
 
 // Implement from and into traits for all primitive integer types.
@@ -285,7 +248,7 @@ type_macros::impl_from_integer_for_enum! {
 }
 
 impl Display for Rank {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", *self as usize + 1)
-    }
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", *self as usize + 1)
+	}
 }
