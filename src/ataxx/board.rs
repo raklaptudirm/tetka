@@ -18,7 +18,7 @@ use strum::IntoEnumIterator;
 
 use super::{
 	BitBoard, Color, FEN, FENParseError, File,
-	hash::Hash, Move, MoveList, MoveStore, Rank, Square,
+	Hash, Move, MoveList, MoveStore, Rank, Square,
 };
 
 /// Board implements an ataxx game board which can start from a given
