@@ -235,7 +235,7 @@ impl Position {
 	pub fn new(white: BitBoard, black: BitBoard, stm: Color) -> Position {
 		Position {
 			bitboards: [white, black],
-			checksum: Hash::new(white.0, black.0).perspective(stm),
+			checksum: Hash::new(white, black, stm),
 			side_to_move: stm,
 		}
 	}
@@ -592,8 +592,9 @@ impl FromStr for Position {
 
 		// Calculate the Hash value for the Position.
 		position.checksum = Hash::new(
-			position.bitboard(Color::White).0,
-			position.bitboard(Color::Black).0,
+			position.bitboard(Color::White),
+			position.bitboard(Color::Black),
+			position.side_to_move,
 		);
 
 		Ok(position)

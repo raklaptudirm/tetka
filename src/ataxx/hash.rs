@@ -11,33 +11,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{fmt::Display, ops};
-use std::fmt::{Debug, Formatter};
+use std::fmt;
 
-use crate::{
-    ataxx::Color,
-    util::type_macros,
-};
+use crate::ataxx::{BitBoard, Color};
 
+/// Hash represents the semi-unique checksum of a Position used to efficiently
+/// check for Position equality. Some properties of a Hash include determinism,
+/// uniform distribution, avalanche effect, and collision resistance.
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct Hash(pub u64);
 
-impl Display for Hash {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{:#X}", self.0)
-	}
-}
-
-impl Debug for Hash {
-	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}", self)
-	}
-}
-
 impl Hash {
-	// new implements an 2^-63-almost delta universal hash function, based on
-	// https://eprint.iacr.org/2011/116.pdf by Long Hoang Nguyen et al.
-	pub fn new(a: u64, b: u64) -> Hash {
+	/// new creates a new Hash from the given white and black piece BitBoards.
+	/// This function is used in the backend by Position, and it is usually
+	/// unnecessary for it to be used explicitly by end-users.
+	pub fn new(white: BitBoard, black: BitBoard, stm: Color) -> Hash {
+		let a = white.0;
+		let b = black.0;
+
+		// Currently, an 2^-63-almost delta universal hash function, based on
+		// https://eprint.iacr.org/2011/116.pdf by Long Hoang Nguyen and Andrew
+		// William Roscoe is used to create the Hash. This may change in the future.
+
 		// 3 64-bit integer constants used in the hash function.
 		const X: u64 = 6364136223846793005;
 		const Y: u64 = 1442695040888963407;
@@ -47,25 +42,35 @@ impl Hash {
 		// floor(pq/2^64) is essentially getting the top 64 bits of p*q.
 		let part_1 = X.wrapping_mul(a); // xa
 		let part_2 = Y.wrapping_mul(b); // yb
-		let part_3 = ((Y as u128 * a as u128) >> 64) as u64; // floor(ya/2^64)
-		let part_4 = ((Z as u128 * b as u128) >> 64) as u64; // floor(zb/2^64)
+		let part_3 = ((Y as u128 * a as u128) >> 64) as u64; // floor(ya/2^64) = ya >> 64
+		let part_4 = ((Z as u128 * b as u128) >> 64) as u64; // floor(zb/2^64) = zb >> 64
 
 		// add the parts together and return the resultant hash.
-		Hash(part_1.wrapping_add(part_2).wrapping_add(part_3).wrapping_add(part_4))
-	}
+		let hash = part_1
+			.wrapping_add(part_2)
+			.wrapping_add(part_3)
+			.wrapping_add(part_4);
 
-	// perspective returns the Hash from the perspective of the given Color.
-	// The Hash is bitwise complemented if the given Color is Black.
-	pub fn perspective(&self, color: Color) -> Hash {
-		match color {
-			Color::Black => !*self,
-			_ => *self,
+		// The Hash is bitwise complemented if the given Color is Black. Therefore,
+		// if two Positions only differ in side to move, `a.Hash == !b.Hash`.
+		if stm == Color::Black {
+			Hash(!hash)
+		} else {
+			Hash(hash)
 		}
 	}
 }
 
-type_macros::impl_unary_ops_for_tuple! {
-    for Hash:
+impl fmt::Display for Hash {
+	/// Display allows Hash to be formatted in a human-readable form.
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "{:#X}", self.0)
+	}
+}
 
-    ops::Not, not, !;
+impl fmt::Debug for Hash {
+	/// Debug allows Hash to be formatted in a human-readable form.
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self)
+	}
 }
