@@ -43,7 +43,6 @@ use super::{ColorParseError, PositionParseErr};
 /// started. This field is not very essential but kept for compatibility.
 pub struct FEN {
 	pub position: Position,
-	pub half_move_clock: u8,
 	pub full_move_count: u16,
 }
 
@@ -66,8 +65,7 @@ impl From<&Board> for FEN {
 		FEN {
 			position: board.position(),
 
-			// TODO: record half/full move counts
-			half_move_clock: 0,
+			// TODO: record full move counts
 			full_move_count: 0,
 		}
 	}
@@ -77,9 +75,8 @@ impl fmt::Display for FEN {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(
 			f,
-			"{} {} {}",
+			"{} {}",
 			self.position,
-			self.half_move_clock,
 			self.full_move_count
 		)
 	}
@@ -119,7 +116,7 @@ impl FromStr for FEN {
 		};
 
 		// Parse half move clock, if present.
-		let half_move_clock = if fields.len() > FEN::HALF_MV_OFFSET {
+		position.half_move_clock = if fields.len() > FEN::HALF_MV_OFFSET {
 			match str::parse::<u8>(fields[FEN::HALF_MV_OFFSET]) {
 				Ok(half_move_clock) => half_move_clock,
 				Err(err) => return Err(FENParseError::HalfMoveClockParseError(err)),
@@ -140,7 +137,6 @@ impl FromStr for FEN {
 
 		Ok(FEN {
 			position,
-			half_move_clock,
 			full_move_count,
 		})
 	}

@@ -228,6 +228,7 @@ pub struct Position {
 	pub bitboards: [BitBoard; Color::N],
 	pub checksum: Hash,
 	pub side_to_move: Color,
+	pub half_move_clock: u8,
 }
 
 impl Position {
@@ -237,6 +238,7 @@ impl Position {
 			bitboards: [white, black],
 			checksum: Hash::new(white, black, stm),
 			side_to_move: stm,
+			half_move_clock: 0,
 		}
 	}
 
@@ -309,7 +311,9 @@ impl Position {
 	pub fn is_game_over(&self) -> bool {
 		let white = self.bitboard(Color::White);
 		let black = self.bitboard(Color::Black);
-		white | black == BitBoard::UNIVERSE || white == BitBoard::EMPTY || black == BitBoard::EMPTY
+		self.half_move_clock >= 100 ||                           // Fifty-move rule
+			white | black == BitBoard::UNIVERSE ||               // All squares occupied
+			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
 	}
 
 	/// winner returns the Color which has won the game. It returns Color::None if the game is a
@@ -328,6 +332,11 @@ impl Position {
 	/// ```
 	pub fn winner(&self) -> Color {
 		debug_assert!(self.is_game_over());
+
+		if self.half_move_clock >= 100 {
+			// Draw by 50 move rule.
+			return Color::None;
+		}
 
 		let white = self.bitboard(Color::White);
 		let black = self.bitboard(Color::Black);
@@ -380,7 +389,12 @@ impl Position {
 
 		// A pass move is a do nothing move; just change the side to move.
 		if m == Move::PASS {
-			return Position::new(self.bitboard(Color::White), self.bitboard(Color::Black), !stm);
+			return Position {
+				bitboards: self.bitboards,
+				checksum: Hash(!self.checksum.0),
+				side_to_move: !self.side_to_move,
+				half_move_clock: self.half_move_clock + 1,
+			};
 		}
 
 		let stm_pieces = self.bitboard(stm);
@@ -395,15 +409,27 @@ impl Position {
 		// Add a stm piece to the target square.
 		let mut new_stm = new_stm | BitBoard::from(m.target());
 
+		// Reset half move clock on a singular move.
+		let mut half_move_clock = 0;
+
 		// Remove the piece from the source square if the move is non-singular.
 		if !m.is_single() {
-			new_stm ^= BitBoard::from(m.source())
+			new_stm ^= BitBoard::from(m.source());
+			// Jump move, so don't reset half move clock.
+			half_move_clock = self.half_move_clock + 1;
 		};
 
-		if stm == Color::White {
-			Position::new(new_stm, new_xtm, !stm)
+		let (white, black) = if stm == Color::White {
+			(new_stm, new_xtm)
 		} else {
-			Position::new(new_xtm, new_stm, !stm)
+			(new_xtm, new_stm)
+		};
+
+		Position {
+			bitboards: [white, black],
+			checksum: Hash::new(white, black, !stm),
+			side_to_move: !stm,
+			half_move_clock,
 		}
 	}
 }
@@ -442,6 +468,11 @@ impl Position {
 	/// assert_eq!(movelist.len(), 16);
 	/// ```
 	pub fn generate_moves_into<T: MoveStore>(&self, movelist: &mut T) {
+		if self.is_game_over() {
+			// Game is over, so don't generate any moves.
+			return;
+		}
+
 		let stm = self.bitboard(self.side_to_move);
 		let xtm = self.bitboard(!self.side_to_move);
 
@@ -487,6 +518,11 @@ impl Position {
 	/// assert_eq!(position.count_moves(), 16);
 	/// ```
 	pub fn count_moves(&self) -> usize {
+		if self.is_game_over() {
+			// Game is over, so don't generate any moves.
+			return 0;
+		}
+
 		let mut moves: usize = 0;
 
 		let stm = self.bitboard(self.side_to_move);
