@@ -12,6 +12,7 @@
 // limitations under the License.
 
 use std::fmt;
+use std::fmt::Formatter;
 use std::ops;
 use std::str::FromStr;
 
@@ -75,6 +76,12 @@ impl fmt::Display for Color {
 				Self::None => "-",
 			}
 		)
+	}
+}
+
+impl fmt::Debug for Color {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self)
 	}
 }
 
