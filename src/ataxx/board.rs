@@ -80,7 +80,9 @@ impl Board {
 	// Reimplementation of Position's methods //
 	////////////////////////////////////////////
 
-	/// bitboard returns the BitBoard associated to the piece configuration of the given Color.
+	/// bitboard returns the BitBoard associated to the piece configuration of the
+	/// given Color. Only the Squares with a piece of the given Color on them are
+	/// contained inside the returned BitBoard.
 	/// ```
 	/// use mexx::ataxx::*;
 	/// use std::str::FromStr;
@@ -153,7 +155,13 @@ impl Board {
 impl From<&FEN> for Board {
 	fn from(fen: &FEN) -> Self {
 		let mut board = Board {
-			history: [Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Color::None); Board::MAX_PLY],
+			history: [
+				Position::new(
+					BitBoard::EMPTY,
+					BitBoard::EMPTY,
+					Color::None,
+				); Board::MAX_PLY
+			],
 			current: 0,
 		};
 
@@ -173,8 +181,9 @@ impl FromStr for Board {
 }
 
 impl Board {
-	/// generate_moves generates the legal moves in the current Position and returns a MoveList
-	/// containing all the moves. It is a wrapper on top of the more general generate_moves_into.
+	/// generate_moves generates the legal moves in the current Position and
+	/// returns a [`MoveList`] containing all the moves. It is a wrapper on top of
+	/// the more general [`Board::generate_moves_into<T>`].
 	/// ```
 	/// use mexx::ataxx::*;
 	/// use std::str::FromStr;
@@ -189,8 +198,9 @@ impl Board {
 		self.current_pos().generate_moves()
 	}
 
-	/// generate_moves_into generates all the legal moves in the current Position and adds them
-	/// to the given movelist. The type of the movelist must implement the MoveStore trait.
+	/// generate_moves_into generates all the legal moves in the current Position
+	/// and adds them to the given movelist. The type of the movelist must
+	/// implement the [`MoveStore`] trait.
 	/// ```
 	/// use mexx::ataxx::*;
 	/// use std::str::FromStr;
@@ -207,8 +217,9 @@ impl Board {
 		self.current_pos().generate_moves_into(movelist);
 	}
 
-	/// count_moves returns the number of legal moves in the current Position. It is faster than
-	/// calling generate_moves or generate_moves_into and then finding the length of the movelist.
+	/// count_moves returns the number of legal moves in the current Position. It
+	/// is faster than calling [`generate_moves`] or [`generate_moves_into`] and
+	/// then finding the length of the movelist.
 	/// ```
 	/// use mexx::ataxx::*;
 	/// use std::str::FromStr;
@@ -232,7 +243,7 @@ pub struct Position {
 }
 
 impl Position {
-	/// new creates a new Position with the given piece configurations and side to move.
+	/// new creates a new Position with the given BitBoards and side to move.
 	pub fn new(white: BitBoard, black: BitBoard, stm: Color) -> Position {
 		Position {
 			bitboards: [white, black],
@@ -242,11 +253,17 @@ impl Position {
 		}
 	}
 
-	/// bitboard returns the BitBoard associated with the piece configuration of the given Color.
+	/// bitboard returns the BitBoard associated to the piece configuration of the
+	/// given Color. Only the Squares with a piece of the given Color on them are
+	/// contained inside the returned BitBoard.
 	/// ```
 	/// use mexx::ataxx::*;
 	///
-	/// let position = Position::new(BitBoard::UNIVERSE, BitBoard::EMPTY, Color::White);
+	/// let position = Position::new(
+	///     BitBoard::UNIVERSE,
+	///     BitBoard::EMPTY,
+	///     Color::White
+	/// );
 	/// assert_eq!(position.bitboard(Color::White), BitBoard::UNIVERSE);
 	/// ```
 	pub const fn bitboard(&self, color: Color) -> BitBoard {
@@ -257,7 +274,11 @@ impl Position {
 	/// ```
 	/// use mexx::ataxx::*;
 	///
-	/// let mut position = Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Color::White);
+	/// let mut position = Position::new(
+	///     BitBoard::EMPTY,
+	///     BitBoard::EMPTY,
+	///     Color::White
+	/// );
 	/// position.put(Square::A1, Color::White);
 	///
 	/// assert_eq!(position.bitboard(Color::White), bitboard! {
@@ -282,7 +303,11 @@ impl Position {
 	/// ```
 	/// use mexx::ataxx::*;
 	///
-	/// let position = Position::new(BitBoard::UNIVERSE, BitBoard::EMPTY, Color::White);
+	/// let position = Position::new(
+	///     BitBoard::UNIVERSE,
+	///     BitBoard::EMPTY,
+	///     Color::White
+	/// );
 	/// assert_eq!(position.at(Square::A1), Color::White);
 	/// ```
 	pub const fn at(&self, sq: Square) -> Color {
@@ -316,8 +341,9 @@ impl Position {
 			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
 	}
 
-	/// winner returns the Color which has won the game. It returns Color::None if the game is a
-	/// draw. If is_game_over is false, the behaviour of this function is undefined.
+	/// winner returns the Color which has won the game. It returns [`Color::None`]
+	/// if the game is a draw. If [`Position::is_game_over`] is false, then the
+	/// behaviour of this function is undefined.
 	/// ```
 	/// use mexx::ataxx::*;
 	/// use std::str::FromStr;
@@ -467,7 +493,8 @@ impl Position {
 			movelist.push(Move::new_single(target));
 		}
 
-		// If there are no legal moves and the game isn't over, a pass move is possible.
+		// If there are no legal moves possible on the Position and the game isn't
+		// over, a pass move is the only move possible to be played.
 		if movelist.len() == 0 && !self.is_game_over() {
 			movelist.push(Move::PASS);
 		}
@@ -507,7 +534,8 @@ impl Position {
 		// Count the number single moves in the Position.
 		moves += (single & allowed).cardinality();
 
-		// If there are no legal moves and the game isn't over, a pass move is possible.
+		// If there are no legal moves possible on the Position and the game isn't
+		// over, a pass move is the only move possible to be played.
 		if moves == 0 && !self.is_game_over() {
 			moves += 1;
 		}
@@ -534,7 +562,11 @@ impl FromStr for Position {
 	type Err = PositionParseErr;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		let mut position = Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Color::None);
+		let mut position = Position::new(
+			BitBoard::EMPTY,
+			BitBoard::EMPTY,
+			Color::None,
+		);
 
 		// Spilt the position spec by the Ranks which are separated by '/'.
 		let ranks: Vec<&str> = s.split('/').collect();
@@ -562,7 +594,9 @@ impl FromStr for Position {
 
 					// Numbers represent jump specs to jump over empty squares.
 					'1'..='8' => {
-						file = File::try_from(file.unwrap() as usize + data as usize - '1' as usize);
+						file = File::try_from(
+							file.unwrap() as usize + data as usize - '1' as usize
+						);
 						if file.is_err() {
 							return Err(PositionParseErr::JumpTooLong);
 						}
