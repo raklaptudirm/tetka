@@ -488,81 +488,6 @@ impl fmt::Debug for BitBoard {
 }
 
 impl BitBoard {
-	/// single returns the targets of a singular Move from the given Square.
-	/// ```
-	/// use mexx::ataxx::*;
-	///
-	/// assert_eq!(BitBoard::single(Square::A1), bitboard! {
-	///     . . . . . . .
-	///     . . . . . . .
-	///     . . . . . . .
-	///     . . . . . . .
-	///     . . . . . . .
-	///     X X . . . . .
-	///     . X . . . . .
-	/// });
-	/// ```
-	pub const fn single(square: Square) -> BitBoard {
-		BitBoard::SINGLES[square as usize]
-	}
-
-	/// double returns the targets of a jump Move from the given Square.
-	/// ```
-	/// use mexx::ataxx::*;
-	///
-	/// assert_eq!(BitBoard::double(Square::A1), bitboard! {
-	///     . . . . . . .
-	///     . . . . . . .
-	///     . . . . . . .
-	///     . . . . . . .
-	///     X X X . . . .
-	///     . . X . . . .
-	///     . . X . . . .
-	/// });
-	/// ```
-	pub const fn double(square: Square) -> BitBoard {
-		BitBoard::DOUBLES[square as usize]
-	}
-
-	const SINGLES: [BitBoard; 64] = [
-		BitBoard(0x00000000000302), BitBoard(0x00000000000705), BitBoard(0x00000000000e0a), BitBoard(0x00000000001c14),
-		BitBoard(0x00000000003828), BitBoard(0x00000000007050), BitBoard(0x00000000006020), BitBoard(0x00000000000000),
-		BitBoard(0x00000000030203), BitBoard(0x00000000070507), BitBoard(0x000000000e0a0e), BitBoard(0x000000001c141c),
-		BitBoard(0x00000000382838), BitBoard(0x00000000705070), BitBoard(0x00000000602060), BitBoard(0x00000000000000),
-		BitBoard(0x00000003020300), BitBoard(0x00000007050700), BitBoard(0x0000000e0a0e00), BitBoard(0x0000001c141c00),
-		BitBoard(0x00000038283800), BitBoard(0x00000070507000), BitBoard(0x00000060206000), BitBoard(0x00000000000000),
-		BitBoard(0x00000302030000), BitBoard(0x00000705070000), BitBoard(0x00000e0a0e0000), BitBoard(0x00001c141c0000),
-		BitBoard(0x00003828380000), BitBoard(0x00007050700000), BitBoard(0x00006020600000), BitBoard(0x00000000000000),
-		BitBoard(0x00030203000000), BitBoard(0x00070507000000), BitBoard(0x000e0a0e000000), BitBoard(0x001c141c000000),
-		BitBoard(0x00382838000000), BitBoard(0x00705070000000), BitBoard(0x00602060000000), BitBoard(0x00000000000000),
-		BitBoard(0x03020300000000), BitBoard(0x07050700000000), BitBoard(0x0e0a0e00000000), BitBoard(0x1c141c00000000),
-		BitBoard(0x38283800000000), BitBoard(0x70507000000000), BitBoard(0x60206000000000), BitBoard(0x00000000000000),
-		BitBoard(0x02030000000000), BitBoard(0x05070000000000), BitBoard(0x0a0e0000000000), BitBoard(0x141c0000000000),
-		BitBoard(0x28380000000000), BitBoard(0x50700000000000), BitBoard(0x20600000000000), BitBoard(0x00000000000000),
-		BitBoard(0x00000000000000), BitBoard(0x00000000000000), BitBoard(0x00000000000000), BitBoard(0x00000000000000),
-		BitBoard(0x00000000000000), BitBoard(0x00000000000000), BitBoard(0x00000000000000), BitBoard(0x00000000000000),
-	];
-	const DOUBLES: [BitBoard; 64] = [
-		BitBoard(0x00000000070404), BitBoard(0x000000000f0808), BitBoard(0x000000001f1111), BitBoard(0x000000003e2222),
-		BitBoard(0x000000007c4444), BitBoard(0x00000000780808), BitBoard(0x00000000701010), BitBoard(0x00000000000000),
-		BitBoard(0x00000007040404), BitBoard(0x0000000f080808), BitBoard(0x0000001f111111), BitBoard(0x0000003e222222),
-		BitBoard(0x0000007c444444), BitBoard(0x00000078080808), BitBoard(0x00000070101010), BitBoard(0x00000000000000),
-		BitBoard(0x00000704040407), BitBoard(0x00000f0808080f), BitBoard(0x00001f1111111f), BitBoard(0x00003e2222223e),
-		BitBoard(0x00007c4444447c), BitBoard(0x00007808080878), BitBoard(0x00007010101070), BitBoard(0x00000000000000),
-		BitBoard(0x00070404040700), BitBoard(0x000f0808080f00), BitBoard(0x001f1111111f00), BitBoard(0x003e2222223e00),
-		BitBoard(0x007c4444447c00), BitBoard(0x00780808087800), BitBoard(0x00701010107000), BitBoard(0x00000000000000),
-		BitBoard(0x07040404070000), BitBoard(0x0f0808080f0000), BitBoard(0x1f1111111f0000), BitBoard(0x3e2222223e0000),
-		BitBoard(0x7c4444447c0000), BitBoard(0x78080808780000), BitBoard(0x70101010700000), BitBoard(0x00000000000000),
-		BitBoard(0x04040407000000), BitBoard(0x0808080f000000), BitBoard(0x1111111f000000), BitBoard(0x2222223e000000),
-		BitBoard(0x4444447c000000), BitBoard(0x08080878000000), BitBoard(0x10101070000000), BitBoard(0x00000000000000),
-		BitBoard(0x04040700000000), BitBoard(0x08080f00000000), BitBoard(0x11111f00000000), BitBoard(0x22223e00000000),
-		BitBoard(0x44447c00000000), BitBoard(0x08087800000000), BitBoard(0x10107000000000), BitBoard(0x00000000000000),
-		BitBoard(0x00000000000000), BitBoard(0x00000000000000), BitBoard(0x00000000000000), BitBoard(0x00000000000000),
-		BitBoard(0x00000000000000), BitBoard(0x00000000000000), BitBoard(0x00000000000000), BitBoard(0x00000000000000),
-	];
-}
-
-impl BitBoard {
 	/// file returns a BitBoard containing all the squares from the given File.
 	/// ```
 	/// use mexx::ataxx::*;
@@ -599,7 +524,46 @@ impl BitBoard {
 		BitBoard::RANK[rank as usize]
 	}
 
-	const FILE: [BitBoard; 7] = [
+	/// single returns the targets of a singular Move from the given Square.
+	/// ```
+	/// use mexx::ataxx::*;
+	///
+	/// assert_eq!(BitBoard::single(Square::A1), bitboard! {
+	///     . . . . . . .
+	///     . . . . . . .
+	///     . . . . . . .
+	///     . . . . . . .
+	///     . . . . . . .
+	///     X X . . . . .
+	///     . X . . . . .
+	/// });
+	/// ```
+	pub const fn single(square: Square) -> BitBoard {
+		BitBoard::SINGLES[square as usize]
+	}
+
+	/// double returns the targets of a jump Move from the given Square.
+	/// ```
+	/// use mexx::ataxx::*;
+	///
+	/// assert_eq!(BitBoard::double(Square::A1), bitboard! {
+	///     . . . . . . .
+	///     . . . . . . .
+	///     . . . . . . .
+	///     . . . . . . .
+	///     X X X . . . .
+	///     . . X . . . .
+	///     . . X . . . .
+	/// });
+	/// ```
+	pub const fn double(square: Square) -> BitBoard {
+		BitBoard::DOUBLES[square as usize]
+	}
+}
+
+// Private constants wrapped in methods for indexing.
+impl BitBoard {
+	const FILE: [BitBoard; File::N] = [
 		BitBoard(0x0001010101010101),
 		BitBoard(0x0002020202020202),
 		BitBoard(0x0004040404040404),
@@ -609,7 +573,7 @@ impl BitBoard {
 		BitBoard(0x0040404040404040),
 	];
 
-	const RANK: [BitBoard; 7] = [
+	const RANK: [BitBoard; Rank::N] = [
 		BitBoard(0x000000000000007f),
 		BitBoard(0x0000000000007f00),
 		BitBoard(0x00000000007f0000),
@@ -617,5 +581,74 @@ impl BitBoard {
 		BitBoard(0x0000007f00000000),
 		BitBoard(0x00007f0000000000),
 		BitBoard(0x007f000000000000),
+	];
+
+	const SINGLES: [BitBoard; 64] = [
+		BitBoard(0x00000000000302), BitBoard(0x00000000000705),
+		BitBoard(0x00000000000e0a), BitBoard(0x00000000001c14),
+		BitBoard(0x00000000003828), BitBoard(0x00000000007050),
+		BitBoard(0x00000000006020), BitBoard(0x00000000000000),
+		BitBoard(0x00000000030203), BitBoard(0x00000000070507),
+		BitBoard(0x000000000e0a0e), BitBoard(0x000000001c141c),
+		BitBoard(0x00000000382838), BitBoard(0x00000000705070),
+		BitBoard(0x00000000602060), BitBoard(0x00000000000000),
+		BitBoard(0x00000003020300), BitBoard(0x00000007050700),
+		BitBoard(0x0000000e0a0e00), BitBoard(0x0000001c141c00),
+		BitBoard(0x00000038283800), BitBoard(0x00000070507000),
+		BitBoard(0x00000060206000), BitBoard(0x00000000000000),
+		BitBoard(0x00000302030000), BitBoard(0x00000705070000),
+		BitBoard(0x00000e0a0e0000), BitBoard(0x00001c141c0000),
+		BitBoard(0x00003828380000), BitBoard(0x00007050700000),
+		BitBoard(0x00006020600000), BitBoard(0x00000000000000),
+		BitBoard(0x00030203000000), BitBoard(0x00070507000000),
+		BitBoard(0x000e0a0e000000), BitBoard(0x001c141c000000),
+		BitBoard(0x00382838000000), BitBoard(0x00705070000000),
+		BitBoard(0x00602060000000), BitBoard(0x00000000000000),
+		BitBoard(0x03020300000000), BitBoard(0x07050700000000),
+		BitBoard(0x0e0a0e00000000), BitBoard(0x1c141c00000000),
+		BitBoard(0x38283800000000), BitBoard(0x70507000000000),
+		BitBoard(0x60206000000000), BitBoard(0x00000000000000),
+		BitBoard(0x02030000000000), BitBoard(0x05070000000000),
+		BitBoard(0x0a0e0000000000), BitBoard(0x141c0000000000),
+		BitBoard(0x28380000000000), BitBoard(0x50700000000000),
+		BitBoard(0x20600000000000), BitBoard(0x00000000000000),
+		BitBoard(0x00000000000000), BitBoard(0x00000000000000),
+		BitBoard(0x00000000000000), BitBoard(0x00000000000000),
+		BitBoard(0x00000000000000), BitBoard(0x00000000000000),
+		BitBoard(0x00000000000000), BitBoard(0x00000000000000),
+	];
+	const DOUBLES: [BitBoard; 64] = [
+		BitBoard(0x00000000070404), BitBoard(0x000000000f0808),
+		BitBoard(0x000000001f1111), BitBoard(0x000000003e2222),
+		BitBoard(0x000000007c4444), BitBoard(0x00000000780808),
+		BitBoard(0x00000000701010), BitBoard(0x00000000000000),
+		BitBoard(0x00000007040404), BitBoard(0x0000000f080808),
+		BitBoard(0x0000001f111111), BitBoard(0x0000003e222222),
+		BitBoard(0x0000007c444444), BitBoard(0x00000078080808),
+		BitBoard(0x00000070101010), BitBoard(0x00000000000000),
+		BitBoard(0x00000704040407), BitBoard(0x00000f0808080f),
+		BitBoard(0x00001f1111111f), BitBoard(0x00003e2222223e),
+		BitBoard(0x00007c4444447c), BitBoard(0x00007808080878),
+		BitBoard(0x00007010101070), BitBoard(0x00000000000000),
+		BitBoard(0x00070404040700), BitBoard(0x000f0808080f00),
+		BitBoard(0x001f1111111f00), BitBoard(0x003e2222223e00),
+		BitBoard(0x007c4444447c00), BitBoard(0x00780808087800),
+		BitBoard(0x00701010107000), BitBoard(0x00000000000000),
+		BitBoard(0x07040404070000), BitBoard(0x0f0808080f0000),
+		BitBoard(0x1f1111111f0000), BitBoard(0x3e2222223e0000),
+		BitBoard(0x7c4444447c0000), BitBoard(0x78080808780000),
+		BitBoard(0x70101010700000), BitBoard(0x00000000000000),
+		BitBoard(0x04040407000000), BitBoard(0x0808080f000000),
+		BitBoard(0x1111111f000000), BitBoard(0x2222223e000000),
+		BitBoard(0x4444447c000000), BitBoard(0x08080878000000),
+		BitBoard(0x10101070000000), BitBoard(0x00000000000000),
+		BitBoard(0x04040700000000), BitBoard(0x08080f00000000),
+		BitBoard(0x11111f00000000), BitBoard(0x22223e00000000),
+		BitBoard(0x44447c00000000), BitBoard(0x08087800000000),
+		BitBoard(0x10107000000000), BitBoard(0x00000000000000),
+		BitBoard(0x00000000000000), BitBoard(0x00000000000000),
+		BitBoard(0x00000000000000), BitBoard(0x00000000000000),
+		BitBoard(0x00000000000000), BitBoard(0x00000000000000),
+		BitBoard(0x00000000000000), BitBoard(0x00000000000000),
 	];
 }

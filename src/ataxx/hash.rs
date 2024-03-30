@@ -42,14 +42,14 @@ impl Hash {
 		// floor(pq/2^64) is essentially getting the top 64 bits of p*q.
 		let part_1 = X.wrapping_mul(a); // xa
 		let part_2 = Y.wrapping_mul(b); // yb
-		let part_3 = ((Y as u128 * a as u128) >> 64) as u64; // floor(ya/2^64) = ya >> 64
-		let part_4 = ((Z as u128 * b as u128) >> 64) as u64; // floor(zb/2^64) = zb >> 64
+		let part_3 = (Y as u128 * a as u128) >> 64; // floor(ya/2^64) = ya >> 64
+		let part_4 = (Z as u128 * b as u128) >> 64; // floor(zb/2^64) = zb >> 64
 
 		// add the parts together and return the resultant hash.
 		let hash = part_1
 			.wrapping_add(part_2)
-			.wrapping_add(part_3)
-			.wrapping_add(part_4);
+			.wrapping_add(part_3 as u64)
+			.wrapping_add(part_4 as u64);
 
 		// The Hash is bitwise complemented if the given Color is Black. Therefore,
 		// if two Positions only differ in side to move, `a.Hash == !b.Hash`.

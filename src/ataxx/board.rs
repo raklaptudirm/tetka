@@ -11,7 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{cmp, fmt};
+use std::cmp;
+use std::fmt;
 use std::str::FromStr;
 
 use strum::IntoEnumIterator;
