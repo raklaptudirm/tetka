@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
+use std::{cmp, fmt};
 use std::str::FromStr;
 
 use strum::IntoEnumIterator;
@@ -53,7 +53,7 @@ impl Board {
 	/// use std::str::FromStr;
 	///
 	/// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-	/// assert_eq!(board.side_to_move(), Color::White);
+	/// assert_eq!(board.side_to_move(), Color::Black);
 	/// ```
 	pub fn side_to_move(&self) -> Color {
 		self.current_pos().side_to_move
@@ -324,11 +324,9 @@ impl Position {
 	///
 	/// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7").unwrap();
 	/// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7").unwrap();
-	/// let ongoing = Position::from_str("xxx1ooo/7/7/7/7/7/7").unwrap();
 	///
 	/// assert_eq!(white_win.winner(), Color::White);
 	/// assert_eq!(black_win.winner(), Color::Black);
-	/// assert_eq!(ongoing.winner(), Color::None);
 	/// ```
 	pub fn winner(&self) -> Color {
 		debug_assert!(self.is_game_over());
@@ -357,33 +355,20 @@ impl Position {
 		let white_n = white.cardinality();
 		let black_n = black.cardinality();
 
-		if white_n > black_n {
-			// White has more pieces, white wins.
-			Color::White
-		} else if black_n > white_n {
-			// Black has more pieces, black wins.
-			Color::Black
-		} else {
-			// Equal number of pieces, draw.
-			Color::None
+		match white_n.cmp(&black_n) {
+			cmp::Ordering::Less => Color::Black,
+			cmp::Ordering::Greater => Color::White,
+			// Since there are an odd number of Squares and all of them are filled, there
+			// can't be an equal number of black and white pieces on the Board.
+			cmp::Ordering::Equal => unreachable!(),
 		}
 	}
 }
 
 impl Position {
-	/// after_move returns a new Position which occurs when the given Move is played on the
-	/// current Position. Its behaviour is undefined if the given Move is illegal.
-	/// ```
-	/// use mexx::ataxx::*;
-	/// use std::str::FromStr;
-	///
-	/// let mut position = Position::from_str("x5o/7/7/7/7/7/o5x").unwrap();
-	/// let new_position = Position::from_str("xx4o/7/7/7/7/7/o5x").unwrap();
-	///
-	/// let mov = Move::new_single(Square::B7);
-	///
-	/// assert_eq!(position.after_move(mov).checksum, new_position.checksum);
-	/// ```
+	/// after_move returns a new Position which occurs when the given Move is
+	/// played on the current Position. Its behaviour is undefined if the given
+	/// Move is illegal. See [`Board::make_move`] for more examples.
 	pub fn after_move(&self, m: Move) -> Position {
 		let stm = self.side_to_move;
 
@@ -435,38 +420,20 @@ impl Position {
 }
 
 impl Position {
-	/// generate_moves generates the legal moves in the current Position and returns a MoveList
-	/// containing all the moves. It is a wrapper on top of the more general generate_moves_into.
-	/// ```
-	/// use mexx::ataxx::*;
-	/// use std::str::FromStr;
-	///
-	/// let position = Position::from_str("x5o/7/7/7/7/7/o5x").unwrap();
-	/// let movelist = position.generate_moves();
-	///
-	/// // There are 16 possible moves in startpos.
-	/// assert_eq!(movelist.len(), 16);
-	/// ```
+	/// generate_moves generates the legal moves in the current Position and
+	/// returns a MoveList containing all the moves. It is a wrapper on top of the
+	/// more general generate_moves_into. See [`Board::generate_moves`] for more
+	/// usage information and examples.
 	pub fn generate_moves(&self) -> MoveList {
 		let mut movelist = MoveList::new();
 		self.generate_moves_into(&mut movelist);
 		movelist
 	}
 
-	/// generate_moves_into generates all the legal moves in the current Position and adds them
-	/// to the given movelist. The type of the movelist must implement the MoveStore trait.
-	/// ```
-	/// use mexx::ataxx::*;
-	/// use std::str::FromStr;
-	///
-	/// let position = Board::from_str("x5o/7/7/7/7/7/o5x").unwrap();
-	/// let mut movelist = MoveList::new();
-	///
-	/// position.generate_moves_into(&mut movelist);
-	///
-	/// // There are 16 possible moves in startpos.
-	/// assert_eq!(movelist.len(), 16);
-	/// ```
+	/// generate_moves_into generates all the legal moves in the current Position
+	/// and adds them/ to the given movelist. The type of the movelist must
+	/// implement the MoveStore trait. See [`Board::generate_moves_into<T>`] for
+	/// more usage information and examples.
 	pub fn generate_moves_into<T: MoveStore>(&self, movelist: &mut T) {
 		if self.is_game_over() {
 			// Game is over, so don't generate any moves.
@@ -506,17 +473,10 @@ impl Position {
 		}
 	}
 
-	/// count_moves returns the number of legal moves in the current Position. It is faster than
-	/// calling generate_moves or generate_moves_into and then finding the length of the movelist.
-	/// ```
-	/// use mexx::ataxx::*;
-	/// use std::str::FromStr;
-	///
-	/// let position = Board::from_str("x5o/7/7/7/7/7/o5x").unwrap();
-	///
-	/// // There are 16 possible moves in startpos.
-	/// assert_eq!(position.count_moves(), 16);
-	/// ```
+	/// count_moves returns the number of legal moves in the current Position. It
+	/// is faster than calling generate_moves or generate_moves_into and then
+	/// finding the length of the movelist. See [`Board::generate_moves_into<T>`]
+	/// for more usage information and examples.
 	pub fn count_moves(&self) -> usize {
 		if self.is_game_over() {
 			// Game is over, so don't generate any moves.
@@ -656,7 +616,7 @@ impl fmt::Display for Position {
 		// Append the file markers.
 		string_rep += "a b c d e f g\n";
 
-		write!(f, "{}\n", string_rep).unwrap();
-		write!(f, "Side To Move: {}\n", self.side_to_move)
+		writeln!(f, "{}", string_rep).unwrap();
+		writeln!(f, "Side To Move: {}", self.side_to_move)
 	}
 }
