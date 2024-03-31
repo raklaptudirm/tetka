@@ -25,13 +25,13 @@ use crate::util::type_macros;
 #[derive(Copy, Clone, PartialEq, PartialOrd, FromPrimitive, EnumIter)]
 #[rustfmt::skip]
 pub enum Square {
-    A1 = 0x00, B1, C1, D1, E1, F1, G1,
-    A2 = 0x08, B2, C2, D2, E2, F2, G2,
-    A3 = 0x10, B3, C3, D3, E3, F3, G3,
-    A4 = 0x18, B4, C4, D4, E4, F4, G4,
-    A5 = 0x20, B5, C5, D5, E5, F5, G5,
-    A6 = 0x28, B6, C6, D6, E6, F6, G6,
-    A7 = 0x30, B7, C7, D7, E7, F7, G7,
+    A1, B1, C1, D1, E1, F1, G1,
+    A2, B2, C2, D2, E2, F2, G2,
+    A3, B3, C3, D3, E3, F3, G3,
+    A4, B4, C4, D4, E4, F4, G4,
+    A5, B5, C5, D5, E5, F5, G5,
+    A6, B6, C6, D6, E6, F6, G6,
+    A7, B7, C7, D7, E7, F7, G7,
 }
 
 impl Square {
@@ -45,7 +45,7 @@ impl Square {
     /// assert_eq!(Square::new(File::A, Rank::First), Square::A1);
     /// ```
     pub fn new(file: File, rank: Rank) -> Square {
-        Square::try_from(rank as usize * 8 + file as usize).unwrap()
+        Square::try_from(rank as usize * File::N + file as usize).unwrap()
     }
 
     /// file returns the File of the current Square.
@@ -56,7 +56,7 @@ impl Square {
     /// ```
     #[inline(always)]
     pub fn file(self) -> File {
-        File::try_from(self as usize % 8).unwrap()
+        File::try_from(self as usize % File::N).unwrap()
     }
 
     /// rank returns the Rank of the current Square.
@@ -67,7 +67,7 @@ impl Square {
     /// ```
     #[inline(always)]
     pub fn rank(self) -> Rank {
-        Rank::try_from(self as usize / 8).unwrap()
+        Rank::try_from(self as usize / File::N).unwrap()
     }
 
     /// north returns the Square to the North of this one.
@@ -77,7 +77,7 @@ impl Square {
     /// assert_eq!(Square::D4.north(), Square::D5);
     /// ```
     pub fn north(self) -> Self {
-        Square::try_from(self as usize + 8).unwrap()
+        Square::try_from(self as usize + File::N).unwrap()
     }
 
     /// south returns the Square to the South of this one.
@@ -87,7 +87,7 @@ impl Square {
     /// assert_eq!(Square::D4.south(), Square::D3);
     /// ```
     pub fn south(self) -> Self {
-        Square::try_from(self as usize - 8).unwrap()
+        Square::try_from(self as usize - File::N).unwrap()
     }
 
     /// east returns the Square to the East of this one.
