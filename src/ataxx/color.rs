@@ -84,7 +84,7 @@ impl fmt::Display for Color {
 
 impl fmt::Debug for Color {
     /// Debug implements debug printing of a Color in a human-readable form. It uses
-    /// [`Color::fmt`] under the hood to format and print the Color.
+    /// `Color::Display` under the hood to format and print the Color.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }

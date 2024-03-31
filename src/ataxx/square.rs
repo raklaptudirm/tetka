@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt;
 use std::str::FromStr;
 
 use num_derive::FromPrimitive;
@@ -125,8 +125,8 @@ impl FromStr for Square {
 
     /// from_str converts a square given in the format `<file><rank>` into
     /// a Square. For the formats of `<file>` and `<rank>` see the documentation
-    /// for [`File::from_str`] and [`Rank::from_str`]. It is effectively the
-    /// inverse operation of Display.
+    /// for [`File::FromStr`](File::from_str) and [`Rank::FromStr`](Rank::from_str).
+    /// It is effectively the inverse operation of Display.
     /// ```
     /// use mexx::ataxx::*;
     /// use std::str::FromStr;
@@ -169,24 +169,24 @@ type_macros::impl_from_integer_for_enum! {
     i32, Square::from_i32; i64, Square::from_i64;
 }
 
-impl Display for Square {
+impl fmt::Display for Square {
     /// Display formats the given Square in the format `<file><rank>`. For how
     /// `<file>` and `<rank>` are formatted, see the documentation for
-    /// [`File::fmt`] and [`Rank::fmt`].
+    /// `File::Display` and `Rank::Display` trait implementations.
     /// ```
     /// use mexx::ataxx::*;
     ///
     /// assert_eq!(Square::A1.to_string(), "a1");
     /// ```
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}", self.file(), self.rank())
     }
 }
 
-impl Debug for Square {
+impl fmt::Debug for Square {
     /// Debug implements Debug formatting for a Square.
-    /// It uses [`Square::Display`] behind the hood.
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    /// It uses `Square::Display` behind the hood.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self)
     }
 }
@@ -262,7 +262,7 @@ type_macros::impl_from_integer_for_enum! {
     i32, File::from_i32; i64, File::from_i64;
 }
 
-impl Display for File {
+impl fmt::Display for File {
     /// Display formats the given File into a string. Specifically,
     /// it formats the File into a lowercase letter representing that File.
     /// ```
@@ -270,15 +270,15 @@ impl Display for File {
     ///
     /// assert_eq!(File::A.to_string(), "a");
     /// ```
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", (b'a' + *self as u8) as char)
     }
 }
 
-impl Debug for File {
+impl fmt::Debug for File {
     /// Debug implements Debug formatting for a File.
-    /// It uses [`File::Display`] behind the hood.
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    /// It uses `File::Display` behind the hood.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self)
     }
 }
@@ -355,7 +355,7 @@ type_macros::impl_from_integer_for_enum! {
     i32, Rank::from_i32; i64, Rank::from_i64;
 }
 
-impl Display for Rank {
+impl fmt::Display for Rank {
     /// Display formats the given Rank into a string. Specifically, it formats
     /// the Rank into a numerical digit from 1-7 representing that Rank.
     /// ```
@@ -363,15 +363,15 @@ impl Display for Rank {
     ///
     /// assert_eq!(Rank::First.to_string(), "1");
     /// ```
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", *self as usize + 1)
     }
 }
 
-impl Debug for Rank {
+impl fmt::Debug for Rank {
     /// Debug implements Debug formatting for a Rank.
-    /// It uses [`Rank::Display`] behind the hood.
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    /// It uses `Rank::Display` behind the hood.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self)
     }
 }

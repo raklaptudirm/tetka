@@ -140,7 +140,7 @@ impl fmt::Display for Move {
     /// Display formats the given Move in a human-readable manner. The format used
     /// for displaying jump moves is `<source><target>`, while a singular Move is
     /// formatted as `<target>`. For the formatting of `<source>` and `<target>`,
-    /// refer to [`Square::fmt`]. [`Move::NULL`] is  formatted as `null`, while
+    /// refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`, while
     /// [`Move::PASS`] is formatted as `0000`.
     /// ```
     /// use mexx::ataxx::*;
@@ -170,15 +170,16 @@ impl fmt::Display for Move {
 
 impl fmt::Debug for Move {
     /// Debug formats the given Move into a human-readable debug string. It uses
-    /// [`Move::fmt`] under the hood for formatting the Move.
+    /// `Move::Display` trait under the hood for formatting the Move.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
 /// MoveStore is a trait implemented by types which are able to store [Move]s inside
-/// themselves and are thus usable in move-generation methods in [Board] like
-/// [`Board::generate_moves_into<T>`](ataxx::Board::generate_moves_into<T>).
+/// themselves and are thus usable in move-generation methods in
+/// [Board](super::Board) like
+/// [`Board::generate_moves_into<T>`](super::Board::generate_moves_into<T>).
 pub trait MoveStore {
     /// push adds the given Move to the MoveStore.
     fn push(&mut self, m: Move);
