@@ -59,7 +59,7 @@ impl Board {
     /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     /// assert_eq!(board.side_to_move(), Color::Black);
     /// ```
-    pub fn side_to_move(&self) -> Color {
+    pub const fn side_to_move(&self) -> Color {
         self.current_pos().side_to_move
     }
 
@@ -72,14 +72,16 @@ impl Board {
     ///
     /// assert_eq!(board.checksum(), board.position().checksum);
     /// ```
-    pub fn checksum(&self) -> Hash {
+    pub const fn checksum(&self) -> Hash {
         self.current_pos().checksum
     }
 
     const fn current_pos(&self) -> &Position {
         &self.history[self.current]
     }
+}
 
+impl Board {
     ////////////////////////////////////////////
     // Reimplementation of Position's methods //
     ////////////////////////////////////////////
@@ -116,6 +118,42 @@ impl Board {
     /// ```
     pub const fn at(&self, sq: Square) -> Color {
         self.current_pos().at(sq)
+    }
+}
+
+impl Board {
+    /// is_game_over checks if the game is over, i.e. is a win or a draw.
+    /// ```
+    /// use mexx::ataxx::*;
+    /// use std::str::FromStr;
+    ///
+    /// let white_win = Board::from_str("ooooooo/7/7/7/7/7/7 x 0 1").unwrap();
+    /// let black_win = Board::from_str("xxxxxxx/7/7/7/7/7/7 o 0 1").unwrap();
+    /// let ongoing = Board::from_str("xxx1ooo/7/7/7/7/7/7 x 0 1").unwrap();
+    ///
+    /// assert!(white_win.is_game_over());
+    /// assert!(black_win.is_game_over());
+    /// assert!(!ongoing.is_game_over());
+    /// ```
+    pub fn is_game_over(&self) -> bool {
+        self.current_pos().is_game_over()
+    }
+
+    /// winner returns the Color which has won the game. It returns [`Color::None`]
+    /// if the game is a draw. If [`Board::is_game_over`] is false, then the
+    /// behavior of this function is undefined.
+    /// ```
+    /// use mexx::ataxx::*;
+    /// use std::str::FromStr;
+    ///
+    /// let white_win = Board::from_str("ooooooo/7/7/7/7/7/7 x 0 1").unwrap();
+    /// let black_win = Board::from_str("xxxxxxx/7/7/7/7/7/7 o 0 1").unwrap();
+    ///
+    /// assert_eq!(white_win.winner(), Color::White);
+    /// assert_eq!(black_win.winner(), Color::Black);
+    /// ```
+    pub fn winner(&self) -> Color {
+        self.current_pos().winner()
     }
 }
 
@@ -256,23 +294,6 @@ impl Position {
         }
     }
 
-    /// bitboard returns the BitBoard associated to the piece configuration of the
-    /// given Color. Only the Squares with a piece of the given Color on them are
-    /// contained inside the returned BitBoard.
-    /// ```
-    /// use mexx::ataxx::*;
-    ///
-    /// let position = Position::new(
-    ///     BitBoard::UNIVERSE,
-    ///     BitBoard::EMPTY,
-    ///     Color::White
-    /// );
-    /// assert_eq!(position.bitboard(Color::White), BitBoard::UNIVERSE);
-    /// ```
-    pub const fn bitboard(&self, color: Color) -> BitBoard {
-        self.bitboards[color as usize]
-    }
-
     /// put puts the given piece represented by its Color on the given Square.
     /// ```
     /// use mexx::ataxx::*;
@@ -323,19 +344,28 @@ impl Position {
         }
     }
 
-    /// is_game_over checks if the game is over, i.e. is a win or a draw.
+    /// bitboard returns the BitBoard associated to the piece configuration of the
+    /// given Color. Only the Squares with a piece of the given Color on them are
+    /// contained inside the returned BitBoard.
     /// ```
     /// use mexx::ataxx::*;
-    /// use std::str::FromStr;
     ///
-    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7").unwrap();
-    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7").unwrap();
-    /// let ongoing = Position::from_str("xxx1ooo/7/7/7/7/7/7").unwrap();
-    ///
-    /// assert!(white_win.is_game_over());
-    /// assert!(black_win.is_game_over());
-    /// assert!(!ongoing.is_game_over());
+    /// let position = Position::new(
+    ///     BitBoard::UNIVERSE,
+    ///     BitBoard::EMPTY,
+    ///     Color::White
+    /// );
+    /// assert_eq!(position.bitboard(Color::White), BitBoard::UNIVERSE);
     /// ```
+    pub const fn bitboard(&self, color: Color) -> BitBoard {
+        self.bitboards[color as usize]
+    }
+}
+
+impl Position {
+    /// is_game_over checks if the current position is a terminal game state, where
+    /// either one of the sides have won the game, or it is a draw. See the
+    /// documentation for [`Board::is_game_over`] for more examples.
     pub fn is_game_over(&self) -> bool {
         let white = self.bitboard(Color::White);
         let black = self.bitboard(Color::Black);
@@ -344,19 +374,9 @@ impl Position {
 			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
     }
 
-    /// winner returns the Color which has won the game. It returns [`Color::None`]
-    /// if the game is a draw. If [`Position::is_game_over`] is false, then the
-    /// behavior of this function is undefined.
-    /// ```
-    /// use mexx::ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7").unwrap();
-    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7").unwrap();
-    ///
-    /// assert_eq!(white_win.winner(), Color::White);
-    /// assert_eq!(black_win.winner(), Color::Black);
-    /// ```
+    /// winner returns the [Color] which has won the game whose final state is
+    /// represented by the current Position. It returns [`Color::None`] if the game
+    /// is a draw. See the documentation for [`Board::winner`] for examples.
     pub fn winner(&self) -> Color {
         debug_assert!(self.is_game_over());
 
