@@ -30,4 +30,4 @@ fn main() {
 - Support for semi-unique hashing of Ataxx positions for hash tables.
 - Parsing `Position` and `Board` from FEN strings.
 
-Refer to the [documentation](https://docs.rs/) for a full in depth list of features and functions.
+Refer to the [documentation](https://docs.rs/ataxx) for a full in depth list of features and functions.
