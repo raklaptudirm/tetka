@@ -3,7 +3,13 @@ name = "ataxx"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Rak Laptudirm <rak@laptudirm.com>"]
+
+license = "Apache-2.0"
+description = "A Rust library for the game Ataxx"
+repository = "https://github.com/raklaptudirm/mexx"
+keywords = ["ataxx"]
+categories = ["games"]
 
 [dependencies]
 num-traits = "0.2"
