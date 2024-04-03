@@ -13,14 +13,16 @@
 
 use std::cmp;
 use std::fmt;
+use std::num::ParseIntError;
 use std::str::FromStr;
 
 use strum::IntoEnumIterator;
 
+use super::ColorParseError;
 #[rustfmt::skip]
 use super::{
-    BitBoard, Color, FEN, FENParseError, File,
-    Hash, Move, MoveList, MoveStore, Rank, Square,
+    BitBoard, Color, File, Hash, Move,
+    MoveList, MoveStore, Rank, Square,
 };
 
 /// Board implements an ataxx game board which can start from a given
@@ -29,6 +31,25 @@ use super::{
 pub struct Board {
     history: [Position; Board::MAX_PLY],
     current: usize,
+    mov_cnt: u16,
+}
+
+impl Board {
+    #[rustfmt::skip]
+    pub fn new(position: Position, movcount: u16) -> Board {
+        let mut board = Board {
+            history: [
+                Position::new(
+                    BitBoard::EMPTY, BitBoard::EMPTY, Color::None
+                ); Board::MAX_PLY
+            ],
+            current: 0,
+            mov_cnt: movcount,
+        };
+
+        board.history[0] = position;
+        board
+    }
 }
 
 impl Board {
@@ -43,7 +64,7 @@ impl Board {
     /// use std::str::FromStr;
     ///
     /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x").unwrap();
+    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
     ///
     /// assert_eq!(board.checksum(), position.checksum);
     /// ```
@@ -76,82 +97,38 @@ impl Board {
         self.current_pos().checksum
     }
 
+    pub const fn full_moves(&self) -> u16 {
+        self.mov_cnt
+    }
+
     const fn current_pos(&self) -> &Position {
         &self.history[self.current]
     }
 }
 
 impl Board {
-    ////////////////////////////////////////////
-    // Reimplementation of Position's methods //
-    ////////////////////////////////////////////
-
-    /// bitboard returns the BitBoard associated to the piece configuration of the
-    /// given Color. Only the Squares with a piece of the given Color on them are
-    /// contained inside the returned BitBoard.
-    /// ```
-    /// use mexx::ataxx::*;
-    /// use std::str::FromStr;
     ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// assert_eq!(board.bitboard(Color::White), bitboard! {
-    ///     . . . . . . X
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     X . . . . . .
-    /// });
-    /// ```
-    pub const fn bitboard(&self, color: Color) -> BitBoard {
-        self.current_pos().bitboard(color)
-    }
-
-    /// at returns the Color of the piece present at the given Square.
-    /// ```
-    /// use mexx::ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// assert_eq!(board.at(Square::A7), Color::Black);
-    /// ```
     pub const fn at(&self, sq: Square) -> Color {
         self.current_pos().at(sq)
+    }
+
+    ///
+    pub const fn bitboard(&self, color: Color) -> BitBoard {
+        self.current_pos().bitboard(color)
     }
 }
 
 impl Board {
-    /// is_game_over checks if the game is over, i.e. is a win or a draw.
-    /// ```
-    /// use mexx::ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let white_win = Board::from_str("ooooooo/7/7/7/7/7/7 x 0 1").unwrap();
-    /// let black_win = Board::from_str("xxxxxxx/7/7/7/7/7/7 o 0 1").unwrap();
-    /// let ongoing = Board::from_str("xxx1ooo/7/7/7/7/7/7 x 0 1").unwrap();
-    ///
-    /// assert!(white_win.is_game_over());
-    /// assert!(black_win.is_game_over());
-    /// assert!(!ongoing.is_game_over());
-    /// ```
+    /// is_game_over checks if the game represented by the current Board has ended.
+    /// It is a wrapper on top of [`Position::is_game_over`], so refer to it for
+    /// more in-depth documentation and examples.
     pub fn is_game_over(&self) -> bool {
         self.current_pos().is_game_over()
     }
 
-    /// winner returns the Color which has won the game. It returns [`Color::None`]
-    /// if the game is a draw. If [`Board::is_game_over`] is false, then the
-    /// behavior of this function is undefined.
-    /// ```
-    /// use mexx::ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let white_win = Board::from_str("ooooooo/7/7/7/7/7/7 x 0 1").unwrap();
-    /// let black_win = Board::from_str("xxxxxxx/7/7/7/7/7/7 o 0 1").unwrap();
-    ///
-    /// assert_eq!(white_win.winner(), Color::White);
-    /// assert_eq!(black_win.winner(), Color::Black);
-    /// ```
+    /// winner returns the Color which has won the game represented by the current
+    /// Board. It is a wrapper on top of [`Position::winner`], so refer to it for
+    /// more in-depth documentation and examples.
     pub fn winner(&self) -> Color {
         self.current_pos().winner()
     }
@@ -159,20 +136,14 @@ impl Board {
 
 impl Board {
     /// make_move plays the given Move on the Board and updates state accordingly.
-    /// ```
-    /// use mexx::ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let mut board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let new_board = Board::from_str("xx4o/7/7/7/7/7/o5x x 0 1").unwrap();
-    ///
-    /// board.make_move(Move::new_single(Square::B7));
-    ///
-    /// assert_eq!(board.checksum(), new_board.checksum());
-    /// ```
+    /// It is a wrapper on top of [`Position::after_move`], so refer to it for more
+    /// in-depth documentation and examples.
     pub fn make_move(&mut self, m: Move) {
         self.history[self.current + 1] = self.current_pos().after_move(m);
         self.current += 1;
+        if self.side_to_move() == Color::Black {
+            self.mov_cnt += 1;
+        }
     }
 
     /// undo_move un-plays the last played Move on the Board.
@@ -193,93 +164,83 @@ impl Board {
     }
 }
 
-// Implementation for converting a FEN into a Board.
-impl From<&FEN> for Board {
-    #[rustfmt::skip]
-    fn from(fen: &FEN) -> Self {
-        let mut board = Board {
-            history: [
-                Position::new(
-                    BitBoard::EMPTY, BitBoard::EMPTY, Color::None
-                ); Board::MAX_PLY
-            ],
-            current: 0,
-        };
+#[derive(Debug)]
+pub enum BoardParseError {
+    BadPosition(PositionParseError),
+    BadMoveCount(ParseIntError),
+}
 
-        board.history[0] = fen.position;
-        board
+/// Given a [PositionParseError] which was encountered while trying to parse the
+/// Position part of the FEN string, it returns a [BoardParseError::BadPosition]
+/// which wraps the given [PositionParseError].
+impl From<PositionParseError> for BoardParseError {
+    fn from(value: PositionParseError) -> Self {
+        Self::BadPosition(value)
     }
 }
 
-// Implementation for converting a FEN string into a Board.
-impl FromStr for Board {
-    type Err = FENParseError;
+/// Given a [ParseIntError] which was encountered while trying to parse the
+/// move count in the FEN string, it returns a [BoardParseError::BadMoveCount]
+/// which wraps the given [ParseIntError].
+impl From<ParseIntError> for BoardParseError {
+    fn from(value: ParseIntError) -> Self {
+        Self::BadMoveCount(value)
+    }
+}
 
+impl FromStr for Board {
+    type Err = BoardParseError;
+
+    /// from_str converts the given FEN string into a [Board].
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let fen = FEN::from_str(s)?;
-        Ok(Board::from(&fen))
+        // Split at the last space, the delimiter between the Position part and
+        // the move count part of the given FEN string.
+        let (pos, fm) = s.rsplit_once(' ').unwrap();
+
+        let position = Position::from_str(pos)?; // Parse the Position
+        let movcount = fm.parse::<u16>()?; // Parse the Move Count
+
+        Ok(Board::new(position, movcount))
     }
 }
 
 impl Board {
-    /// generate_moves generates the legal moves in the current Position and
-    /// returns a [`MoveList`] containing all the moves. It is a wrapper on top of
-    /// the more general [`Board::generate_moves_into<T>`].
-    /// ```
-    /// use mexx::ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let movelist = board.generate_moves();
-    ///
-    /// // There are 16 possible moves in startpos.
-    /// assert_eq!(movelist.len(), 16);
-    /// ```
+    /// generate_moves generates the legal Moves present in the current Position
+    /// on the Board into a [MoveList] and returns it. It is a wrapper on top of
+    /// the [`Position::generate_moves`] function, so refer to it for more in
+    /// depth documentation and examples.
     pub fn generate_moves(&self) -> MoveList {
         self.current_pos().generate_moves()
     }
 
-    /// generate_moves_into generates all the legal moves in the current Position
-    /// and adds them to the given movelist. The type of the movelist must
-    /// implement the [`MoveStore`] trait.
-    /// ```
-    /// use mexx::ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let mut movelist = MoveList::new();
-    ///
-    /// board.generate_moves_into(&mut movelist);
-    ///
-    /// // There are 16 possible moves in startpos.
-    /// assert_eq!(movelist.len(), 16);
-    /// ```
+    /// generate_moves_into generates the legal Moves present in the current
+    /// Position into the given type which implements [MoveStore]. It is a
+    /// wrapper on top of the [`Position::generate_moves_into<T>`] function, so
+    /// refer to it for more in depth documentation and examples.
     pub fn generate_moves_into<T: MoveStore>(&self, movelist: &mut T) {
         self.current_pos().generate_moves_into(movelist);
     }
 
-    /// count_moves returns the number of legal moves in the current Position. It
-    /// is faster than calling [`Board::generate_moves`] or
-    ///  [`Board::generate_moves_into<T>`] and then finding the length.
-    /// ```
-    /// use mexx::ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    ///
-    /// // There are 16 possible moves in startpos.
-    /// assert_eq!(board.count_moves(), 16);
-    /// ```
+    /// count_moves counts the number of legal Moves present in the current
+    /// Position. It is a wrapper on top of the [`Position::count_moves`]
+    /// function, so refer to it for more in depth documentation and examples.
     pub fn count_moves(&self) -> usize {
         self.current_pos().count_moves()
     }
 }
 
+/// Position represents the snapshot of an Ataxx Board, the state of the Board
+/// at a single point in time. It is the functional backend of the [Board] type.
 #[derive(Copy, Clone)]
 pub struct Position {
+    /// bitboards stores [BitBoard]s for the piece configuration of each [Color].
     pub bitboards: [BitBoard; Color::N],
+    /// checksum stores the semi-unique [struct@Hash] of the current Position.
     pub checksum: Hash,
+    /// side_to_move stores the [Color] whose turn to move it currently is.
     pub side_to_move: Color,
+    /// half-move clock stores the number of half-moves since the last irreversible
+    /// Move. It is used to adjudicate games using the 50-move/100-ply rule.
     pub half_move_clock: u8,
 }
 
@@ -363,9 +324,21 @@ impl Position {
 }
 
 impl Position {
-    /// is_game_over checks if the current position is a terminal game state, where
-    /// either one of the sides have won the game, or it is a draw. See the
-    /// documentation for [`Board::is_game_over`] for more examples.
+    /// is_game_over checks if the game is over, i.e. is a win or a draw.
+    /// ```
+    /// use mexx::ataxx::*;
+    /// use std::str::FromStr;
+    ///
+    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0").unwrap();
+    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0").unwrap();
+    /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100").unwrap();
+    /// let ongoing = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 0").unwrap();
+    ///
+    /// assert!(white_win.is_game_over());
+    /// assert!(black_win.is_game_over());
+    /// assert!(draw_game.is_game_over());
+    /// assert!(!ongoing.is_game_over());
+    /// ```
     pub fn is_game_over(&self) -> bool {
         let white = self.bitboard(Color::White);
         let black = self.bitboard(Color::Black);
@@ -374,9 +347,21 @@ impl Position {
 			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
     }
 
-    /// winner returns the [Color] which has won the game whose final state is
-    /// represented by the current Position. It returns [`Color::None`] if the game
-    /// is a draw. See the documentation for [`Board::winner`] for examples.
+    /// winner returns the Color which has won the game. It returns [`Color::None`]
+    /// if the game is a draw. If [`Board::is_game_over`] is false, then the
+    /// behavior of this function is undefined.
+    /// ```
+    /// use mexx::ataxx::*;
+    /// use std::str::FromStr;
+    ///
+    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0").unwrap();
+    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0").unwrap();
+    /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100").unwrap();
+    ///
+    /// assert_eq!(white_win.winner(), Color::White);
+    /// assert_eq!(black_win.winner(), Color::Black);
+    /// assert_eq!(draw_game.winner(), Color::None);
+    /// ```
     pub fn winner(&self) -> Color {
         debug_assert!(self.is_game_over());
 
@@ -417,7 +402,18 @@ impl Position {
 impl Position {
     /// after_move returns a new Position which occurs when the given Move is
     /// played on the current Position. Its behavior is undefined if the given
-    /// Move is illegal. See [`Board::make_move`] for more examples.
+    /// Move is illegal.
+    /// ```
+    /// use mexx::ataxx::*;
+    /// use std::str::FromStr;
+    ///
+    /// let mut pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
+    /// let new_pos = Position::from_str("xx4o/7/7/7/7/7/o5x o 0").unwrap();
+    ///
+    /// let mov = Move::new_single(Square::B7);
+    ///
+    /// assert_eq!(pos.after_move(mov).checksum, new_pos.checksum);
+    /// ```
     pub fn after_move(&self, m: Move) -> Position {
         let stm = self.side_to_move;
 
@@ -470,9 +466,18 @@ impl Position {
 
 impl Position {
     /// generate_moves generates the legal moves in the current Position and
-    /// returns a MoveList containing all the moves. It is a wrapper on top of the
-    /// more general generate_moves_into. See [`Board::generate_moves`] for more
-    /// usage information and examples.
+    /// returns a [`MoveList`] containing all the moves. It is a wrapper on top of
+    /// the more general [`Position::generate_moves_into<T>`].
+    /// ```
+    /// use mexx::ataxx::*;
+    /// use std::str::FromStr;
+    ///
+    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
+    /// let movelist = position.generate_moves();
+    ///
+    /// // There are 16 possible moves in startpos.
+    /// assert_eq!(movelist.len(), 16);
+    /// ```
     pub fn generate_moves(&self) -> MoveList {
         let mut movelist = MoveList::new();
         self.generate_moves_into(&mut movelist);
@@ -480,9 +485,20 @@ impl Position {
     }
 
     /// generate_moves_into generates all the legal moves in the current Position
-    /// and adds them/ to the given movelist. The type of the movelist must
-    /// implement the MoveStore trait. See [`Board::generate_moves_into<T>`] for
-    /// more usage information and examples.
+    /// and adds them to the given movelist. The type of the movelist must
+    /// implement the [`MoveStore`] trait.
+    /// ```
+    /// use mexx::ataxx::*;
+    /// use std::str::FromStr;
+    ///
+    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
+    /// let mut movelist = MoveList::new();
+    ///
+    /// position.generate_moves_into(&mut movelist);
+    ///
+    /// // There are 16 possible moves in startpos.
+    /// assert_eq!(movelist.len(), 16);
+    /// ```
     pub fn generate_moves_into<T: MoveStore>(&self, movelist: &mut T) {
         if self.is_game_over() {
             // Game is over, so don't generate any moves.
@@ -524,9 +540,17 @@ impl Position {
     }
 
     /// count_moves returns the number of legal moves in the current Position. It
-    /// is faster than calling generate_moves or generate_moves_into and then
-    /// finding the length of the movelist. See [`Board::generate_moves_into<T>`]
-    /// for more usage information and examples.
+    /// is faster than calling [`Position::generate_moves`] or
+    ///  [`Position::generate_moves_into<T>`] and then finding the length.
+    /// ```
+    /// use mexx::ataxx::*;
+    /// use std::str::FromStr;
+    ///
+    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
+    ///
+    /// // There are 16 possible moves in startpos.
+    /// assert_eq!(position.count_moves(), 16);
+    /// ```
     pub fn count_moves(&self) -> usize {
         if self.is_game_over() {
             // Game is over, so don't generate any moves.
@@ -570,25 +594,53 @@ impl Position {
 /// PositionParseErr represents an error encountered while parsing
 /// the given FEN position field into a valid Position.
 #[derive(Debug)]
-pub enum PositionParseErr {
+pub enum PositionParseError {
+    TooManyFields,
+
+    /// A jump spec was too big for the current rank.
     JumpTooLong,
-    // A jump spec was too big for the current rank.
+    /// Invalid character in Square spec.
     InvalidColorIdent,
-    // Invalid character in Square spec.
+    /// Insufficient number of Square spec entries.
     FileDataIncomplete,
-    // Insufficient number of Square spec entries.
-    TooManyFields, // More fields in string spec than Ranks.
+    /// More fields in string spec than Ranks.
+    TooManyRanks,
+
+    BadSideToMove(ColorParseError),
+    BadHalfMoveClock(ParseIntError),
+}
+
+impl From<ColorParseError> for PositionParseError {
+    fn from(value: ColorParseError) -> Self {
+        Self::BadSideToMove(value)
+    }
+}
+
+impl From<ParseIntError> for PositionParseError {
+    fn from(value: ParseIntError) -> Self {
+        Self::BadHalfMoveClock(value)
+    }
 }
 
 // FromStr implements parsing of the position field in a FEN.
 impl FromStr for Position {
-    type Err = PositionParseErr;
+    type Err = PositionParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts = s.split(' ').collect::<Vec<&str>>();
+
+        if parts.len() != 3 {
+            return Err(PositionParseError::TooManyFields);
+        }
+
+        let pos = parts[0];
+        let stm = parts[1];
+        let hmc = parts[2];
+
         let mut position = Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Color::None);
 
         // Spilt the position spec by the Ranks which are separated by '/'.
-        let ranks: Vec<&str> = s.split('/').collect();
+        let ranks: Vec<&str> = pos.split('/').collect();
 
         let mut rank = Ok(Rank::Seventh);
         let mut file = Ok(File::A);
@@ -597,14 +649,14 @@ impl FromStr for Position {
         for rank_data in ranks {
             // Rank pointer ran out, but data carried on.
             if rank.is_err() {
-                return Err(PositionParseErr::TooManyFields);
+                return Err(PositionParseError::TooManyRanks);
             }
 
             // Iterate over the Square specs in the Rank spec.
             for data in rank_data.chars() {
                 // Check if a jump spec was too big and we landed on an invalid File.
                 if file.is_err() {
-                    return Err(PositionParseErr::JumpTooLong);
+                    return Err(PositionParseError::JumpTooLong);
                 }
                 let square = Square::new(file.unwrap(), rank.unwrap());
                 match data {
@@ -616,11 +668,11 @@ impl FromStr for Position {
                         file =
                             File::try_from(file.unwrap() as usize + data as usize - '1' as usize);
                         if file.is_err() {
-                            return Err(PositionParseErr::JumpTooLong);
+                            return Err(PositionParseError::JumpTooLong);
                         }
                     }
 
-                    _ => return Err(PositionParseErr::InvalidColorIdent),
+                    _ => return Err(PositionParseError::InvalidColorIdent),
                 }
 
                 // On to the next Square spec in the Rank spec.
@@ -630,13 +682,16 @@ impl FromStr for Position {
             // After rank data runs out, file pointer should be
             // at the last file, i.e, rank is completely filled.
             if file.is_ok() {
-                return Err(PositionParseErr::FileDataIncomplete);
+                return Err(PositionParseError::FileDataIncomplete);
             }
 
             // Switch rank pointer and reset file pointer.
             rank = Rank::try_from((rank.unwrap() as usize).wrapping_sub(1));
             file = Ok(File::A);
         }
+
+        position.side_to_move = Color::from_str(stm)?;
+        position.half_move_clock = hmc.parse::<u8>()?;
 
         // Calculate the Hash value for the Position.
         position.checksum = Hash::new(
