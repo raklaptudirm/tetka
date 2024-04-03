@@ -1,0 +1,28 @@
+name: Mexx - Continuous Integration
+
+on:
+  - push
+  - pull_request
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+
+    name: Cargo - Build & Test - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+
+      - run: cargo clippy --verbose
+      - run: cargo build --verbose
+      - run: cargo test --verbose
