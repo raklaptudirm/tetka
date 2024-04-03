@@ -60,7 +60,7 @@ impl Board {
 
     /// position returns a copy of the current Position on the Board.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
@@ -74,7 +74,7 @@ impl Board {
 
     /// side_to_move returns the current Color to move on the Board.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
@@ -86,7 +86,7 @@ impl Board {
 
     /// checksum returns a semi-unique Hash to identify the Position by.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
@@ -148,7 +148,7 @@ impl Board {
 
     /// undo_move un-plays the last played Move on the Board.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let mut board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
@@ -257,7 +257,7 @@ impl Position {
 
     /// put puts the given piece represented by its Color on the given Square.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mut position = Position::new(
     ///     BitBoard::EMPTY,
@@ -286,7 +286,7 @@ impl Position {
 
     /// at returns the Color of the piece present on the given Square.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let position = Position::new(
     ///     BitBoard::UNIVERSE,
@@ -309,7 +309,7 @@ impl Position {
     /// given Color. Only the Squares with a piece of the given Color on them are
     /// contained inside the returned BitBoard.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let position = Position::new(
     ///     BitBoard::UNIVERSE,
@@ -326,7 +326,7 @@ impl Position {
 impl Position {
     /// is_game_over checks if the game is over, i.e. is a win or a draw.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0").unwrap();
@@ -351,7 +351,7 @@ impl Position {
     /// if the game is a draw. If [`Board::is_game_over`] is false, then the
     /// behavior of this function is undefined.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0").unwrap();
@@ -404,7 +404,7 @@ impl Position {
     /// played on the current Position. Its behavior is undefined if the given
     /// Move is illegal.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let mut pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
@@ -469,7 +469,7 @@ impl Position {
     /// returns a [`MoveList`] containing all the moves. It is a wrapper on top of
     /// the more general [`Position::generate_moves_into<T>`].
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
@@ -488,7 +488,7 @@ impl Position {
     /// and adds them to the given movelist. The type of the movelist must
     /// implement the [`MoveStore`] trait.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
@@ -543,7 +543,7 @@ impl Position {
     /// is faster than calling [`Position::generate_moves`] or
     ///  [`Position::generate_moves_into<T>`] and then finding the length.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();

@@ -40,7 +40,7 @@ impl Square {
 
     /// new creates a new Square from the given File and Rank.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(Square::new(File::A, Rank::First), Square::A1);
     /// ```
@@ -50,7 +50,7 @@ impl Square {
 
     /// file returns the File of the current Square.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(Square::A1.file(), File::A);
     /// ```
@@ -61,7 +61,7 @@ impl Square {
 
     /// rank returns the Rank of the current Square.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(Square::A1.rank(), Rank::First);
     /// ```
@@ -72,7 +72,7 @@ impl Square {
 
     /// north returns the Square to the North of this one.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(Square::D4.north(), Square::D5);
     /// ```
@@ -82,7 +82,7 @@ impl Square {
 
     /// south returns the Square to the South of this one.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(Square::D4.south(), Square::D3);
     /// ```
@@ -92,7 +92,7 @@ impl Square {
 
     /// east returns the Square to the East of this one.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(Square::D4.east(), Square::E4);
     /// ```
@@ -102,7 +102,7 @@ impl Square {
 
     /// west returns the Square to the West of this one.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(Square::D4.west(), Square::C4);
     /// ```
@@ -128,7 +128,7 @@ impl FromStr for Square {
     /// for [`File::FromStr`](File::from_str) and [`Rank::FromStr`](Rank::from_str).
     /// It is effectively the inverse operation of Display.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// assert_eq!(Square::from_str("a1").unwrap(), Square::A1);
@@ -174,7 +174,7 @@ impl fmt::Display for Square {
     /// `<file>` and `<rank>` are formatted, see the documentation for
     /// `File::Display` and `Rank::Display` trait implementations.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(Square::A1.to_string(), "a1");
     /// ```
@@ -226,7 +226,7 @@ impl FromStr for File {
     /// corresponding File value. String representations are lowercase alphabets
     ///  from a to g which represent Files from [`File::A`] to [`File::G`].
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// assert_eq!(File::from_str("a").unwrap(), File::A);
@@ -266,7 +266,7 @@ impl fmt::Display for File {
     /// Display formats the given File into a string. Specifically,
     /// it formats the File into a lowercase letter representing that File.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(File::A.to_string(), "a");
     /// ```
@@ -319,7 +319,7 @@ impl FromStr for Rank {
     /// decimal digits from 1 to 7 which represent the Ranks from
     /// [`Rank::First`] to [`Rank::Seventh`] respectively.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// assert_eq!(Rank::from_str("1").unwrap(), Rank::First);
@@ -359,7 +359,7 @@ impl fmt::Display for Rank {
     /// Display formats the given Rank into a string. Specifically, it formats
     /// the Rank into a numerical digit from 1-7 representing that Rank.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(Rank::First.to_string(), "1");
     /// ```

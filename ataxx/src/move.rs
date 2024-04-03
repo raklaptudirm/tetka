@@ -37,7 +37,7 @@ impl Move {
     pub const NULL: Move = Move(1 << 15);
     /// PASS Move represents a no move, where only the side to move changes.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
@@ -54,7 +54,7 @@ impl Move {
     /// target Square. For a singular Move, [`Move::source`] and [`Move::target`]
     /// are equal since the source Square is irrelevant to the Move.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mov = Move::new_single(Square::A1);
     ///
@@ -70,7 +70,7 @@ impl Move {
     /// target Square. These Squares can be recovered with the [`Move::source`] and
     /// [`Move::target`] methods respectively.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
@@ -89,7 +89,7 @@ impl Move {
     /// Source returns the source Square of the moving piece. This is equal to the
     /// target Square if the given Move is of singular type.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
@@ -105,7 +105,7 @@ impl Move {
 
     /// Target returns the target Square of the moving piece.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
@@ -122,7 +122,7 @@ impl Move {
     /// is_single checks if the given Move is singular in nature. The result of this
     /// function for [`Move::NULL`] and [`Move::PASS`] is undefined.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let sing = Move::new_single(Square::A1);
     /// let jump = Move::new(Square::A1, Square::A3);
@@ -143,7 +143,7 @@ impl fmt::Display for Move {
     /// refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`, while
     /// [`Move::PASS`] is formatted as `0000`.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let null = Move::NULL;
     /// let pass = Move::PASS;
@@ -204,7 +204,7 @@ pub struct MoveList {
 impl MoveList {
     /// new creates an empty MoveList ready for use.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let movelist = MoveList::new();
     ///
@@ -242,7 +242,7 @@ impl MoveList {
 impl MoveStore for MoveList {
     /// push adds the given move to the MoveList.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
@@ -259,7 +259,7 @@ impl MoveStore for MoveList {
 
     /// len returns the length of the MoveList.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mut movelist = MoveList::new();
     ///

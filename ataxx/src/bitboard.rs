@@ -27,7 +27,7 @@ use crate::{File, Rank, Square};
 /// Methods and overloaded operators provide support for
 /// various set operations on the BitBoard.
 /// ```
-/// use mexx::ataxx::*;
+/// use ataxx::*;
 ///
 /// let a1 = BitBoard::from(Square::A1);
 /// let b1 = BitBoard::from(Square::B1);
@@ -49,7 +49,7 @@ pub struct BitBoard(pub u64);
 /// bitboard is a macro which allows creation of BitBoard values from their
 /// graphical representation with (.)s and (X)s inside the macro call.
 /// ```
-/// use mexx::ataxx::*;
+/// use ataxx::*;
 ///
 /// assert_eq!(BitBoard::file(File::B) | Square::G7, bitboard! {
 ///     . X . . . . X
@@ -120,7 +120,7 @@ pub use bitboard;
 impl BitBoard {
     /// EMPTY is an empty BitBoard containing no Squares.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(BitBoard::EMPTY, bitboard! {
     ///     . . . . . . .
@@ -136,7 +136,7 @@ impl BitBoard {
 
     /// UNIVERSE is a filled BitBoard containing all Squares.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(BitBoard::UNIVERSE, bitboard! {
     ///     X X X X X X X
@@ -153,7 +153,7 @@ impl BitBoard {
     /// is_disjoint checks if the two BitBoards are disjoint, i.e. don't have
     /// any squares in common among themselves.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert!( BitBoard::UNIVERSE.is_disjoint(BitBoard::EMPTY));
     /// assert!(!BitBoard::UNIVERSE.is_disjoint(BitBoard::UNIVERSE));
@@ -167,7 +167,7 @@ impl BitBoard {
     /// all the squares in the target are also present in the given BitBoard.
     /// ```
     /// use std::sync::atomic::fence;
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert!( BitBoard::UNIVERSE.is_subset(BitBoard::EMPTY));
     /// assert!(!BitBoard::EMPTY.is_subset(BitBoard::UNIVERSE));
@@ -180,7 +180,7 @@ impl BitBoard {
     /// is_superset checks if the given BitBoard is a superset of the target, i.e.
     /// all the squares in the given BitBoard are also present in the target.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert!(!BitBoard::UNIVERSE.is_superset(BitBoard::EMPTY));
     /// assert!( BitBoard::EMPTY.is_superset(BitBoard::UNIVERSE));
@@ -192,7 +192,7 @@ impl BitBoard {
 
     /// is_empty checks if the target BitBoard is empty.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert!( BitBoard::EMPTY.is_empty());
     /// assert!(!BitBoard::UNIVERSE.is_empty());
@@ -204,7 +204,7 @@ impl BitBoard {
 
     /// cardinality returns the number of Squares present in the BitBoard.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(BitBoard::EMPTY.cardinality(), 0);
     /// assert_eq!(BitBoard::UNIVERSE.cardinality(), Square::N);
@@ -215,7 +215,7 @@ impl BitBoard {
 
     /// contains checks if the BitBoard contains the given Square.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert!(!BitBoard::EMPTY.contains(Square::A1));
     /// assert!( BitBoard::UNIVERSE.contains(Square::A1));
@@ -227,7 +227,7 @@ impl BitBoard {
 
     /// north returns a new BitBoard with all the squares shifted to the north.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// assert_eq!(BitBoard::rank(Rank::First).north(), bitboard! {
     ///     . . . . . . .
     ///     . . . . . . .
@@ -244,7 +244,7 @@ impl BitBoard {
 
     /// south returns a new BitBoard with all the squares shifted to the south.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// assert_eq!(BitBoard::rank(Rank::Seventh).south(), bitboard! {
     ///     . . . . . . .
     ///     X X X X X X X
@@ -261,7 +261,7 @@ impl BitBoard {
 
     /// east returns a new BitBoard with all the squares shifted to the east.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// assert_eq!(BitBoard::file(File::A).east(), bitboard! {
     ///     . X . . . . .
     ///     . X . . . . .
@@ -278,7 +278,7 @@ impl BitBoard {
 
     /// west returns a new BitBoard with all the squares shifted to the west.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     /// assert_eq!(BitBoard::file(File::G).west(), bitboard! {
     ///     . . . . . X .
     ///     . . . . . X .
@@ -295,7 +295,7 @@ impl BitBoard {
 
     /// insert puts the given Square into the BitBoard.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mut bb = BitBoard::EMPTY;
     /// bb.insert(Square::A1);
@@ -308,7 +308,7 @@ impl BitBoard {
 
     /// remove removes the given Square from the BitBoard.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mut bb = BitBoard::UNIVERSE;
     /// bb.remove(Square::A1);
@@ -322,7 +322,7 @@ impl BitBoard {
     /// pop_lsb pops the least significant Square from the BitBoard, i.e. it
     /// removes the lsb from the BitBoard and returns its value.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mut bb = BitBoard::UNIVERSE;
     /// assert_eq!(bb.pop_lsb(), Square::A1);
@@ -339,7 +339,7 @@ impl BitBoard {
     /// pop_msb pops the most significant Square from the BitBoard i.e. it
     /// removes the msb from the BitBoard and returns its value.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// let mut bb = BitBoard::UNIVERSE;
     /// assert_eq!(bb.pop_msb(), Square::G7);
@@ -355,7 +355,7 @@ impl BitBoard {
 
     /// get_lsb returns the least significant Square from the BitBoard.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(BitBoard::UNIVERSE.lsb(), Square::A1);
     /// ```
@@ -366,7 +366,7 @@ impl BitBoard {
 
     /// get_msb returns the most significant Square from the BitBoard.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(BitBoard::UNIVERSE.msb(), Square::G7);
     /// ```
@@ -487,7 +487,7 @@ impl fmt::Debug for BitBoard {
 impl BitBoard {
     /// file returns a BitBoard containing all the squares from the given File.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(BitBoard::file(File::A), bitboard! {
     ///     X . . . . . .
@@ -505,7 +505,7 @@ impl BitBoard {
 
     /// rank returns a BitBoard containing all the squares from the given Rank.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(BitBoard::rank(Rank::First), bitboard! {
     ///     . . . . . . .
@@ -523,7 +523,7 @@ impl BitBoard {
 
     /// single returns the targets of a singular Move from the given Square.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(BitBoard::single(Square::A1), bitboard! {
     ///     . . . . . . .
@@ -541,7 +541,7 @@ impl BitBoard {
 
     /// double returns the targets of a jump Move from the given Square.
     /// ```
-    /// use mexx::ataxx::*;
+    /// use ataxx::*;
     ///
     /// assert_eq!(BitBoard::double(Square::A1), bitboard! {
     ///     . . . . . . .
