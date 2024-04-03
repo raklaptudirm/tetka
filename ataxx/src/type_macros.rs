@@ -1,4 +1,5 @@
 #[macro_export]
+#[doc(hidden)]
 macro_rules! impl_from_integer_for_enum {
     (for $type:ident: $($num:ident, $fn:path;)*) => {$(
         impl TryFrom<$num> for $type {
@@ -24,6 +25,7 @@ macro_rules! impl_from_integer_for_enum {
 pub use impl_from_integer_for_enum;
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! impl_unary_ops_for_tuple {
     (for $type:ident: $($trait:path, $fn:ident, $op:tt;)*) => {$(
         impl $trait for $type {
@@ -40,6 +42,7 @@ macro_rules! impl_unary_ops_for_tuple {
 pub use impl_unary_ops_for_tuple;
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! impl_binary_ops_for_tuple {
     (for $type:ident: $($trait:path, $fn:ident, $op:tt;)*) => {$(
         impl $trait for $type {
@@ -56,6 +59,7 @@ macro_rules! impl_binary_ops_for_tuple {
 pub use impl_binary_ops_for_tuple;
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! impl_assign_ops_for_tuple {
     (for $type:ident: $($trait:path, $fn:ident, $op:tt;)*) => {$(
         impl $trait for $type {
@@ -70,6 +74,7 @@ macro_rules! impl_assign_ops_for_tuple {
 pub use impl_assign_ops_for_tuple;
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! impl_from_integer_for_tuple {
     (for $type:ident $root_type:ident: $($num:ident,)*) => {$(
         impl From<$num> for $type {
