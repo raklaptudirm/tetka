@@ -18,7 +18,7 @@ use std::str::FromStr;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-use crate::util::type_macros;
+use crate::type_macros;
 
 /// Color represents all the possible colors that an ataxx piece can have,
 /// specifically White, Black, and None(no Color/no piece).

@@ -18,11 +18,11 @@ use std::str::FromStr;
 
 use strum::IntoEnumIterator;
 
-use super::ColorParseError;
 #[rustfmt::skip]
-use super::{
+use crate::{
     BitBoard, Color, File, Hash, Move,
     MoveList, MoveStore, Rank, Square,
+    ColorParseError,
 };
 
 /// Board implements an ataxx game board which can start from a given

@@ -14,7 +14,7 @@
 use std::fmt;
 use std::mem::MaybeUninit;
 
-use crate::ataxx::Square;
+use crate::Square;
 
 /// Move represents an Ataxx move which can be played on the Board.
 #[derive(Copy, Clone, PartialEq, Eq, Default)]

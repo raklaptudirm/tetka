@@ -17,9 +17,8 @@ use std::ops;
 use num_derive::FromPrimitive;
 use strum::IntoEnumIterator;
 
-use crate::util::type_macros;
-
-use super::{File, Rank, Square};
+use crate::type_macros;
+use crate::{File, Rank, Square};
 
 /// BitBoard represents a set of squares as a 64 bit bitset.
 /// A BitBoard contains a Square if the 1 << square as usize
@@ -115,6 +114,7 @@ macro_rules! bitboard {
         compile_error!("Expected 49 squares")
     };
 }
+#[allow(unused_imports)]
 pub use bitboard;
 
 impl BitBoard {

@@ -18,7 +18,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use strum_macros::EnumIter;
 
-use crate::util::type_macros;
+use crate::type_macros;
 
 /// Square represents all the squares present on an Ataxx Board.
 /// The index of each Square is equal to `rank-index * 8 + file-index`.

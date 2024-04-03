@@ -15,3 +15,7 @@ mod color;
 mod hash;
 mod r#move;
 mod square;
+
+// Private modules.
+#[doc(hidden)]
+pub mod type_macros;
