@@ -204,6 +204,12 @@ impl FromStr for Board {
     }
 }
 
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.current_pos())
+    }
+}
+
 impl Board {
     /// generate_moves generates the legal Moves present in the current Position
     /// on the Board into a [MoveList] and returns it. It is a wrapper on top of
