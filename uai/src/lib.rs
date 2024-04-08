@@ -1,27 +1,21 @@
 use std::collections::{HashMap, HashSet};
-use std::fmt;
 use std::io;
 use std::io::BufRead;
+use std::sync::{Arc, Mutex};
+use std::{fmt, thread};
 
-pub struct Client<T> {
-    context: T,
+pub struct Client<T: Send> {
     commands: HashMap<String, Command<T>>,
 }
 
-impl<T> Client<T> {
-    pub fn new(context: T) -> Client<T> {
-        Client {
-            context,
-            commands: HashMap::new(),
-        }
-    }
-
+impl<T: Send + 'static> Client<T> {
     pub fn add_command(&mut self, name: &str, cmd: Command<T>) {
         self.commands.insert(name.to_string(), cmd);
     }
 
-    pub fn start(&mut self) {
+    pub fn start(&mut self, context: T) {
         let stdin = io::stdin();
+        let context = Arc::new(Mutex::new(context));
 
         'reading: for line in stdin.lock().lines() {
             let line = line.unwrap();
@@ -58,7 +52,7 @@ impl<T> Client<T> {
                 args = &args[yank..];
             }
 
-            match cmd.run(&mut self.context, &flags) {
+            match cmd.run(&context, flags) {
                 RunError::None => (),
                 RunError::Quit => break,
                 RunError::Error(o_o) => println!("{}", o_o),
@@ -71,22 +65,40 @@ impl<T> Client<T> {
     }
 }
 
-type RunFn<T> = fn(&mut T, &Flags) -> Result<(), RunError>;
+impl<T: Sync + Send> Default for Client<T> {
+    fn default() -> Self {
+        Client {
+            commands: HashMap::new(),
+        }
+    }
+}
+
+type RunFn<T> = fn(Arc<Mutex<T>>, Flags) -> Result<(), RunError>;
 
 pub struct Command<T> {
     pub run_fn: RunFn<T>,
     pub flags: HashMap<String, Flag>,
+    pub parallel: bool,
 }
 
-impl<T> Command<T> {
+impl<T: Send + 'static> Command<T> {
     pub fn new(func: RunFn<T>) -> Command<T> {
         Command {
             run_fn: func,
             flags: Default::default(),
+            parallel: false,
         }
     }
 
-    pub fn run(&self, context: &mut T, flags: &Flags) -> RunError {
+    pub fn run(&self, context: &Arc<Mutex<T>>, flags: Flags) -> RunError {
+        let context = Arc::clone(context);
+        let func = self.run_fn;
+
+        if self.parallel {
+            thread::spawn(move || func(context, flags));
+            return RunError::None;
+        }
+
         match (self.run_fn)(context, flags) {
             Ok(_) => RunError::None,
             Err(err) => err,
