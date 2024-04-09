@@ -2,14 +2,14 @@ use std::collections::{HashMap, HashSet};
 use std::io;
 use std::io::BufRead;
 use std::sync::{Arc, Mutex};
-use std::{fmt, thread};
+use std::thread;
 
-pub struct Client<T: Send> {
-    commands: HashMap<String, Command<T>>,
+pub struct Client<T: Send, E: RunError> {
+    commands: HashMap<String, Command<T, E>>,
 }
 
-impl<T: Send + 'static> Client<T> {
-    pub fn add_command(&mut self, name: &str, cmd: Command<T>) {
+impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
+    pub fn add_command(&mut self, name: &str, cmd: Command<T, E>) {
         self.commands.insert(name.to_string(), cmd);
     }
 
@@ -53,10 +53,10 @@ impl<T: Send + 'static> Client<T> {
             }
 
             match cmd.run(&context, flags) {
-                RunError::None => (),
-                RunError::Quit => break,
-                RunError::Error(o_o) => println!("{}", o_o),
-                RunError::Fatal(o_o) => {
+                RunErrorType::None => (),
+                RunErrorType::Quit => break,
+                RunErrorType::Error(o_o) => println!("{}", o_o),
+                RunErrorType::Fatal(o_o) => {
                     println!("{}", o_o);
                     break;
                 }
@@ -65,24 +65,24 @@ impl<T: Send + 'static> Client<T> {
     }
 }
 
-impl<T: Sync + Send> Default for Client<T> {
+impl<T: Send, E: RunError> Default for Client<T, E> {
     fn default() -> Self {
-        Client {
+        Client::<T, E> {
             commands: HashMap::new(),
         }
     }
 }
 
-type RunFn<T> = fn(Arc<Mutex<T>>, Flags) -> Result<(), RunError>;
+type RunFn<T, E> = fn(Arc<Mutex<T>>, Flags) -> Result<(), E>;
 
-pub struct Command<T> {
-    pub run_fn: RunFn<T>,
+pub struct Command<T, E: RunError> {
+    pub run_fn: RunFn<T, E>,
     pub flags: HashMap<String, Flag>,
     pub parallel: bool,
 }
 
-impl<T: Send + 'static> Command<T> {
-    pub fn new(func: RunFn<T>) -> Command<T> {
+impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
+    pub fn new(func: RunFn<T, E>) -> Command<T, E> {
         Command {
             run_fn: func,
             flags: Default::default(),
@@ -90,18 +90,18 @@ impl<T: Send + 'static> Command<T> {
         }
     }
 
-    pub fn run(&self, context: &Arc<Mutex<T>>, flags: Flags) -> RunError {
+    pub fn run(&self, context: &Arc<Mutex<T>>, flags: Flags) -> RunErrorType {
         let context = Arc::clone(context);
         let func = self.run_fn;
 
         if self.parallel {
             thread::spawn(move || func(context, flags));
-            return RunError::None;
+            return RunErrorType::None;
         }
 
         match (self.run_fn)(context, flags) {
-            Ok(_) => RunError::None,
-            Err(err) => err,
+            Ok(_) => RunErrorType::None,
+            Err(err) => err.error(),
         }
     }
 
@@ -110,23 +110,16 @@ impl<T: Send + 'static> Command<T> {
     }
 }
 
-pub enum RunError {
+pub trait RunError: Send {
+    fn error(&self) -> RunErrorType;
+}
+
+#[derive(Clone)]
+pub enum RunErrorType {
     None,
     Quit,
     Error(String),
     Fatal(String),
-}
-
-impl From<RunError> for Result<(), RunError> {
-    fn from(value: RunError) -> Self {
-        Err(value)
-    }
-}
-
-impl From<&dyn fmt::Debug> for RunError {
-    fn from(value: &dyn fmt::Debug) -> Self {
-        Self::Error(format!("{:?}", value))
-    }
 }
 
 #[derive(Clone, Copy)]
