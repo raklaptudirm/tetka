@@ -13,6 +13,7 @@
 
 use std::fmt;
 use std::mem::MaybeUninit;
+use std::str::FromStr;
 
 use crate::Square;
 
@@ -133,6 +134,62 @@ impl Move {
     #[inline(always)]
     pub fn is_single(self) -> bool {
         self.source() == self.target()
+    }
+}
+
+#[derive(Debug)]
+pub enum MoveParseError {
+    BadLength(usize),
+    BadSourceSquare(String),
+    BadTargetSquare(String),
+}
+
+impl FromStr for Move {
+    type Err = MoveParseError;
+
+    /// from_str converts the given string representation of a Move into a [Move].
+    /// The formats supported are '0000' for a [Move::PASS], <target> for a singular
+    /// Move, and <source><target> for a jump Move. For how <source> and <target>
+    /// are parsed, take a look at [`Square::FromStr`](Square::from_str). This
+    /// function can be treated as the inverse of [`Move::Display`].
+    /// ```
+    /// use ataxx::*;
+    /// use std::str::FromStr;
+    ///
+    /// let pass = Move::PASS;
+    /// let sing = Move::new_single(Square::A1);
+    /// let jump = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert_eq!(Move::from_str(&pass.to_string()).unwrap(), pass);
+    /// assert_eq!(Move::from_str(&sing.to_string()).unwrap(), sing);
+    /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
+    /// ```
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "0000" {
+            return Ok(Move::PASS);
+        };
+
+        if s.len() != 2 && s.len() != 4 {
+            return Err(MoveParseError::BadLength(s.len()));
+        }
+
+        let source = &s[..2];
+        let source = match Square::from_str(source) {
+            Ok(sq) => sq,
+            Err(_err) => return Err(MoveParseError::BadSourceSquare(source.to_string())),
+        };
+
+        if s.len() < 4 {
+            return Ok(Move::new_single(source));
+        }
+
+        let target = &s[2..];
+        let target = match Square::from_str(target) {
+            Ok(sq) => sq,
+            Err(_err) => return Err(MoveParseError::BadTargetSquare(target.to_string())),
+        };
+
+        Ok(Move::new(source, target))
     }
 }
 
