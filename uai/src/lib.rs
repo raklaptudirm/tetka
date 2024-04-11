@@ -53,13 +53,15 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
             }
 
             match cmd.run(&context, flags) {
-                RunErrorType::None => (),
-                RunErrorType::Quit => break,
-                RunErrorType::Error(o_o) => println!("{}", o_o),
-                RunErrorType::Fatal(o_o) => {
-                    println!("{}", o_o);
-                    break;
-                }
+                Ok(_) => (),
+                Err(err) => match err.error() {
+                    RunErrorType::Quit => break,
+                    RunErrorType::Error(o_o) => println!("{}", o_o),
+                    RunErrorType::Fatal(o_o) => {
+                        println!("{}", o_o);
+                        break;
+                    }
+                },
             };
         }
     }
@@ -90,19 +92,16 @@ impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
         }
     }
 
-    pub fn run(&self, context: &Arc<Mutex<T>>, flags: Flags) -> RunErrorType {
+    pub fn run(&self, context: &Arc<Mutex<T>>, flags: Flags) -> Result<(), E> {
         let context = Arc::clone(context);
         let func = self.run_fn;
 
         if self.parallel {
             thread::spawn(move || func(context, flags));
-            return RunErrorType::None;
+            return Ok(());
         }
 
-        match (self.run_fn)(context, flags) {
-            Ok(_) => RunErrorType::None,
-            Err(err) => err.error(),
-        }
+        (self.run_fn)(context, flags)
     }
 
     pub fn add_flag(&mut self, name: &str, flag: Flag) {
@@ -110,13 +109,35 @@ impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
     }
 }
 
-pub trait RunError: Send {
+pub trait RunError: Send + From<RunErrorType> {
     fn error(&self) -> RunErrorType;
+}
+
+#[macro_export]
+macro_rules! quit {
+    () => {
+        Err(ataxx_uai::RunErrorType::Quit.into())
+    };
+}
+
+#[macro_export]
+macro_rules! error {
+    ($($arg:tt)*) => {
+        {
+            Err(ataxx_uai::RunErrorType::Error(format!($($arg)*)).into())
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! fatal {
+    ($($arg:tt)*) => {
+        Err(ataxx_uai::RunErrorType::Fatal(format!($($arg)*)).into())
+    };
 }
 
 #[derive(Clone)]
 pub enum RunErrorType {
-    None,
     Quit,
     Error(String),
     Fatal(String),
