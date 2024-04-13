@@ -5,6 +5,11 @@ on:
   - pull_request
 
 env:
+  # treat warnings as errors
+  RUSTFLAGS:    -D warnings
+  RUSTDOCFLAGS: -D warnings
+
+  # use colors when printing
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -21,8 +26,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # update rust to latest stable version
       - run: rustup update stable && rustup default stable
 
-      - run: cargo clippy --verbose
-      - run: cargo build --verbose
-      - run: cargo test --verbose
+      - run: cargo clippy # look for lint errors
+      - run: cargo build  # look for build errors
+      - run: cargo test   # look for test errors
+      - run: cargo doc    # look for bad documentation
