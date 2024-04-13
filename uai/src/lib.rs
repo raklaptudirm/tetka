@@ -205,6 +205,9 @@ impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
 /// achieved by requiring conversions from and into [`RunErrorType`].
 pub trait RunError: Send + From<RunErrorType> + Into<RunErrorType> {}
 
+/// `quit!()` resolves to a [`Err(~RunErrorType::Quit)`](RunErrorType::Quit)
+/// kind of error, and thus can be called by itself inside a Command to instruct
+/// the Client to quit itself and stop executing commands.
 #[macro_export]
 macro_rules! quit {
     () => {
@@ -212,6 +215,10 @@ macro_rules! quit {
     };
 }
 
+/// `error!()` resolves to a [`Err(~RunErrorType::Error)`](RunErrorType::Error)
+/// kind of error, and thus can be called by itself inside a Command to exit the
+/// Command with the given error. It supports the same arguments as the
+/// [`format!`] macro.
 #[macro_export]
 macro_rules! error {
     ($($arg:tt)*) => {
@@ -221,6 +228,24 @@ macro_rules! error {
     };
 }
 
+/// `error_val!()` resolves to a `E` value which represents a
+/// [`RunErrorType::Error`] kind of error. It can be used to simplify creating
+/// such error values where necessary, for example in conversion functions. If
+/// this value will be returned from a Command, use the [`error!`] macro instead.
+/// This macro has the same arguments as the [`error!`] macro.
+#[macro_export]
+macro_rules! error_val {
+    ($($arg:tt)*) => {
+        {
+            ataxx_uai::RunErrorType::Error(format!($($arg)*)).into()
+        }
+    };
+}
+
+/// `fatal!()` resolves to a [`Err(~RunErrorType::Fatal)`](RunErrorType::Fatal)
+/// kind of error, and thus can be called by itself inside a Command to exit the
+/// Command with the given error and to quit the Client. It is similar to the
+/// [`error!`] macro and supports the same arguments.
 #[macro_export]
 macro_rules! fatal {
     ($($arg:tt)*) => {
