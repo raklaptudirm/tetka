@@ -96,7 +96,7 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
             // Parsing complete, run the Command and handle any errors.
             match cmd.run(&context, flags) {
                 Ok(_) => (),
-                Err(err) => match err.error() {
+                Err(err) => match err.into() {
                     // Quit is a directive to quit the Client, so break
                     // out of the main Command loop reading from stdin.
                     RunErrorType::Quit => break,
@@ -201,11 +201,9 @@ impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
 
 /// RunError is the interface which the Client uses to understand custom errors
 /// returned by a Command. It allows the user to implement their own error types
-/// while allowing the Client to interpret and use those errors.
-pub trait RunError: Send + From<RunErrorType> {
-    /// error returns the current error as a [`RunErrorType`].
-    fn error(&self) -> RunErrorType;
-}
+/// while allowing the Client to interpret and use those errors. This is
+/// achieved by requiring conversions from and into [`RunErrorType`].
+pub trait RunError: Send + From<RunErrorType> + Into<RunErrorType> {}
 
 #[macro_export]
 macro_rules! quit {
