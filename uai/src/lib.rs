@@ -1,3 +1,16 @@
+// Copyright © 2024 Rak Laptudirm <rak@laptudirm.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead};
 use std::sync::{Arc, Mutex};
@@ -12,18 +25,11 @@ pub struct Client<T: Send, E: RunError> {
 }
 
 impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
-    /// add_command adds the given Command to the Client. After this, the Client
-    /// will be able to parse and run that Command when such a request is sent from
-    /// the GUI.
-    pub fn add_command(&mut self, name: &str, cmd: Command<T, E>) {
-        self.commands.insert(name.to_string(), cmd);
-    }
-
     /// start starts the Client so that it can now accept Commands from the GUI and
     /// send Commands back to the GUI as necessary. The Client will return only if
     /// it encounters a fatal error while running a command ([`RunErrorType::Fatal`])
     /// or one of the commands asks the Client to quit ([`RunErrorType::Quit`]).
-    pub fn start(&mut self, context: T) {
+    pub fn start(&self, context: T) {
         // The GUI sends commands to the stdin.
         let stdin = io::stdin();
 
@@ -117,12 +123,36 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
     }
 }
 
-impl<T: Send, E: RunError> Default for Client<T, E> {
-    /// Default value for a Client is a Client with an empty Command schema.
-    fn default() -> Self {
+impl<T: Send, E: RunError> Client<T, E> {
+    /// new creates a new [Client]. The Client can be configured using builder
+    /// methods like [`Client::command`].
+    /// ```rust,ignore
+    /// let client = Client::new()
+    ///     .command("go", go_cmd)
+    ///     .command("perft", perft_cmd);
+    /// ```
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
         Client::<T, E> {
             commands: HashMap::new(),
         }
+    }
+
+    /// command adds the given Command to the given Client. After this, the Client
+    /// will be able to parse and run that Command when such a request is sent from
+    /// the GUI.
+    ///
+    /// command takes ownership of the given Client value and returns that ownership
+    /// after adding the given Command. This allows the usage of the builder pattern
+    /// while creating a new [Client].
+    /// ```rust,ignore
+    /// let client = Client::new()
+    ///     .command("go", go_cmd)
+    ///     .command("perft", perft_cmd);
+    /// ```
+    pub fn command(mut self, name: &str, cmd: Command<T, E>) -> Self {
+        self.commands.insert(name.to_string(), cmd);
+        self
     }
 }
 
@@ -130,7 +160,7 @@ impl<T: Send, E: RunError> Default for Client<T, E> {
 /// with the context (`Arc<Mutex<T>>`) and the flag values ([`FlagValues`]) whenever
 /// the Command is to be executed. It returns a `Result<(), E>` where `E` implements
 /// [`RunError`] and is the error type for the [Client].
-type RunFn<T, E> = fn(Arc<Mutex<T>>, FlagValues) -> Result<(), E>;
+pub type RunFn<T, E> = fn(Arc<Mutex<T>>, FlagValues) -> Result<(), E>;
 
 /// Command represents a runnable UAI command. It contains all the metadata
 /// needed to parse and verify a Command request from the GUI for a Command, and
@@ -147,32 +177,6 @@ pub struct Command<T, E: RunError> {
 }
 
 impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
-    /// new creates a new Command with the given run function. By default the flag
-    /// schema is empty the the Command is run synchronously (`parallel == false`).
-    /// ```rust,ignore
-    /// // new invocation to create a new Command.
-    /// let mut cmd: Command<T, E> = Command::new(|_ctx, _flg| Ok(()));
-    ///
-    /// // Add flags to the Command's flag schema.
-    /// cmd.add_flag("flag1", Flag::Boolean);
-    /// cmd.add_flag("flag2", Flag::Singular);
-    /// cmd.add_flag("flag3", Flag::Array(10));
-    /// cmd.add_flag("flag4", Flag::Variadic);
-    ///
-    /// // Make the command run in parallel.
-    /// cmd.parallel = true;
-    ///
-    /// // Add the Command to the Client.
-    /// client.add_command("cmd", cmd);
-    /// ```
-    pub fn new(func: RunFn<T, E>) -> Command<T, E> {
-        Command {
-            run_fn: func,
-            flags: Default::default(),
-            parallel: false,
-        }
-    }
-
     /// run runs the current Command with the given context and flag values.
     /// A new thread is spawned and detached to run parallel Commands. It returns
     /// the error returned by the Command's execution, or [`Ok`] for parallel.
@@ -192,10 +196,62 @@ impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
         // Run the synchronous Command and return its error.
         func(context, flags)
     }
+}
 
-    // add_flag adds the given Flag to the Command's Flag schema.
-    pub fn add_flag(&mut self, name: &str, flag: Flag) {
+impl<T: Send, E: RunError> Command<T, E> {
+    /// new creates a new Command with the given run function.
+    ///
+    /// By default the flag schema is empty the the Command is run synchronously.
+    ///
+    /// Further configuration of the Command can be done using the builder style
+    /// methods provided on Command, like [`Self::flag`] and [`Self::parallelize`].
+    /// These methods take the ownership of the given Command, make the necessary
+    /// changes and then return it. These allows them to be chained in builder
+    /// pattern style to create fully configured Commands.
+    /// ```rust,ignore
+    /// let cmd: Command<T, E> =
+    ///     // new invocation to create a Command. In this example, a very
+    ///     // simple run function which returns `Ok(())` is provided.
+    ///     Command::new(|_ctx, _flg| Ok(()))
+    ///         // Add flags to the Command's flag schema.
+    ///         .flag("flag1", Flag::Boolean)
+    ///         .flag("flag2", Flag::Singular)
+    ///         .flag("flag3", Flag::Array(10))
+    ///         .flag("flag4", Flag::Variadic)
+    ///         // Make the command run in parallel.
+    ///         .parallelize(true);
+    /// ```
+    pub fn new(func: RunFn<T, E>) -> Command<T, E> {
+        Command {
+            run_fn: func,
+            flags: Default::default(),
+            parallel: false,
+        }
+    }
+
+    /// flag adds the given Flag to the Command's Flag schema.
+    ///
+    /// After a flag is added to a Command, the Client will automatically parse that
+    /// flag and verify its arguments whenever that Command is invoked.
+    ///
+    /// flag is a builder method. Refer to the documentation of [`Command::new`] for
+    /// more information about [Command]'s builder methods.
+    pub fn flag(mut self, name: &str, flag: Flag) -> Self {
         self.flags.insert(name.to_string(), flag);
+        self
+    }
+
+    /// parallelize sets if the Command to be run in a separate thread.
+    ///
+    /// Synchronization of a parallel Command should be done with the help of the
+    /// mutex-locked context that is provided to the Command's run function. The
+    /// Client continues in the main thread while a parallel Command is running.
+    ///
+    /// parallelize is a builder method. Refer to the documentation of
+    /// [`Command::new`] for more information about [Command]'s builder methods.
+    pub fn parallelize(mut self, y: bool) -> Self {
+        self.parallel = y;
+        self
     }
 }
 
