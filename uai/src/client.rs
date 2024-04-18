@@ -15,6 +15,8 @@ use std::collections::HashMap;
 use std::io::{self, BufRead};
 use std::sync::{Arc, Mutex};
 
+use crate::inbuilt;
+
 use super::{Command, FlagValues, RunError, RunErrorType};
 
 /// Client represents an UAI engine client. It can accept and parse commands
@@ -133,9 +135,13 @@ impl<T: Send, E: RunError> Client<T, E> {
     ///     .command("perft", perft_cmd);
     /// ```
     #[allow(clippy::new_without_default)]
+    #[rustfmt::skip]
     pub fn new() -> Self {
         Client::<T, E> {
-            commands: HashMap::new(),
+            commands: HashMap::from([
+                ("quit".into(), inbuilt::quit()),
+                ("isready".into(), inbuilt::isready()),
+            ]),
         }
     }
 

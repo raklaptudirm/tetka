@@ -1,3 +1,5 @@
+pub mod inbuilt;
+
 mod client;
 mod cmd;
 mod flag;

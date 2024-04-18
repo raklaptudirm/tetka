@@ -128,7 +128,7 @@ pub trait RunError: Send + From<RunErrorType> + Into<RunErrorType> {}
 #[macro_export]
 macro_rules! quit {
     () => {
-        Err(ataxx_uai::RunErrorType::Quit.into())
+        Err(RunErrorType::Quit.into())
     };
 }
 
@@ -140,7 +140,7 @@ macro_rules! quit {
 macro_rules! error {
     ($($arg:tt)*) => {
         {
-            Err(ataxx_uai::RunErrorType::Error(format!($($arg)*)).into())
+            Err(RunErrorType::Error(format!($($arg)*)).into())
         }
     };
 }
@@ -154,7 +154,7 @@ macro_rules! error {
 macro_rules! error_val {
     ($($arg:tt)*) => {
         {
-            ataxx_uai::RunErrorType::Error(format!($($arg)*)).into()
+            RunErrorType::Error(format!($($arg)*)).into()
         }
     };
 }
@@ -166,7 +166,7 @@ macro_rules! error_val {
 #[macro_export]
 macro_rules! fatal {
     ($($arg:tt)*) => {
-        Err(ataxx_uai::RunErrorType::Fatal(format!($($arg)*)).into())
+        Err(RunErrorType::Fatal(format!($($arg)*)).into())
     };
 }
 
