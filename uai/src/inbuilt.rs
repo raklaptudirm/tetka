@@ -11,20 +11,56 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashMap;
+
 use crate::{quit, RunErrorType};
+use lazy_static::lazy_static;
 
 pub type Command = crate::Command<Context, RunErrorType>;
 
-pub fn quit() -> Command {
-    Command::new(|_ctx, _flag| quit!())
+lazy_static! {
+    pub static ref COMMANDS: HashMap<String, Command> = HashMap::from(
+        [
+            ("quit", Command::new(|_ctx, _flags| quit!())),
+            (
+                "isready",
+                Command::new(|_ctx, _flags| {
+                    println!("readyok");
+                    Ok(())
+                })
+            ),
+            (
+                "uai",
+                Command::new(|ctx, _flags| {
+                    let ctx = ctx.lock().unwrap();
+
+                    println!("id name {}", ctx.engine);
+                    println!("id author {}", ctx.author);
+                    println!();
+                    println!("uaiok");
+
+                    Ok(())
+                })
+            )
+        ]
+        .map(|a| {
+            let (b, c) = a;
+            (b.to_owned(), c)
+        })
+    );
 }
 
-pub fn isready() -> Command {
-    Command::new(|_ctx, _flag| {
-        println!("readyok");
-        Ok(())
-    })
+#[derive(Clone)]
+pub struct Context {
+    pub engine: String,
+    pub author: String,
 }
 
-#[derive(Default)]
-pub struct Context {}
+impl Default for Context {
+    fn default() -> Self {
+        Context {
+            engine: "Nameless v0.0.0".to_string(),
+            author: "Anonymous".to_string(),
+        }
+    }
+}

@@ -26,7 +26,7 @@ use super::{Command, FlagValues, RunError, RunErrorType};
 /// Commands sent from the GUI are automatically parsed and executed according
 /// to the Command schema provided by the user to the Client.
 pub struct Client<T: Send, E: RunError> {
-    inbuilt: HashMap<String, inbuilt::Command>,
+    context: inbuilt::Context,
     commands: HashMap<String, Command<T, E>>,
 }
 
@@ -41,7 +41,7 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
 
         // Make the context thread safe to allow commands to run in parallel.
         let context = Arc::new(Mutex::new(context));
-        let our_ctx = Arc::new(Mutex::new(Default::default()));
+        let our_ctx = Arc::new(Mutex::new(self.context.clone()));
 
         // Iterate over the lines in the input, since Commands for the GUI are
         // separated by newlines and we want to parse each Command separately.
@@ -73,7 +73,7 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
             }
 
             // Try to find a Command with the given name.
-            let cmd = self.inbuilt.get(cmd_name);
+            let cmd = inbuilt::COMMANDS.get(cmd_name);
             if cmd.is_some() {
                 // Parsing complete, run the Command and handle any errors.
                 match self.run(cmd.unwrap(), &our_ctx, args) {
@@ -158,10 +158,7 @@ impl<T: Send, E: RunError> Client<T, E> {
     #[rustfmt::skip]
     pub fn new() -> Self {
         Client::<T, E> {
-            inbuilt: HashMap::from([
-                ("quit".into(), inbuilt::quit()),
-                ("isready".into(), inbuilt::isready()),
-            ]),
+            context: Default::default(),
             commands: HashMap::new(),
         }
     }
@@ -180,6 +177,16 @@ impl<T: Send, E: RunError> Client<T, E> {
     /// ```
     pub fn command(mut self, name: &str, cmd: Command<T, E>) -> Self {
         self.commands.insert(name.to_string(), cmd);
+        self
+    }
+
+    pub fn engine(mut self, name: &str) -> Self {
+        self.context.engine = name.to_owned();
+        self
+    }
+
+    pub fn author(mut self, name: &str) -> Self {
+        self.context.author = name.to_owned();
         self
     }
 }
