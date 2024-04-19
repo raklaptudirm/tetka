@@ -15,7 +15,9 @@ use std::collections::HashMap;
 use std::io::{self, BufRead};
 use std::sync::{Arc, Mutex};
 
-use crate::inbuilt;
+use std::default::Default;
+
+use crate::{error, inbuilt};
 
 use super::{Command, FlagValues, RunError, RunErrorType};
 
@@ -24,6 +26,7 @@ use super::{Command, FlagValues, RunError, RunErrorType};
 /// Commands sent from the GUI are automatically parsed and executed according
 /// to the Command schema provided by the user to the Client.
 pub struct Client<T: Send, E: RunError> {
+    inbuilt: HashMap<String, inbuilt::Command>,
     commands: HashMap<String, Command<T, E>>,
 }
 
@@ -38,6 +41,7 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
 
         // Make the context thread safe to allow commands to run in parallel.
         let context = Arc::new(Mutex::new(context));
+        let our_ctx = Arc::new(Mutex::new(Default::default()));
 
         // Iterate over the lines in the input, since Commands for the GUI are
         // separated by newlines and we want to parse each Command separately.
@@ -49,80 +53,96 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
             let parts = line.split_whitespace().collect::<Vec<&str>>();
 
             let cmd_name = parts[0]; // The first part is the Command name.
-            let mut args = &parts[1..]; // The others are flags and their args.
+            let args = &parts[1..]; // The others are flags and their args.
 
             // Try to find a Command with the given name.
             let cmd = self.commands.get(cmd_name);
-            if cmd.is_none() {
-                // Command not found, return error and continue.
-                println!("info error command {} not found", cmd_name);
+            if cmd.is_some() {
+                // Parsing complete, run the Command and handle any errors.
+                match self.run(cmd.unwrap(), &context, args) {
+                    Ok(_) => (),
+                    Err(err) => {
+                        println!("{}", err);
+                        if err.should_quit() {
+                            break 'reading;
+                        }
+                    }
+                };
+
                 continue 'reading;
             }
 
-            // The Option<Command> is not None, so it can be safely unwrapped.
-            let cmd = cmd.unwrap();
+            // Try to find a Command with the given name.
+            let cmd = self.inbuilt.get(cmd_name);
+            if cmd.is_some() {
+                // Parsing complete, run the Command and handle any errors.
+                match self.run(cmd.unwrap(), &our_ctx, args) {
+                    Ok(_) => (),
+                    Err(err) => {
+                        println!("{}", err);
+                        if err.should_quit() {
+                            break 'reading;
+                        }
+                    }
+                };
 
-            // Initialize an empty list of the Command's Flags' values.
-            let mut flags: FlagValues = Default::default();
-
-            // The arguments have the following format:
-            // { flag_name { flag_arg... } ... }
-            while !args.is_empty() {
-                let flag_name = args[0]; // The first arg has to be a flag name.
-                args = &args[1..]; // Remove the flag name from the rest of the args.
-
-                // Try to find a flag with the given name.
-                let flag = cmd.flags.get(flag_name);
-                if flag.is_none() {
-                    // Flag not found, return error and continue.
-                    println!("info error flag {} not found", flag_name);
-                    continue 'reading;
-                }
-
-                // The Option<Flag> in not None, so it can be safely unwrapped.
-                let flag = flag.unwrap();
-
-                // Find the number of arguments the Flag expects.
-                let yank = flag.collect(args);
-
-                // Check if args has the required number of arguments.
-                if args.len() < yank {
-                    println!(
-                        "info error flag {} expects {} arguments, found {}",
-                        flag_name,
-                        yank,
-                        args.len(),
-                    );
-                    continue 'reading;
-                }
-
-                // Collect that number of arguments from the remaining args.
-                let collected = &args[..yank];
-                flags.insert(flag_name, *flag, collected);
-                args = &args[yank..];
+                continue 'reading;
             }
 
-            // Parsing complete, run the Command and handle any errors.
-            match cmd.run(&context, flags) {
-                Ok(_) => (),
-                Err(err) => match err.into() {
-                    // Quit is a directive to quit the Client, so break
-                    // out of the main Command loop reading from stdin.
-                    RunErrorType::Quit => break,
-
-                    // Command encountered some simple error, report it
-                    // to the GUI and continue parsing Commands.
-                    RunErrorType::Error(o_o) => println!("info error {}", o_o),
-
-                    // Fatal error encountered, report it to the GUI and quit
-                    // the Client, since this error can't be recovered from.
-                    RunErrorType::Fatal(o_o) => {
-                        println!("info error {}", o_o);
-                        break;
-                    }
-                },
-            };
+            // Command not found, return error and continue.
+            println!("info error command {} not found", cmd_name);
+            continue 'reading;
         }
+    }
+
+    pub fn run<CT: Send + 'static, CE: RunError + 'static>(
+        &self,
+        cmd: &Command<CT, CE>,
+        context: &Arc<Mutex<CT>>,
+        args: &[&str],
+    ) -> Result<(), RunErrorType> {
+        // Initialize an empty list of the Command's Flags' values.
+        let mut flags: FlagValues = Default::default();
+
+        let mut args = args;
+
+        // The arguments have the following format:
+        // { flag_name { flag_arg... } ... }
+        while !args.is_empty() {
+            let flag_name = args[0]; // The first arg has to be a flag name.
+            args = &args[1..]; // Remove the flag name from the rest of the args.
+
+            // Try to find a flag with the given name.
+            let flag = cmd.flags.get(flag_name);
+            if flag.is_none() {
+                // Flag not found, return error and continue.
+                return error!("info error flag {} not found", flag_name);
+            }
+
+            // The Option<Flag> in not None, so it can be safely unwrapped.
+            let flag = flag.unwrap();
+
+            // Find the number of arguments the Flag expects.
+            let yank = flag.collect(args);
+
+            // Check if args has the required number of arguments.
+            if args.len() < yank {
+                return error!(
+                    "info error flag {} expects {} arguments, found {}",
+                    flag_name,
+                    yank,
+                    args.len(),
+                );
+            }
+
+            // Collect that number of arguments from the remaining args.
+            let collected = &args[..yank];
+            flags.insert(flag_name, *flag, collected);
+            args = &args[yank..];
+        }
+
+        // Parsing complete, run the Command and handle any errors.
+        cmd.run(context, flags).map_err(|e| e.into())
     }
 }
 
@@ -138,10 +158,11 @@ impl<T: Send, E: RunError> Client<T, E> {
     #[rustfmt::skip]
     pub fn new() -> Self {
         Client::<T, E> {
-            commands: HashMap::from([
+            inbuilt: HashMap::from([
                 ("quit".into(), inbuilt::quit()),
                 ("isready".into(), inbuilt::isready()),
             ]),
+            commands: HashMap::new(),
         }
     }
 

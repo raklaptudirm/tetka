@@ -12,6 +12,7 @@
 // limitations under the License.
 
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -181,3 +182,23 @@ pub enum RunErrorType {
     /// Fatal represents an unrecoverable error, report and quit the Client.
     Fatal(String),
 }
+
+impl RunErrorType {
+    /// should_quit checks if the current error requires the Client to quit.
+    pub fn should_quit(&self) -> bool {
+        // Except Error, all other variants cause the Client to quit.
+        !matches!(self, Self::Error(_err))
+    }
+}
+
+impl fmt::Display for RunErrorType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RunErrorType::Quit => Ok(()),
+            RunErrorType::Error(o_o) => write!(f, "info error {}", o_o),
+            RunErrorType::Fatal(o_o) => write!(f, "info error {}", o_o),
+        }
+    }
+}
+
+impl RunError for RunErrorType {}
