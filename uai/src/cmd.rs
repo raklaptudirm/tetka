@@ -16,6 +16,8 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use crate::Context;
+
 use super::{Flag, FlagValues};
 
 /// Command represents a runnable UAI command. It contains all the metadata
@@ -23,7 +25,7 @@ use super::{Flag, FlagValues};
 /// to run that Command with the current context and the provided flag values.
 /// `T` is the context type of the [Client], while `E` is the error type. `E`
 /// must implement the [`RunError`] trait to be usable.
-pub struct Command<T, E: RunError> {
+pub struct Command<T: Send, E: RunError> {
     /// run_fn is the function used to run this Command.
     pub run_fn: RunFn<T, E>,
     /// flags is the schema of the Flags this Command accepts.
@@ -38,19 +40,19 @@ impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
     /// the error returned by the Command's execution, or [`Ok`] for parallel.
     pub fn run(&self, context: &Arc<Mutex<T>>, flags: FlagValues) -> Result<(), E> {
         // Clone values which might be moved by spawning a new thread.
-        let context = Arc::clone(context);
+        let context = Context::new(context, flags);
         let func = self.run_fn;
 
         if self.parallel {
             // If the Command is supposed to be run in parallel, spawn a new
             // thread and detach it for its execution. Syncing with the thread
             // should be handled by the user using the context.
-            thread::spawn(move || func(context, flags));
+            thread::spawn(move || func(context));
             return Ok(());
         }
 
         // Run the synchronous Command and return its error.
-        func(context, flags)
+        func(context)
     }
 }
 
@@ -115,7 +117,7 @@ impl<T: Send, E: RunError> Command<T, E> {
 /// with the context (`Arc<Mutex<T>>`) and the flag values ([`FlagValues`]) whenever
 /// the Command is to be executed. It returns a `Result<(), E>` where `E` implements
 /// [`RunError`] and is the error type for the [Client].
-pub type RunFn<T, E> = fn(Arc<Mutex<T>>, FlagValues) -> Result<(), E>;
+pub type RunFn<T, E> = fn(Context<T>) -> Result<(), E>;
 
 /// RunError is the interface which the Client uses to understand custom errors
 /// returned by a Command. It allows the user to implement their own error types
