@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 
 use std::default::Default;
 
-use crate::{error, inbuilt};
+use crate::{error, inbuilt, Parameter};
 
 use super::{Command, FlagValues, RunError, RunErrorType};
 
@@ -46,14 +46,11 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
         // Iterate over the lines in the input, since Commands for the GUI are
         // separated by newlines and we want to parse each Command separately.
         'reading: for line in stdin.lock().lines() {
-            // Get the full String version of the Command.
-            let line = line.unwrap();
-
             // Split the Command into parts by whitespace.
+            let line = line.unwrap();
             let parts = line.split_whitespace().collect::<Vec<&str>>();
 
-            let cmd_name = parts[0]; // The first part is the Command name.
-            let args = &parts[1..]; // The others are flags and their args.
+            let (cmd_name, args) = (parts[0], &parts[1..]);
 
             // Try to find a Command with the given name.
             let cmd = self.commands.get(cmd_name);
@@ -177,6 +174,11 @@ impl<T: Send, E: RunError> Client<T, E> {
     /// ```
     pub fn command(mut self, name: &str, cmd: Command<T, E>) -> Self {
         self.commands.insert(name.to_string(), cmd);
+        self
+    }
+
+    pub fn option(mut self, name: &str, option: Parameter) -> Self {
+        self.context.options.insert(name.to_string(), option);
         self
     }
 

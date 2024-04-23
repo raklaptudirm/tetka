@@ -13,7 +13,7 @@
 
 use std::collections::HashMap;
 
-use crate::{quit, RunErrorType};
+use crate::{quit, Parameter, RunErrorType};
 use lazy_static::lazy_static;
 
 pub type Command = crate::Command<Context, RunErrorType>;
@@ -54,6 +54,8 @@ lazy_static! {
 pub struct Context {
     pub engine: String,
     pub author: String,
+
+    pub options: HashMap<String, Parameter>,
 }
 
 impl Default for Context {
@@ -61,6 +63,7 @@ impl Default for Context {
         Context {
             engine: "Nameless v0.0.0".to_string(),
             author: "Anonymous".to_string(),
+            options: HashMap::new(),
         }
     }
 }
