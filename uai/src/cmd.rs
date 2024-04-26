@@ -16,7 +16,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::Context;
+use crate::{Context, ParameterValues};
 
 use super::{Flag, FlagValues};
 
@@ -38,9 +38,14 @@ impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
     /// run runs the current Command with the given context and flag values.
     /// A new thread is spawned and detached to run parallel Commands. It returns
     /// the error returned by the Command's execution, or [`Ok`] for parallel.
-    pub fn run(&self, context: &Arc<Mutex<T>>, flags: FlagValues) -> Result<(), E> {
+    pub fn run(
+        &self,
+        context: &Arc<Mutex<T>>,
+        flags: FlagValues,
+        options: ParameterValues,
+    ) -> Result<(), E> {
         // Clone values which might be moved by spawning a new thread.
-        let context = Context::new(context, flags);
+        let context = Context::new(context, flags, options);
         let func = self.run_fn;
 
         if self.parallel {

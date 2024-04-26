@@ -26,7 +26,7 @@ use super::{Command, FlagValues, RunError, RunErrorType};
 /// Commands sent from the GUI are automatically parsed and executed according
 /// to the Command schema provided by the user to the Client.
 pub struct Client<T: Send, E: RunError> {
-    context: inbuilt::Context,
+    initial_context: inbuilt::Context,
     commands: HashMap<String, Command<T, E>>,
 }
 
@@ -41,7 +41,7 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
 
         // Make the context thread safe to allow commands to run in parallel.
         let context = Arc::new(Mutex::new(context));
-        let our_ctx = Arc::new(Mutex::new(self.context.clone()));
+        let our_ctx = Arc::new(Mutex::new(self.initial_context.clone()));
 
         // Iterate over the lines in the input, since Commands for the GUI are
         // separated by newlines and we want to parse each Command separately.
@@ -139,7 +139,8 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
         }
 
         // Parsing complete, run the Command and handle any errors.
-        cmd.run(context, flags).map_err(|e| e.into())
+        cmd.run(context, flags, self.initial_context.option_values.clone())
+            .map_err(|e| e.into())
     }
 }
 
@@ -155,7 +156,7 @@ impl<T: Send, E: RunError> Client<T, E> {
     #[rustfmt::skip]
     pub fn new() -> Self {
         Client::<T, E> {
-            context: Default::default(),
+            initial_context: Default::default(),
             commands: HashMap::new(),
         }
     }
@@ -178,17 +179,22 @@ impl<T: Send, E: RunError> Client<T, E> {
     }
 
     pub fn option(mut self, name: &str, option: Parameter) -> Self {
-        self.context.options.insert(name.to_string(), option);
+        self.initial_context
+            .options
+            .insert(name.to_string(), option.clone());
+        self.initial_context
+            .option_values
+            .insert_default(name.to_string(), &option);
         self
     }
 
     pub fn engine(mut self, name: &str) -> Self {
-        self.context.engine = name.to_owned();
+        self.initial_context.engine = name.to_owned();
         self
     }
 
     pub fn author(mut self, name: &str) -> Self {
-        self.context.author = name.to_owned();
+        self.initial_context.author = name.to_owned();
         self
     }
 }

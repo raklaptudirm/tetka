@@ -1,16 +1,21 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::FlagValues;
+use crate::{FlagValues, Number, ParameterValues};
 
 pub struct Context<T: Send> {
     context: Arc<Mutex<T>>,
     flags: FlagValues,
+    options: ParameterValues,
 }
 
 impl<T: Send> Context<T> {
-    pub fn new(context: &Arc<Mutex<T>>, flags: FlagValues) -> Context<T> {
+    pub fn new(context: &Arc<Mutex<T>>, flags: FlagValues, options: ParameterValues) -> Context<T> {
         let context = Arc::clone(context);
-        Context { context, flags }
+        Context {
+            context,
+            flags,
+            options,
+        }
     }
 
     pub fn lock(&self) -> MutexGuard<'_, T> {
@@ -27,5 +32,17 @@ impl<T: Send> Context<T> {
 
     pub fn get_array_flag(&self, name: &str) -> Option<Vec<String>> {
         self.flags.get_array(name)
+    }
+
+    pub fn get_check_option(&self, name: &str) -> Option<bool> {
+        self.options.get_check(name)
+    }
+
+    pub fn get_string_option(&self, name: &str) -> Option<String> {
+        self.options.get_string(name)
+    }
+
+    pub fn get_spin_option(&self, name: &str) -> Option<Number> {
+        self.options.get_spin(name)
     }
 }
