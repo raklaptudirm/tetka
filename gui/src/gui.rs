@@ -66,7 +66,7 @@ impl Gui {
     }
 }
 
-pub struct GuiOptions {
+struct GuiOptions {
     width: i32,
     height: i32,
 
@@ -89,7 +89,7 @@ impl<'a> Drawer<'a> {
         self.draw_board();
     }
 
-    pub fn draw_board(&mut self) {
+    fn draw_board(&mut self) {
         self.drawer.clear_background(Color::BLACK);
 
         for rank in Rank::iter().rev() {
@@ -123,7 +123,7 @@ impl<'a> Drawer<'a> {
         );
     }
 
-    pub fn draw_square(&mut self, sq: Square) {
+    fn draw_square(&mut self, sq: Square) {
         let pc = self.gui.board.at(sq);
         let a = match pc {
             ataxx::Color::White => 0.0,
@@ -158,6 +158,7 @@ impl<'a> Drawer<'a> {
         );
 
         if pc == ataxx::Color::None {
+            // No piece to draw.
             return;
         }
 
@@ -172,7 +173,7 @@ impl<'a> Drawer<'a> {
     }
 }
 
-pub struct Textures {
+struct Textures {
     pieces: Texture2D,
     square: Texture2D,
     border: Texture2D,
@@ -187,7 +188,7 @@ macro_rules! load_png_texture {
 }
 
 impl Textures {
-    pub fn load(rl: &mut RaylibHandle, thread: &RaylibThread) -> Textures {
+    fn load(rl: &mut RaylibHandle, thread: &RaylibThread) -> Textures {
         Textures {
             pieces: load_png_texture!(rl, thread, "../assets/ataxx-pieces.png"),
             square: load_png_texture!(rl, thread, "../assets/ataxx-square.png"),
