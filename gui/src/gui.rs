@@ -92,9 +92,22 @@ impl<'a> Drawer<'a> {
     fn draw_board(&mut self) {
         self.drawer.clear_background(Color::BLACK);
 
+        self.drawer.draw_texture_ex(
+            &self.gui.textures.board,
+            Vector2::new(
+                self.gui.width as f32 / 2.0
+                    - self.gui.textures.board.width() as f32 * self.gui.scale / 2.0,
+                self.gui.height as f32 / 2.0
+                    - self.gui.textures.board.height() as f32 * self.gui.scale / 2.0,
+            ),
+            0.0,
+            self.gui.scale,
+            Color::WHITE,
+        );
+
         for rank in Rank::iter().rev() {
             for file in File::iter() {
-                self.draw_square(Square::new(file, rank));
+                self.draw_piece(Square::new(file, rank));
             }
         }
 
@@ -123,12 +136,12 @@ impl<'a> Drawer<'a> {
         );
     }
 
-    fn draw_square(&mut self, sq: Square) {
+    fn draw_piece(&mut self, sq: Square) {
         let pc = self.gui.board.at(sq);
         let a = match pc {
             ataxx::Color::White => 0.0,
             ataxx::Color::Black => 1.0,
-            ataxx::Color::None => 0.0, // unused
+            ataxx::Color::None => return,
         };
 
         let top_left = Vector2::new(
@@ -138,7 +151,6 @@ impl<'a> Drawer<'a> {
                 + sq.rank() as u32 as f32 * (SQUARE_SIZE - 1.0) * self.gui.scale,
         );
 
-        let sq_src_rec = Rectangle::new(0.0, 0.0, SQUARE_SIZE, SQUARE_SIZE);
         let pc_src_rec = Rectangle::new(a * SQUARE_SIZE, 0.0, SQUARE_SIZE, SQUARE_SIZE);
 
         let dst_rec = Rectangle::new(
@@ -146,15 +158,6 @@ impl<'a> Drawer<'a> {
             top_left.y,
             SQUARE_SIZE * self.gui.scale,
             SQUARE_SIZE * self.gui.scale,
-        );
-
-        self.drawer.draw_texture_pro(
-            &self.gui.textures.square,
-            sq_src_rec,
-            dst_rec,
-            Vector2::new(0.0, 0.0),
-            0.0,
-            Color::WHITE,
         );
 
         if pc == ataxx::Color::None {
@@ -174,8 +177,8 @@ impl<'a> Drawer<'a> {
 }
 
 struct Textures {
+    board: Texture2D,
     pieces: Texture2D,
-    square: Texture2D,
     border: Texture2D,
 }
 
@@ -190,8 +193,8 @@ macro_rules! load_png_texture {
 impl Textures {
     fn load(rl: &mut RaylibHandle, thread: &RaylibThread) -> Textures {
         Textures {
+            board: load_png_texture!(rl, thread, "../assets/ataxx-board.png"),
             pieces: load_png_texture!(rl, thread, "../assets/ataxx-pieces.png"),
-            square: load_png_texture!(rl, thread, "../assets/ataxx-square.png"),
             border: load_png_texture!(rl, thread, "../assets/ataxx-border.png"),
         }
     }
