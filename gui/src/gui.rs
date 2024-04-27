@@ -28,6 +28,7 @@ impl GuiBuilder {
         let (mut raylib, thread) = raylib::init()
             .size(self.width, self.height)
             .title(&self.title)
+            .resizable()
             .build();
         let textures = Textures::load(&mut raylib, &thread);
         let board = Board::from_str(&self.fen).unwrap();
@@ -36,8 +37,6 @@ impl GuiBuilder {
             raylib,
             thread,
             options: GuiOptions {
-                width: self.width,
-                height: self.height,
                 scale: self.scale,
                 board,
                 textures,
@@ -50,7 +49,7 @@ pub struct Gui {
     raylib: RaylibHandle,
     thread: RaylibThread,
 
-    options: GuiOptions,
+    pub options: GuiOptions,
 }
 
 impl Gui {
@@ -66,13 +65,9 @@ impl Gui {
     }
 }
 
-struct GuiOptions {
-    width: i32,
-    height: i32,
-
-    scale: f32,
-
-    board: ataxx::Board,
+pub struct GuiOptions {
+    pub scale: f32,
+    pub board: ataxx::Board,
 
     textures: Textures,
 }
@@ -91,13 +86,12 @@ impl<'a> Drawer<'a> {
 
     fn draw_board(&mut self) {
         self.drawer.clear_background(Color::BLACK);
-
         self.drawer.draw_texture_ex(
             &self.gui.textures.board,
             Vector2::new(
-                self.gui.width as f32 / 2.0
+                self.drawer.get_screen_width() as f32 / 2.0
                     - self.gui.textures.board.width() as f32 * self.gui.scale / 2.0,
-                self.gui.height as f32 / 2.0
+                self.drawer.get_screen_height() as f32 / 2.0
                     - self.gui.textures.board.height() as f32 * self.gui.scale / 2.0,
             ),
             0.0,
@@ -118,9 +112,9 @@ impl<'a> Drawer<'a> {
             self.gui.textures.border.height() as f32,
         );
         let dst_rec = Rectangle::new(
-            self.gui.width as f32 / 2.0
+            self.drawer.get_screen_width() as f32 / 2.0
                 - self.gui.textures.border.width() as f32 * self.gui.scale / 2.0,
-            self.gui.height as f32 / 2.0
+            self.drawer.get_screen_height() as f32 / 2.0
                 - self.gui.textures.border.height() as f32 * self.gui.scale / 2.0,
             self.gui.textures.border.width() as f32 * self.gui.scale,
             self.gui.textures.border.height() as f32 * self.gui.scale,
@@ -145,9 +139,9 @@ impl<'a> Drawer<'a> {
         };
 
         let top_left = Vector2::new(
-            self.gui.width as f32 / 2.0 - 183.0 * self.gui.scale / 2.0
+            self.drawer.get_screen_width() as f32 / 2.0 - 183.0 * self.gui.scale / 2.0
                 + sq.file() as u32 as f32 * (SQUARE_SIZE - 1.0) * self.gui.scale,
-            self.gui.height as f32 / 2.0 - 183.0 * self.gui.scale / 2.0
+            self.drawer.get_screen_height() as f32 / 2.0 - 183.0 * self.gui.scale / 2.0
                 + sq.rank() as u32 as f32 * (SQUARE_SIZE - 1.0) * self.gui.scale,
         );
 
