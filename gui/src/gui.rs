@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use ataxx::{Board, File, Rank, Square};
+use ataxx::{Board, File, Move, Rank, Square};
 use raylib::prelude::*;
 
 use strum::IntoEnumIterator;
@@ -39,6 +39,8 @@ impl GuiBuilder {
             options: GuiOptions {
                 scale: self.scale,
                 board,
+                last_move: Move::NULL,
+                tint: Color::WHITE,
                 textures,
             },
         }
@@ -67,8 +69,11 @@ impl Gui {
 
 pub struct GuiOptions {
     pub scale: f32,
-    pub board: ataxx::Board,
 
+    pub board: ataxx::Board,
+    pub last_move: ataxx::Move,
+
+    tint: Color,
     textures: Textures,
 }
 
@@ -96,7 +101,7 @@ impl<'a> Drawer<'a> {
             ),
             0.0,
             self.gui.scale,
-            Color::WHITE,
+            self.gui.tint,
         );
 
         for rank in Rank::iter().rev() {
@@ -126,8 +131,10 @@ impl<'a> Drawer<'a> {
             dst_rec,
             Vector2::zero(),
             0.0,
-            Color::WHITE,
+            self.gui.tint,
         );
+
+        self.draw_move_highlight();
     }
 
     fn draw_piece(&mut self, sq: Square) {
@@ -165,7 +172,33 @@ impl<'a> Drawer<'a> {
             dst_rec,
             Vector2::new(0.0, 0.0),
             0.0,
-            Color::WHITE,
+            self.gui.tint,
+        );
+    }
+
+    fn draw_move_highlight(&mut self) {
+        if self.gui.last_move != Move::NULL {
+            self.draw_highlight(self.gui.last_move.source());
+            self.draw_highlight(self.gui.last_move.target());
+        }
+    }
+
+    fn draw_highlight(&mut self, sq: Square) {
+        let top_left = Vector2::new(
+            self.drawer.get_screen_width() as f32 / 2.0 - 183.0 * self.gui.scale / 2.0
+                + sq.file() as u32 as f32 * (SQUARE_SIZE - 1.0) * self.gui.scale
+                - 3.0 * self.gui.scale,
+            self.drawer.get_screen_height() as f32 / 2.0 - 183.0 * self.gui.scale / 2.0
+                + sq.rank() as u32 as f32 * (SQUARE_SIZE - 1.0) * self.gui.scale
+                - 3.0 * self.gui.scale,
+        );
+
+        self.drawer.draw_texture_ex(
+            &self.gui.textures.highlight,
+            top_left,
+            0.0,
+            self.gui.scale,
+            self.gui.tint,
         );
     }
 }
@@ -174,6 +207,7 @@ struct Textures {
     board: Texture2D,
     pieces: Texture2D,
     border: Texture2D,
+    highlight: Texture2D,
 }
 
 macro_rules! load_png_texture {
@@ -190,6 +224,7 @@ impl Textures {
             board: load_png_texture!(rl, thread, "../assets/ataxx-board.png"),
             pieces: load_png_texture!(rl, thread, "../assets/ataxx-pieces.png"),
             border: load_png_texture!(rl, thread, "../assets/ataxx-border.png"),
+            highlight: load_png_texture!(rl, thread, "../assets/ataxx-highlight.png"),
         }
     }
 }
