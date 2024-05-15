@@ -15,6 +15,8 @@ use std::fmt;
 use std::mem::MaybeUninit;
 use std::str::FromStr;
 
+use thiserror::Error;
+
 use crate::Square;
 
 /// Move represents an Ataxx move which can be played on the Board.
@@ -137,10 +139,13 @@ impl Move {
     }
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum MoveParseError {
+    #[error("length of move string should be 2 or 4, not {0}")]
     BadLength(usize),
+    #[error("bad source square string \"{0}\"")]
     BadSourceSquare(String),
+    #[error("bad target square string \"{0}\"")]
     BadTargetSquare(String),
 }
 

@@ -166,28 +166,12 @@ impl Board {
     }
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum BoardParseError {
-    BadPosition(PositionParseError),
-    BadMoveCount(ParseIntError),
-}
-
-/// Given a [PositionParseError] which was encountered while trying to parse the
-/// Position part of the FEN string, it returns a [BoardParseError::BadPosition]
-/// which wraps the given [PositionParseError].
-impl From<PositionParseError> for BoardParseError {
-    fn from(value: PositionParseError) -> Self {
-        Self::BadPosition(value)
-    }
-}
-
-/// Given a [ParseIntError] which was encountered while trying to parse the
-/// move count in the FEN string, it returns a [BoardParseError::BadMoveCount]
-/// which wraps the given [ParseIntError].
-impl From<ParseIntError> for BoardParseError {
-    fn from(value: ParseIntError) -> Self {
-        Self::BadMoveCount(value)
-    }
+    #[error("{0}")]
+    BadPosition(#[from] PositionParseError),
+    #[error("bad move count string \"{0}\"")]
+    BadMoveCount(#[from] ParseIntError),
 }
 
 impl FromStr for Board {
