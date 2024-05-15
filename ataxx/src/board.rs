@@ -18,6 +18,8 @@ use std::str::FromStr;
 
 use strum::IntoEnumIterator;
 
+use thiserror::Error;
+
 #[rustfmt::skip]
 use crate::{
     BitBoard, Color, File, Hash, Move,
@@ -599,33 +601,25 @@ impl Position {
 
 /// PositionParseErr represents an error encountered while parsing
 /// the given FEN position field into a valid Position.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PositionParseError {
-    TooManyFields,
+    #[error("expected 3 fields, found {0}")]
+    TooManyFields(usize),
 
-    /// A jump spec was too big for the current rank.
+    #[error("a jump value was too long and overshot")]
     JumpTooLong,
-    /// Invalid character in Square spec.
-    InvalidColorIdent,
-    /// Insufficient number of Square spec entries.
-    FileDataIncomplete,
-    /// More fields in string spec than Ranks.
+
+    #[error("invalid color identifier '{0}'")]
+    InvalidColorIdent(char),
+    #[error("insufficient data to fill the entire {0} file")]
+    FileDataIncomplete(File),
+    #[error("expected 7 ranks, found more")]
     TooManyRanks,
 
-    BadSideToMove(ColorParseError),
-    BadHalfMoveClock(ParseIntError),
-}
-
-impl From<ColorParseError> for PositionParseError {
-    fn from(value: ColorParseError) -> Self {
-        Self::BadSideToMove(value)
-    }
-}
-
-impl From<ParseIntError> for PositionParseError {
-    fn from(value: ParseIntError) -> Self {
-        Self::BadHalfMoveClock(value)
-    }
+    #[error("parsing side to move: {0}")]
+    BadSideToMove(#[from] ColorParseError),
+    #[error("parsing half-move clock: {0}")]
+    BadHalfMoveClock(#[from] ParseIntError),
 }
 
 // FromStr implements parsing of the position field in a FEN.
@@ -636,7 +630,7 @@ impl FromStr for Position {
         let parts = s.split(' ').collect::<Vec<&str>>();
 
         if parts.len() != 3 {
-            return Err(PositionParseError::TooManyFields);
+            return Err(PositionParseError::TooManyFields(parts.len()));
         }
 
         let pos = parts[0];
@@ -678,7 +672,7 @@ impl FromStr for Position {
                         }
                     }
 
-                    _ => return Err(PositionParseError::InvalidColorIdent),
+                    _ => return Err(PositionParseError::InvalidColorIdent(data)),
                 }
 
                 // On to the next Square spec in the Rank spec.
@@ -687,8 +681,8 @@ impl FromStr for Position {
 
             // After rank data runs out, file pointer should be
             // at the last file, i.e, rank is completely filled.
-            if file.is_ok() {
-                return Err(PositionParseError::FileDataIncomplete);
+            if let Ok(file) = file {
+                return Err(PositionParseError::FileDataIncomplete(file));
             }
 
             // Switch rank pointer and reset file pointer.

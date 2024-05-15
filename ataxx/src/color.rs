@@ -18,6 +18,8 @@ use std::str::FromStr;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+use thiserror::Error;
+
 use crate::type_macros;
 
 /// Color represents all the possible colors that an ataxx piece can have,
@@ -60,10 +62,12 @@ impl ops::Not for Color {
     }
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ColorParseError {
+    #[error("color identifier string has more than 1 character")]
     StringTooLong,
-    StringFormatInvalid,
+    #[error("unknown color identifier '{0}'")]
+    StringFormatInvalid(String),
 }
 
 impl fmt::Display for Color {
@@ -105,7 +109,7 @@ impl FromStr for Color {
         match s {
             "x" | "X" | "b" | "B" => Ok(Color::Black),
             "o" | "O" | "w" | "W" => Ok(Color::White),
-            _ => Err(ColorParseError::StringFormatInvalid),
+            _ => Err(ColorParseError::StringFormatInvalid(s.to_string())),
         }
     }
 }
