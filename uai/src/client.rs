@@ -17,20 +17,20 @@ use std::sync::{Arc, Mutex};
 
 use std::default::Default;
 
-use crate::{error, inbuilt, Parameter};
+use crate::{error, inbuilt, BundledCtx, Parameter};
 
-use super::{Command, FlagValues, RunError, RunErrorType};
+use super::{Command, FlagValues, RunError};
 
 /// Client represents an UAI engine client. It can accept and parse commands
 /// from the GUI and send commands to the GUI though its input and output.
 /// Commands sent from the GUI are automatically parsed and executed according
 /// to the Command schema provided by the user to the Client.
-pub struct Client<T: Send, E: RunError> {
+pub struct Client<T: Send> {
     initial_context: inbuilt::Context,
-    commands: HashMap<String, Command<T, E>>,
+    commands: HashMap<String, Command<T>>,
 }
 
-impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
+impl<T: Send + 'static> Client<T> {
     /// start starts the Client so that it can now accept Commands from the GUI and
     /// send Commands back to the GUI as necessary. The Client will return only if
     /// it encounters a fatal error while running a command ([`RunErrorType::Fatal`])
@@ -40,8 +40,10 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
         let stdin = io::stdin();
 
         // Make the context thread safe to allow commands to run in parallel.
-        let context = Arc::new(Mutex::new(context));
-        let our_ctx = Arc::new(Mutex::new(self.initial_context.clone()));
+        let context = Arc::new(Mutex::new(BundledCtx {
+            user: context,
+            client: self.initial_context.clone(),
+        }));
 
         // Iterate over the lines in the input, since Commands for the GUI are
         // separated by newlines and we want to parse each Command separately.
@@ -54,50 +56,31 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
 
             // Try to find a Command with the given name.
             let cmd = self.commands.get(cmd_name);
-            if cmd.is_some() {
-                // Parsing complete, run the Command and handle any errors.
-                match self.run(cmd.unwrap(), &context, args) {
-                    Ok(_) => (),
-                    Err(err) => {
-                        println!("{}", err);
-                        if err.should_quit() {
-                            break 'reading;
-                        }
-                    }
-                };
-
+            if cmd.is_none() {
+                // Command not found, return error and continue.
+                println!("info error command {} not found", cmd_name);
                 continue 'reading;
             }
 
-            // Try to find a Command with the given name.
-            let cmd = inbuilt::COMMANDS.get(cmd_name);
-            if cmd.is_some() {
-                // Parsing complete, run the Command and handle any errors.
-                match self.run(cmd.unwrap(), &our_ctx, args) {
-                    Ok(_) => (),
-                    Err(err) => {
-                        println!("{}", err);
-                        if err.should_quit() {
-                            break 'reading;
-                        }
+            // Parsing complete, run the Command and handle any errors.
+            match self.run(cmd.unwrap(), &context, args) {
+                Ok(_) => (),
+                Err(err) => {
+                    println!("{}", err);
+                    if err.should_quit() {
+                        break 'reading;
                     }
-                };
-
-                continue 'reading;
-            }
-
-            // Command not found, return error and continue.
-            println!("info error command {} not found", cmd_name);
-            continue 'reading;
+                }
+            };
         }
     }
 
-    pub fn run<CT: Send + 'static, CE: RunError + 'static>(
+    pub fn run<CT: Send + 'static>(
         &self,
-        cmd: &Command<CT, CE>,
-        context: &Arc<Mutex<CT>>,
+        cmd: &Command<CT>,
+        context: &Arc<Mutex<BundledCtx<CT>>>,
         args: &[&str],
-    ) -> Result<(), RunErrorType> {
+    ) -> Result<(), RunError> {
         // Initialize an empty list of the Command's Flags' values.
         let mut flags: FlagValues = Default::default();
 
@@ -139,12 +122,11 @@ impl<T: Send + 'static, E: RunError + 'static> Client<T, E> {
         }
 
         // Parsing complete, run the Command and handle any errors.
-        cmd.run(context, flags, self.initial_context.option_values.clone())
-            .map_err(|e| e.into())
+        cmd.run(context, flags)
     }
 }
 
-impl<T: Send, E: RunError> Client<T, E> {
+impl<T: Send> Client<T> {
     /// new creates a new [Client]. The Client can be configured using builder
     /// methods like [`Client::command`].
     /// ```rust,ignore
@@ -155,9 +137,15 @@ impl<T: Send, E: RunError> Client<T, E> {
     #[allow(clippy::new_without_default)]
     #[rustfmt::skip]
     pub fn new() -> Self {
-        Client::<T, E> {
+        Client::<T> {
             initial_context: Default::default(),
-            commands: HashMap::new(),
+            commands: HashMap::from([
+                ("quit".to_owned(), inbuilt::commands::quit()),
+                ("isready".to_owned(), inbuilt::commands::isready()),
+                ("uai".to_owned(), inbuilt::commands::uai()),
+                ("setoption".to_owned(), inbuilt::commands::setoption()),
+                ("options".to_owned(), inbuilt::commands::options()),
+            ]),
         }
     }
 
@@ -173,7 +161,7 @@ impl<T: Send, E: RunError> Client<T, E> {
     ///     .command("go", go_cmd)
     ///     .command("perft", perft_cmd);
     /// ```
-    pub fn command(mut self, name: &str, cmd: Command<T, E>) -> Self {
+    pub fn command(mut self, name: &str, cmd: Command<T>) -> Self {
         self.commands.insert(name.to_string(), cmd);
         self
     }

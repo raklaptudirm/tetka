@@ -12,11 +12,12 @@
 // limitations under the License.
 
 use std::collections::HashMap;
+use std::error::Error;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::{Context, ParameterValues};
+use crate::{Bundle, BundledCtx};
 
 use super::{Flag, FlagValues};
 
@@ -25,27 +26,22 @@ use super::{Flag, FlagValues};
 /// to run that Command with the current context and the provided flag values.
 /// `T` is the context type of the [Client], while `E` is the error type. `E`
 /// must implement the [`RunError`] trait to be usable.
-pub struct Command<T: Send, E: RunError> {
+pub struct Command<T: Send> {
     /// run_fn is the function used to run this Command.
-    pub run_fn: RunFn<T, E>,
+    pub run_fn: RunFn<T>,
     /// flags is the schema of the Flags this Command accepts.
     pub flags: HashMap<String, Flag>,
     /// parallel says whether to run this command in a separate thread.
     pub parallel: bool,
 }
 
-impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
+impl<T: Send + 'static> Command<T> {
     /// run runs the current Command with the given context and flag values.
     /// A new thread is spawned and detached to run parallel Commands. It returns
     /// the error returned by the Command's execution, or [`Ok`] for parallel.
-    pub fn run(
-        &self,
-        context: &Arc<Mutex<T>>,
-        flags: FlagValues,
-        options: ParameterValues,
-    ) -> Result<(), E> {
+    pub fn run(&self, context: &Arc<Mutex<BundledCtx<T>>>, flags: FlagValues) -> CmdResult {
         // Clone values which might be moved by spawning a new thread.
-        let context = Context::new(context, flags, options);
+        let context = Bundle::new(context, flags);
         let func = self.run_fn;
 
         if self.parallel {
@@ -61,7 +57,7 @@ impl<T: Send + 'static, E: RunError + 'static> Command<T, E> {
     }
 }
 
-impl<T: Send, E: RunError> Command<T, E> {
+impl<T: Send> Command<T> {
     /// new creates a new Command with the given run function.
     ///
     /// By default the flag schema is empty the the Command is run synchronously.
@@ -72,7 +68,7 @@ impl<T: Send, E: RunError> Command<T, E> {
     /// changes and then return it. These allows them to be chained in builder
     /// pattern style to create fully configured Commands.
     /// ```rust,ignore
-    /// let cmd: Command<T, E> =
+    /// let cmd: Command<T> =
     ///     // new invocation to create a Command. In this example, a very
     ///     // simple run function which returns `Ok(())` is provided.
     ///     Command::new(|_ctx, _flg| Ok(()))
@@ -84,7 +80,7 @@ impl<T: Send, E: RunError> Command<T, E> {
     ///         // Make the command run in parallel.
     ///         .parallelize(true);
     /// ```
-    pub fn new(func: RunFn<T, E>) -> Command<T, E> {
+    pub fn new(func: RunFn<T>) -> Command<T> {
         Command {
             run_fn: func,
             flags: Default::default(),
@@ -118,17 +114,19 @@ impl<T: Send, E: RunError> Command<T, E> {
     }
 }
 
-/// RunFn<T, E> represents the run function of a Command. This function is called
+/// RunFn<T> represents the run function of a Command. This function is called
 /// with the context (`Arc<Mutex<T>>`) and the flag values ([`FlagValues`]) whenever
-/// the Command is to be executed. It returns a `Result<(), E>` where `E` implements
+/// the Command is to be executed. It returns a `Result<()>` where `E` implements
 /// [`RunError`] and is the error type for the [Client].
-pub type RunFn<T, E> = fn(Context<T>) -> Result<(), E>;
+pub type RunFn<T> = fn(Bundle<T>) -> CmdResult;
+
+pub type CmdResult = Result<(), RunError>;
 
 /// RunError is the interface which the Client uses to understand custom errors
 /// returned by a Command. It allows the user to implement their own error types
 /// while allowing the Client to interpret and use those errors. This is
 /// achieved by requiring conversions from and into [`RunErrorType`].
-pub trait RunError: Send + From<RunErrorType> + Into<RunErrorType> {}
+//pub trait RunError: Send + Into<RunErrorType> {}
 
 /// `quit!()` resolves to a [`Err(~RunErrorType::Quit)`](RunErrorType::Quit)
 /// kind of error, and thus can be called by itself inside a Command to instruct
@@ -136,7 +134,7 @@ pub trait RunError: Send + From<RunErrorType> + Into<RunErrorType> {}
 #[macro_export]
 macro_rules! quit {
     () => {
-        Err(RunErrorType::Quit.into())
+        Err(RunError::Quit)
     };
 }
 
@@ -148,21 +146,7 @@ macro_rules! quit {
 macro_rules! error {
     ($($arg:tt)*) => {
         {
-            Err(RunErrorType::Error(format!($($arg)*)).into())
-        }
-    };
-}
-
-/// `error_val!()` resolves to a `E` value which represents a
-/// [`RunErrorType::Error`] kind of error. It can be used to simplify creating
-/// such error values where necessary, for example in conversion functions. If
-/// this value will be returned from a Command, use the [`error!`] macro instead.
-/// This macro has the same arguments as the [`error!`] macro.
-#[macro_export]
-macro_rules! error_val {
-    ($($arg:tt)*) => {
-        {
-            RunErrorType::Error(format!($($arg)*)).into()
+            Err(RunError::Error(format!($($arg)*)))
         }
     };
 }
@@ -174,14 +158,14 @@ macro_rules! error_val {
 #[macro_export]
 macro_rules! fatal {
     ($($arg:tt)*) => {
-        Err(RunErrorType::Fatal(format!($($arg)*)).into())
+        Err(RunError::Fatal(format!($($arg)*)))
     };
 }
 
 /// RunErrorType is the error that is used internally in Client. All user errors
 /// must support conversion into this type so that the Client can handle them.
-#[derive(Clone)]
-pub enum RunErrorType {
+#[derive(Debug, Clone)]
+pub enum RunError {
     /// Quit directs the Client to quit itself, without reporting any errors.
     Quit,
     /// Error represents a recoverable error, report and continue the Client.
@@ -190,7 +174,16 @@ pub enum RunErrorType {
     Fatal(String),
 }
 
-impl RunErrorType {
+impl<E> From<E> for RunError
+where
+    E: Error + Send + Sync + 'static,
+{
+    fn from(value: E) -> Self {
+        RunError::Error(value.to_string())
+    }
+}
+
+impl RunError {
     /// should_quit checks if the current error requires the Client to quit.
     pub fn should_quit(&self) -> bool {
         // Except Error, all other variants cause the Client to quit.
@@ -198,14 +191,12 @@ impl RunErrorType {
     }
 }
 
-impl fmt::Display for RunErrorType {
+impl fmt::Display for RunError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RunErrorType::Quit => Ok(()),
-            RunErrorType::Error(o_o) => write!(f, "info error {}", o_o),
-            RunErrorType::Fatal(o_o) => write!(f, "info error {}", o_o),
+            RunError::Quit => Ok(()),
+            RunError::Error(o_o) => write!(f, "info error {}", o_o),
+            RunError::Fatal(o_o) => write!(f, "info error {}", o_o),
         }
     }
 }
-
-impl RunError for RunErrorType {}

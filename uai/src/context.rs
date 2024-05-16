@@ -1,24 +1,19 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::{FlagValues, Number, ParameterValues};
+use crate::{inbuilt, FlagValues, Number};
 
-pub struct Context<T: Send> {
-    context: Arc<Mutex<T>>,
+pub struct Bundle<T: Send> {
+    context: Arc<Mutex<BundledCtx<T>>>,
     flags: FlagValues,
-    options: ParameterValues,
 }
 
-impl<T: Send> Context<T> {
-    pub fn new(context: &Arc<Mutex<T>>, flags: FlagValues, options: ParameterValues) -> Context<T> {
+impl<T: Send> Bundle<T> {
+    pub fn new(context: &Arc<Mutex<BundledCtx<T>>>, flags: FlagValues) -> Bundle<T> {
         let context = Arc::clone(context);
-        Context {
-            context,
-            flags,
-            options,
-        }
+        Bundle { context, flags }
     }
 
-    pub fn lock(&self) -> MutexGuard<'_, T> {
+    pub fn lock(&self) -> MutexGuard<'_, BundledCtx<T>> {
         self.context.lock().unwrap()
     }
 
@@ -33,16 +28,23 @@ impl<T: Send> Context<T> {
     pub fn get_array_flag(&self, name: &str) -> Option<Vec<String>> {
         self.flags.get_array(name)
     }
+}
 
+pub struct BundledCtx<T: Send> {
+    pub user: T,
+    pub client: inbuilt::Context,
+}
+
+impl<T: Send> BundledCtx<T> {
     pub fn get_check_option(&self, name: &str) -> Option<bool> {
-        self.options.get_check(name)
+        self.client.option_values.get_check(name)
     }
 
     pub fn get_string_option(&self, name: &str) -> Option<String> {
-        self.options.get_string(name)
+        self.client.option_values.get_string(name)
     }
 
     pub fn get_spin_option(&self, name: &str) -> Option<Number> {
-        self.options.get_spin(name)
+        self.client.option_values.get_spin(name)
     }
 }

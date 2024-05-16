@@ -13,91 +13,84 @@
 
 use std::collections::HashMap;
 
-use crate::{error, quit, Flag, Parameter, ParameterValues, RunErrorType};
-use lazy_static::lazy_static;
+use crate::{Parameter, ParameterValues};
 
-pub type Command = crate::Command<Context, RunErrorType>;
+pub mod commands {
+    use crate::{error, quit, Command, Flag, Parameter, RunError};
 
-lazy_static! {
-    pub static ref COMMANDS: HashMap<String, Command> = HashMap::from(
-        [
-            ("quit", Command::new(|_ctx| quit!())),
-            (
-                "isready",
-                Command::new(|_ctx| {
-                    println!("readyok");
-                    Ok(())
-                })
-            ),
-            (
-                "uai",
-                Command::new(|ctx| {
-                    let ctx = ctx.lock();
+    pub fn quit<C: Send>() -> Command<C> {
+        Command::new(|_ctx| quit!())
+    }
 
-                    println!("id name {}", ctx.engine);
-                    println!("id author {}", ctx.author);
-                    println!();
-                    if !ctx.options.is_empty() {
-                        for (name, option) in ctx.options.clone() {
-                            println!("option name {} type {}", name, option);
-                        }
-
-                        println!();
-                    }
-                    println!("uaiok");
-
-                    Ok(())
-                })
-            ),
-            (
-                "setoption",
-                Command::new(|ctx| {
-                    let name = ctx.get_single_flag("name");
-                    let value = ctx.get_array_flag("value");
-
-                    if name.is_none() || value.is_none() {
-                        return error!("expected \"name\" and \"value\" flags");
-                    }
-
-                    let name = name.unwrap();
-                    let value = value.unwrap().join(" ");
-
-                    let mut ctx = ctx.lock();
-
-                    ctx.setoption(&name, &value).map_err(RunErrorType::Error)
-                })
-                .flag("name", Flag::Single)
-                .flag("value", Flag::Variadic)
-            ),
-            (
-                "options",
-                Command::new(|ctx| {
-                    let ctx = ctx.lock();
-
-                    for (name, option) in ctx.options.clone() {
-                        print!("option name {} value ", name);
-                        match option {
-                            Parameter::Check(_) => {
-                                println!("{}", ctx.option_values.get_check(&name).unwrap())
-                            }
-                            Parameter::String(_) | Parameter::Combo(_, _) => {
-                                println!("{}", ctx.option_values.get_string(&name).unwrap())
-                            }
-                            Parameter::Spin(_, _, _) => {
-                                println!("{}", ctx.option_values.get_spin(&name).unwrap())
-                            }
-                        }
-                    }
-
-                    Ok(())
-                })
-            )
-        ]
-        .map(|a| {
-            let (b, c) = a;
-            (b.to_owned(), c)
+    pub fn isready<C: Send>() -> Command<C> {
+        Command::new(|_ctx| {
+            println!("readyok");
+            Ok(())
         })
-    );
+    }
+
+    pub fn uai<C: Send>() -> Command<C> {
+        Command::new(|ctx| {
+            let ctx = ctx.lock();
+
+            println!("id name {}", ctx.client.engine);
+            println!("id author {}", ctx.client.author);
+            println!();
+            if !ctx.client.options.is_empty() {
+                for (name, option) in ctx.client.options.clone() {
+                    println!("option name {} type {}", name, option);
+                }
+
+                println!();
+            }
+            println!("uaiok");
+
+            Ok(())
+        })
+    }
+
+    pub fn setoption<C: Send>() -> Command<C> {
+        Command::new(|ctx| {
+            let name = ctx.get_single_flag("name");
+            let value = ctx.get_array_flag("value");
+
+            if name.is_none() || value.is_none() {
+                return error!("expected \"name\" and \"value\" flags");
+            }
+
+            let name = name.unwrap();
+            let value = value.unwrap().join(" ");
+
+            let mut ctx = ctx.lock();
+
+            ctx.client.setoption(&name, &value).map_err(RunError::Error)
+        })
+        .flag("name", Flag::Single)
+        .flag("value", Flag::Variadic)
+    }
+
+    pub fn options<C: Send>() -> Command<C> {
+        Command::new(|ctx| {
+            let ctx = ctx.lock();
+
+            for (name, option) in ctx.client.options.clone() {
+                print!("option name {} value ", name);
+                match option {
+                    Parameter::Check(_) => {
+                        println!("{}", ctx.client.option_values.get_check(&name).unwrap())
+                    }
+                    Parameter::String(_) | Parameter::Combo(_, _) => {
+                        println!("{}", ctx.client.option_values.get_string(&name).unwrap())
+                    }
+                    Parameter::Spin(_, _, _) => {
+                        println!("{}", ctx.client.option_values.get_spin(&name).unwrap())
+                    }
+                }
+            }
+
+            Ok(())
+        })
+    }
 }
 
 #[derive(Clone)]
