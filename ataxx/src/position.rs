@@ -14,7 +14,6 @@
 use std::cmp;
 use std::fmt;
 use std::num::ParseIntError;
-use std::ops::Deref;
 use std::str::FromStr;
 
 use strum::IntoEnumIterator;
@@ -28,124 +27,6 @@ use crate::{
     PieceParseError,
 };
 
-/// Board implements an ataxx game board which can start from a given
-/// Position and on which moves may be made and unmade to reach other
-/// positions. It supports a maximum of MAX_PLY moves to be played.
-pub struct Board {
-    history: [Position; Board::MAX_PLY],
-    ply_cnt: usize,
-}
-
-impl Board {
-    #[rustfmt::skip]
-    pub fn new(position: Position, ply_cnt: usize) -> Board {
-        let mut board = Board {
-            history: [
-                Position::new(
-                    BitBoard::EMPTY, BitBoard::EMPTY, BitBoard::EMPTY, Piece::None
-                ); Board::MAX_PLY
-            ],
-            ply_cnt,
-        };
-
-        board.history[ply_cnt] = position;
-        board
-    }
-}
-
-impl Board {
-    /// MAX_PLY is the maximum number of plys than can be in a game.
-    /// Actually there can be more plys but this is a nice upper bound to
-    /// use for the length of the board's position history.
-    const MAX_PLY: usize = 1024;
-
-    /// move_count returns the number of full moves played till now.
-    pub const fn move_count(&self) -> usize {
-        self.ply_cnt / 2 + 1
-    }
-
-    /// ply_count returns the number of plys played till now.
-    pub const fn ply_count(&self) -> usize {
-        self.ply_cnt
-    }
-}
-
-impl Board {
-    /// make_move plays the given Move on the Board and updates state accordingly.
-    /// It is a wrapper on top of [`Position::after_move`], so refer to it for more
-    /// in-depth documentation and examples.
-    pub fn make_move(&mut self, m: Move) {
-        self.history[self.ply_cnt + 1] = self.after_move(m);
-        self.ply_cnt += 1;
-    }
-
-    /// undo_move un-plays the last played Move on the Board.
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let mut board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let old_checksum = board.checksum;
-    ///
-    /// board.make_move(Move::new_single(Square::B7));
-    /// board.undo_move();
-    ///
-    /// assert_eq!(board.checksum, old_checksum);
-    /// ```
-    pub fn undo_move(&mut self) {
-        self.ply_cnt -= 1;
-    }
-}
-
-impl Deref for Board {
-    type Target = Position;
-
-    /// deref dereferences a Board into a &Position where the Position being pointed
-    /// to is the current Position on the Board. This allows the user to access all
-    /// of Position's methods and fields from the Board.
-    fn deref(&self) -> &Self::Target {
-        &self.history[self.ply_cnt]
-    }
-}
-
-#[derive(Error, Debug)]
-pub enum BoardParseError {
-    #[error("{0}")]
-    BadPosition(#[from] PositionParseError),
-    #[error("bad move count string \"{0}\"")]
-    BadMoveCount(#[from] ParseIntError),
-}
-
-impl FromStr for Board {
-    type Err = BoardParseError;
-
-    /// from_str converts the given FEN string into a [Board].
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // Split at the last space, the delimiter between the Position part and
-        // the move count part of the given FEN string.
-        let (pos, fm) = s.rsplit_once(' ').unwrap();
-
-        let position = Position::from_str(pos)?; // Parse the Position
-        let movcount = fm.parse::<u16>()?; // Parse the Move Count
-
-        Ok(Board::new(
-            position,
-            movcount as usize * 2
-                - if position.side_to_move == Piece::White {
-                    2
-                } else {
-                    1
-                },
-        ))
-    }
-}
-
-impl fmt::Display for Board {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.deref())
-    }
-}
-
 /// Position represents the snapshot of an Ataxx Board, the state of the Board
 /// at a single point in time. It is the functional backend of the [Board] type.
 #[derive(Copy, Clone)]
@@ -156,6 +37,7 @@ pub struct Position {
     pub checksum: Hash,
     /// side_to_move stores the [Piece] whose turn to move it currently is.
     pub side_to_move: Piece,
+    pub ply_count: u16,
     /// half-move clock stores the number of half-moves since the last irreversible
     /// Move. It is used to adjudicate games using the 50-move/100-ply rule.
     pub half_move_clock: u8,
@@ -163,12 +45,20 @@ pub struct Position {
 
 impl Position {
     /// new creates a new Position with the given BitBoards and side to move.
-    pub fn new(black: BitBoard, white: BitBoard, block: BitBoard, stm: Piece) -> Position {
+    pub fn new(
+        black: BitBoard,
+        white: BitBoard,
+        block: BitBoard,
+        side_to_move: Piece,
+        ply_count: u16,
+        half_move_clock: u8,
+    ) -> Position {
         Position {
             bitboards: [black, white, block],
-            checksum: Hash::new(black, white, stm),
-            side_to_move: stm,
-            half_move_clock: 0,
+            checksum: Hash::new(black, white, side_to_move),
+            side_to_move,
+            ply_count,
+            half_move_clock,
         }
     }
 
@@ -180,7 +70,8 @@ impl Position {
     ///     BitBoard::EMPTY,
     ///     BitBoard::EMPTY,
     ///     BitBoard::EMPTY,
-    ///     Piece::Black
+    ///     Piece::Black,
+    ///     0, 0
     /// );
     /// position.put(Square::A1, Piece::White);
     ///
@@ -207,7 +98,8 @@ impl Position {
     ///     BitBoard::UNIVERSE,
     ///     BitBoard::EMPTY,
     ///     BitBoard::EMPTY,
-    ///     Piece::Black
+    ///     Piece::Black,
+    ///     0, 0
     /// );
     /// assert_eq!(position.at(Square::A1), Piece::Black);
     /// ```
@@ -233,7 +125,8 @@ impl Position {
     ///     BitBoard::UNIVERSE,
     ///     BitBoard::EMPTY,
     ///     BitBoard::EMPTY,
-    ///     Piece::Black
+    ///     Piece::Black,
+    ///     0, 0
     /// );
     /// assert_eq!(position.bitboard(Piece::Black), BitBoard::UNIVERSE);
     /// ```
@@ -248,10 +141,10 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0").unwrap();
-    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0").unwrap();
-    /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100").unwrap();
-    /// let ongoing = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 0").unwrap();
+    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0 1").unwrap();
+    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0 1").unwrap();
+    /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100 1").unwrap();
+    /// let ongoing = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 0 1").unwrap();
     ///
     /// assert!(black_win.is_game_over());
     /// assert!(white_win.is_game_over());
@@ -275,9 +168,9 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0").unwrap();
-    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0").unwrap();
-    /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100").unwrap();
+    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0 1").unwrap();
+    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0 1").unwrap();
+    /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100 1").unwrap();
     ///
     /// assert_eq!(black_win.winner(), Piece::Black);
     /// assert_eq!(white_win.winner(), Piece::White);
@@ -329,8 +222,8 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let mut pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
-    /// let new_pos = Position::from_str("xx4o/7/7/7/7/7/o5x o 0").unwrap();
+    /// let mut pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
+    /// let new_pos = Position::from_str("xx4o/7/7/7/7/7/o5x o 0 1").unwrap();
     ///
     /// let mov = Move::new_single(Square::B7);
     ///
@@ -345,6 +238,7 @@ impl Position {
                 bitboards: self.bitboards,
                 checksum: Hash(!self.checksum.0),
                 side_to_move: !self.side_to_move,
+                ply_count: self.ply_count + 1,
                 half_move_clock: self.half_move_clock + 1,
             };
         }
@@ -381,6 +275,7 @@ impl Position {
             bitboards: [black, white, self.bitboard(Piece::Block)],
             checksum: Hash::new(black, white, !stm),
             side_to_move: !stm,
+            ply_count: self.ply_count + 1,
             half_move_clock,
         }
     }
@@ -394,7 +289,7 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
+    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     /// let movelist = position.generate_moves();
     ///
     /// // There are 16 possible moves in startpos.
@@ -413,7 +308,7 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
+    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     /// let mut movelist = MoveList::new();
     ///
     /// position.generate_moves_into(&mut movelist);
@@ -469,7 +364,7 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
+    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     ///
     /// // There are 16 possible moves in startpos.
     /// assert_eq!(position.count_moves(), 16);
@@ -545,19 +440,22 @@ impl FromStr for Position {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts = s.split(' ').collect::<Vec<&str>>();
 
-        if parts.len() != 3 {
+        if parts.len() != 4 {
             return Err(PositionParseError::TooManyFields(parts.len()));
         }
 
         let pos = parts[0];
         let stm = parts[1];
         let hmc = parts[2];
+        let fmc = parts[3];
 
         let mut position = Position::new(
             BitBoard::EMPTY,
             BitBoard::EMPTY,
             BitBoard::EMPTY,
             Piece::None,
+            0,
+            0,
         );
 
         // Spilt the position spec by the Ranks which are separated by '/'.
@@ -614,6 +512,10 @@ impl FromStr for Position {
 
         position.side_to_move = Piece::from_str(stm)?;
         position.half_move_clock = hmc.parse::<u8>()?;
+        position.ply_count = fmc.parse::<u16>()? * 2 - 1;
+        if position.side_to_move == Piece::Black {
+            position.ply_count -= 1;
+        }
 
         // Calculate the Hash value for the Position.
         position.checksum = Hash::new(

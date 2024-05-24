@@ -43,8 +43,7 @@ impl Move {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let old_pos = board.clone();
+    /// let old_pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     /// let new_pos = old_pos.after_move(Move::PASS);
     ///
     /// assert_eq!(old_pos.bitboard(Piece::Black), new_pos.bitboard(Piece::Black));
