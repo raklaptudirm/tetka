@@ -23,12 +23,12 @@ use thiserror::Error;
 use crate::type_macros;
 
 /// Piece represents all the possible pieces that an ataxx piece can have,
-/// specifically White, Black, and None(no Piece/no piece).
+/// specifically Black, White, and None(no Piece/no piece).
 #[derive(Copy, Clone, PartialEq, Eq, Default, FromPrimitive)]
 pub enum Piece {
-    White,
     Black,
-    Gap,
+    White,
+    Block,
     #[default]
     None,
 }
@@ -81,7 +81,7 @@ impl fmt::Display for Piece {
             match *self {
                 Self::Black => "x",
                 Self::White => "o",
-                Self::Gap => "■",
+                Self::Block => "■",
                 Self::None => ".",
             }
         )
@@ -111,6 +111,7 @@ impl FromStr for Piece {
         match s {
             "x" | "X" | "b" | "B" => Ok(Piece::Black),
             "o" | "O" | "w" | "W" => Ok(Piece::White),
+            "-" => Ok(Piece::Block),
             _ => Err(PieceParseError::StringFormatInvalid(s.to_string())),
         }
     }

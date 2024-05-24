@@ -22,12 +22,12 @@ use crate::{BitBoard, Piece};
 pub struct Hash(pub u64);
 
 impl Hash {
-    /// new creates a new Hash from the given white and black piece BitBoards.
+    /// new creates a new Hash from the given black and white piece BitBoards.
     /// This function is used in the backend by Position, and it is usually
     /// unnecessary for it to be used explicitly by end-users.
-    pub fn new(white: BitBoard, black: BitBoard, stm: Piece) -> Hash {
-        let a = white.0;
-        let b = black.0;
+    pub fn new(black: BitBoard, white: BitBoard, stm: Piece) -> Hash {
+        let a = black.0;
+        let b = white.0;
 
         // Currently, an 2^-63-almost delta universal hash function, based on
         // https://eprint.iacr.org/2011/116.pdf by Long Hoang Nguyen and Andrew
