@@ -28,6 +28,7 @@ use crate::type_macros;
 pub enum Piece {
     White,
     Black,
+    Gap,
     #[default]
     None,
 }
@@ -49,7 +50,7 @@ type_macros::impl_from_integer_for_enum! {
 
 impl Piece {
     /// N is the number of possible Pieces, excluding None.
-    pub const N: usize = 2;
+    pub const N: usize = 3;
 }
 
 impl ops::Not for Piece {
@@ -80,7 +81,8 @@ impl fmt::Display for Piece {
             match *self {
                 Self::Black => "x",
                 Self::White => "o",
-                Self::None => "-",
+                Self::Gap => "■",
+                Self::None => ".",
             }
         )
     }

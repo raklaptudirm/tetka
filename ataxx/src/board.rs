@@ -42,7 +42,7 @@ impl Board {
         let mut board = Board {
             history: [
                 Position::new(
-                    BitBoard::EMPTY, BitBoard::EMPTY, Piece::None
+                    BitBoard::EMPTY, BitBoard::EMPTY, BitBoard::EMPTY, Piece::None
                 ); Board::MAX_PLY
             ],
             ply_cnt,
@@ -163,9 +163,9 @@ pub struct Position {
 
 impl Position {
     /// new creates a new Position with the given BitBoards and side to move.
-    pub fn new(white: BitBoard, black: BitBoard, stm: Piece) -> Position {
+    pub fn new(white: BitBoard, black: BitBoard, gaps: BitBoard, stm: Piece) -> Position {
         Position {
-            bitboards: [white, black],
+            bitboards: [white, black, gaps],
             checksum: Hash::new(white, black, stm),
             side_to_move: stm,
             half_move_clock: 0,
@@ -194,11 +194,8 @@ impl Position {
     /// });
     /// ```
     pub fn put(&mut self, sq: Square, color: Piece) {
-        match color {
-            Piece::White => self.bitboards[Piece::White as usize].insert(sq),
-            Piece::Black => self.bitboards[Piece::Black as usize].insert(sq),
-            Piece::None => unreachable!(),
-        };
+        debug_assert_ne!(color, Piece::None);
+        self.bitboards[color as usize].insert(sq);
     }
 
     /// at returns the Piece of the piece present on the given Square.
@@ -217,6 +214,8 @@ impl Position {
             Piece::White
         } else if self.bitboard(Piece::Black).contains(sq) {
             Piece::Black
+        } else if self.bitboard(Piece::Gap).contains(sq) {
+            Piece::Gap
         } else {
             Piece::None
         }
@@ -259,8 +258,9 @@ impl Position {
     pub fn is_game_over(&self) -> bool {
         let white = self.bitboard(Piece::White);
         let black = self.bitboard(Piece::Black);
+        let gaps = self.bitboard(Piece::Gap);
         self.half_move_clock >= 100 ||                           // Fifty-move rule
-			white | black == BitBoard::UNIVERSE ||               // All squares occupied
+			white | black | gaps == BitBoard::UNIVERSE ||               // All squares occupied
 			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
     }
 
@@ -289,6 +289,7 @@ impl Position {
 
         let white = self.bitboard(Piece::White);
         let black = self.bitboard(Piece::Black);
+        let gaps = self.bitboard(Piece::Gap);
 
         if white == BitBoard::EMPTY {
             // White lost all its pieces, black won.
@@ -298,7 +299,7 @@ impl Position {
             return Piece::White;
         }
 
-        debug_assert!(white | black == BitBoard::UNIVERSE);
+        debug_assert!(white | black | gaps == BitBoard::UNIVERSE);
 
         // All the squares are occupied by pieces. Victory is decided by
         // which Piece has the most number of pieces on the Board.
@@ -373,7 +374,7 @@ impl Position {
         };
 
         Position {
-            bitboards: [white, black],
+            bitboards: [white, black, self.bitboard(Piece::Gap)],
             checksum: Hash::new(white, black, !stm),
             side_to_move: !stm,
             half_move_clock,
@@ -424,9 +425,10 @@ impl Position {
 
         let stm = self.bitboard(self.side_to_move);
         let xtm = self.bitboard(!self.side_to_move);
+        let gap = self.bitboard(Piece::Gap);
 
         // Pieces can only move to unoccupied Squares.
-        let allowed = !(stm | xtm);
+        let allowed = !(stm | xtm | gap);
 
         let mut single = BitBoard::EMPTY;
         for piece in stm {
@@ -478,9 +480,10 @@ impl Position {
 
         let stm = self.bitboard(self.side_to_move);
         let xtm = self.bitboard(!self.side_to_move);
+        let gap = self.bitboard(Piece::Gap);
 
         // Pieces can only move to unoccupied Squares.
-        let allowed = !(stm | xtm);
+        let allowed = !(stm | xtm | gap);
 
         let mut single = BitBoard::EMPTY;
         for piece in stm {
@@ -546,7 +549,12 @@ impl FromStr for Position {
         let stm = parts[1];
         let hmc = parts[2];
 
-        let mut position = Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Piece::None);
+        let mut position = Position::new(
+            BitBoard::EMPTY,
+            BitBoard::EMPTY,
+            BitBoard::EMPTY,
+            Piece::None,
+        );
 
         // Spilt the position spec by the Ranks which are separated by '/'.
         let ranks: Vec<&str> = pos.split('/').collect();
@@ -571,6 +579,7 @@ impl FromStr for Position {
                 match data {
                     'O' | 'o' | 'w' => position.put(square, Piece::White),
                     'X' | 'x' | 'b' => position.put(square, Piece::Black),
+                    '-' => position.put(square, Piece::Gap),
 
                     // Numbers represent jump specs to jump over empty squares.
                     '1'..='8' => {
