@@ -193,9 +193,9 @@ impl Position {
     ///     X . . . . . .
     /// });
     /// ```
-    pub fn put(&mut self, sq: Square, color: Piece) {
-        debug_assert_ne!(color, Piece::None);
-        self.bitboards[color as usize].insert(sq);
+    pub fn put(&mut self, sq: Square, piece: Piece) {
+        debug_assert_ne!(piece, Piece::None);
+        self.bitboards[piece as usize].insert(sq);
     }
 
     /// at returns the Piece of the piece present on the given Square.
@@ -234,8 +234,8 @@ impl Position {
     /// );
     /// assert_eq!(position.bitboard(Piece::White), BitBoard::UNIVERSE);
     /// ```
-    pub const fn bitboard(&self, color: Piece) -> BitBoard {
-        self.bitboards[color as usize]
+    pub const fn bitboard(&self, piece: Piece) -> BitBoard {
+        self.bitboards[piece as usize]
     }
 }
 
@@ -521,7 +521,7 @@ pub enum PositionParseError {
     #[error("a jump value was too long and overshot")]
     JumpTooLong,
 
-    #[error("invalid color identifier '{0}'")]
+    #[error("invalid piece identifier '{0}'")]
     InvalidPieceIdent(char),
     #[error("insufficient data to fill the entire {0} file")]
     FileDataIncomplete(File),
