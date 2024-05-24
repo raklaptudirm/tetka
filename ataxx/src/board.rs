@@ -14,6 +14,7 @@
 use std::cmp;
 use std::fmt;
 use std::num::ParseIntError;
+use std::ops::Deref;
 use std::str::FromStr;
 
 use strum::IntoEnumIterator;
@@ -32,24 +33,22 @@ use crate::{
 /// positions. It supports a maximum of MAX_PLY moves to be played.
 pub struct Board {
     history: [Position; Board::MAX_PLY],
-    current: usize,
-    mov_cnt: u16,
+    ply_cnt: usize,
 }
 
 impl Board {
     #[rustfmt::skip]
-    pub fn new(position: Position, movcount: u16) -> Board {
+    pub fn new(position: Position, ply_cnt: usize) -> Board {
         let mut board = Board {
             history: [
                 Position::new(
                     BitBoard::EMPTY, BitBoard::EMPTY, Color::None
                 ); Board::MAX_PLY
             ],
-            current: 0,
-            mov_cnt: movcount,
+            ply_cnt,
         };
 
-        board.history[0] = position;
+        board.history[ply_cnt] = position;
         board
     }
 }
@@ -60,79 +59,14 @@ impl Board {
     /// use for the length of the board's position history.
     const MAX_PLY: usize = 1024;
 
-    /// position returns a copy of the current Position on the Board.
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
-    ///
-    /// assert_eq!(board.checksum(), position.checksum);
-    /// ```
-    pub fn position(&self) -> Position {
-        self.history[self.current]
+    /// move_count returns the number of full moves played till now.
+    pub const fn move_count(&self) -> usize {
+        self.ply_cnt / 2 + 1
     }
 
-    /// side_to_move returns the current Color to move on the Board.
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// assert_eq!(board.side_to_move(), Color::Black);
-    /// ```
-    pub const fn side_to_move(&self) -> Color {
-        self.current_pos().side_to_move
-    }
-
-    /// checksum returns a semi-unique Hash to identify the Position by.
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    ///
-    /// assert_eq!(board.checksum(), board.position().checksum);
-    /// ```
-    pub const fn checksum(&self) -> Hash {
-        self.current_pos().checksum
-    }
-
-    pub const fn full_moves(&self) -> u16 {
-        self.mov_cnt
-    }
-
-    const fn current_pos(&self) -> &Position {
-        &self.history[self.current]
-    }
-}
-
-impl Board {
-    ///
-    pub const fn at(&self, sq: Square) -> Color {
-        self.current_pos().at(sq)
-    }
-
-    ///
-    pub const fn bitboard(&self, color: Color) -> BitBoard {
-        self.current_pos().bitboard(color)
-    }
-}
-
-impl Board {
-    /// is_game_over checks if the game represented by the current Board has ended.
-    /// It is a wrapper on top of [`Position::is_game_over`], so refer to it for
-    /// more in-depth documentation and examples.
-    pub fn is_game_over(&self) -> bool {
-        self.current_pos().is_game_over()
-    }
-
-    /// winner returns the Color which has won the game represented by the current
-    /// Board. It is a wrapper on top of [`Position::winner`], so refer to it for
-    /// more in-depth documentation and examples.
-    pub fn winner(&self) -> Color {
-        self.current_pos().winner()
+    /// ply_count returns the number of plys played till now.
+    pub const fn ply_count(&self) -> usize {
+        self.ply_cnt
     }
 }
 
@@ -141,11 +75,8 @@ impl Board {
     /// It is a wrapper on top of [`Position::after_move`], so refer to it for more
     /// in-depth documentation and examples.
     pub fn make_move(&mut self, m: Move) {
-        self.history[self.current + 1] = self.current_pos().after_move(m);
-        self.current += 1;
-        if self.side_to_move() == Color::Black {
-            self.mov_cnt += 1;
-        }
+        self.history[self.ply_cnt + 1] = self.after_move(m);
+        self.ply_cnt += 1;
     }
 
     /// undo_move un-plays the last played Move on the Board.
@@ -154,15 +85,26 @@ impl Board {
     /// use std::str::FromStr;
     ///
     /// let mut board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let old_checksum = board.position().checksum;
+    /// let old_checksum = board.checksum;
     ///
     /// board.make_move(Move::new_single(Square::B7));
     /// board.undo_move();
     ///
-    /// assert_eq!(board.checksum(), old_checksum);
+    /// assert_eq!(board.checksum, old_checksum);
     /// ```
     pub fn undo_move(&mut self) {
-        self.current -= 1;
+        self.ply_cnt -= 1;
+    }
+}
+
+impl Deref for Board {
+    type Target = Position;
+
+    /// deref dereferences a Board into a &Position where the Position being pointed
+    /// to is the current Position on the Board. This allows the user to access all
+    /// of Position's methods and fields from the Board.
+    fn deref(&self) -> &Self::Target {
+        &self.history[self.ply_cnt]
     }
 }
 
@@ -186,38 +128,21 @@ impl FromStr for Board {
         let position = Position::from_str(pos)?; // Parse the Position
         let movcount = fm.parse::<u16>()?; // Parse the Move Count
 
-        Ok(Board::new(position, movcount))
+        Ok(Board::new(
+            position,
+            movcount as usize * 2
+                - if position.side_to_move == Color::White {
+                    2
+                } else {
+                    1
+                },
+        ))
     }
 }
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.current_pos())
-    }
-}
-
-impl Board {
-    /// generate_moves generates the legal Moves present in the current Position
-    /// on the Board into a [MoveList] and returns it. It is a wrapper on top of
-    /// the [`Position::generate_moves`] function, so refer to it for more in
-    /// depth documentation and examples.
-    pub fn generate_moves(&self) -> MoveList {
-        self.current_pos().generate_moves()
-    }
-
-    /// generate_moves_into generates the legal Moves present in the current
-    /// Position into the given type which implements [MoveStore]. It is a
-    /// wrapper on top of the [`Position::generate_moves_into<T>`] function, so
-    /// refer to it for more in depth documentation and examples.
-    pub fn generate_moves_into<T: MoveStore>(&self, movelist: &mut T) {
-        self.current_pos().generate_moves_into(movelist);
-    }
-
-    /// count_moves counts the number of legal Moves present in the current
-    /// Position. It is a wrapper on top of the [`Position::count_moves`]
-    /// function, so refer to it for more in depth documentation and examples.
-    pub fn count_moves(&self) -> usize {
-        self.current_pos().count_moves()
+        write!(f, "{}", self.deref())
     }
 }
 
@@ -526,7 +451,7 @@ impl Position {
 
         // If there are no legal moves possible on the Position and the game isn't
         // over, a pass move is the only move possible to be played.
-        if movelist.len() == 0 && !self.is_game_over() {
+        if movelist.len() == 0 {
             movelist.push(Move::PASS);
         }
     }
@@ -575,7 +500,7 @@ impl Position {
 
         // If there are no legal moves possible on the Position and the game isn't
         // over, a pass move is the only move possible to be played.
-        if moves == 0 && !self.is_game_over() {
+        if moves == 0 {
             moves += 1;
         }
 
