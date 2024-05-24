@@ -23,9 +23,9 @@ use thiserror::Error;
 
 #[rustfmt::skip]
 use crate::{
-    BitBoard, Color, File, Hash, Move,
+    BitBoard, Piece, File, Hash, Move,
     MoveList, MoveStore, Rank, Square,
-    ColorParseError,
+    PieceParseError,
 };
 
 /// Board implements an ataxx game board which can start from a given
@@ -42,7 +42,7 @@ impl Board {
         let mut board = Board {
             history: [
                 Position::new(
-                    BitBoard::EMPTY, BitBoard::EMPTY, Color::None
+                    BitBoard::EMPTY, BitBoard::EMPTY, Piece::None
                 ); Board::MAX_PLY
             ],
             ply_cnt,
@@ -131,7 +131,7 @@ impl FromStr for Board {
         Ok(Board::new(
             position,
             movcount as usize * 2
-                - if position.side_to_move == Color::White {
+                - if position.side_to_move == Piece::White {
                     2
                 } else {
                     1
@@ -150,12 +150,12 @@ impl fmt::Display for Board {
 /// at a single point in time. It is the functional backend of the [Board] type.
 #[derive(Copy, Clone)]
 pub struct Position {
-    /// bitboards stores [BitBoard]s for the piece configuration of each [Color].
-    pub bitboards: [BitBoard; Color::N],
+    /// bitboards stores [BitBoard]s for the piece configuration of each [Piece].
+    pub bitboards: [BitBoard; Piece::N],
     /// checksum stores the semi-unique [struct@Hash] of the current Position.
     pub checksum: Hash,
-    /// side_to_move stores the [Color] whose turn to move it currently is.
-    pub side_to_move: Color,
+    /// side_to_move stores the [Piece] whose turn to move it currently is.
+    pub side_to_move: Piece,
     /// half-move clock stores the number of half-moves since the last irreversible
     /// Move. It is used to adjudicate games using the 50-move/100-ply rule.
     pub half_move_clock: u8,
@@ -163,7 +163,7 @@ pub struct Position {
 
 impl Position {
     /// new creates a new Position with the given BitBoards and side to move.
-    pub fn new(white: BitBoard, black: BitBoard, stm: Color) -> Position {
+    pub fn new(white: BitBoard, black: BitBoard, stm: Piece) -> Position {
         Position {
             bitboards: [white, black],
             checksum: Hash::new(white, black, stm),
@@ -172,18 +172,18 @@ impl Position {
         }
     }
 
-    /// put puts the given piece represented by its Color on the given Square.
+    /// put puts the given piece represented by its Piece on the given Square.
     /// ```
     /// use ataxx::*;
     ///
     /// let mut position = Position::new(
     ///     BitBoard::EMPTY,
     ///     BitBoard::EMPTY,
-    ///     Color::White
+    ///     Piece::White
     /// );
-    /// position.put(Square::A1, Color::White);
+    /// position.put(Square::A1, Piece::White);
     ///
-    /// assert_eq!(position.bitboard(Color::White), bitboard! {
+    /// assert_eq!(position.bitboard(Piece::White), bitboard! {
     ///     . . . . . . .
     ///     . . . . . . .
     ///     . . . . . . .
@@ -193,37 +193,37 @@ impl Position {
     ///     X . . . . . .
     /// });
     /// ```
-    pub fn put(&mut self, sq: Square, color: Color) {
+    pub fn put(&mut self, sq: Square, color: Piece) {
         match color {
-            Color::White => self.bitboards[Color::White as usize].insert(sq),
-            Color::Black => self.bitboards[Color::Black as usize].insert(sq),
-            Color::None => unreachable!(),
+            Piece::White => self.bitboards[Piece::White as usize].insert(sq),
+            Piece::Black => self.bitboards[Piece::Black as usize].insert(sq),
+            Piece::None => unreachable!(),
         };
     }
 
-    /// at returns the Color of the piece present on the given Square.
+    /// at returns the Piece of the piece present on the given Square.
     /// ```
     /// use ataxx::*;
     ///
     /// let position = Position::new(
     ///     BitBoard::UNIVERSE,
     ///     BitBoard::EMPTY,
-    ///     Color::White
+    ///     Piece::White
     /// );
-    /// assert_eq!(position.at(Square::A1), Color::White);
+    /// assert_eq!(position.at(Square::A1), Piece::White);
     /// ```
-    pub const fn at(&self, sq: Square) -> Color {
-        if self.bitboard(Color::White).contains(sq) {
-            Color::White
-        } else if self.bitboard(Color::Black).contains(sq) {
-            Color::Black
+    pub const fn at(&self, sq: Square) -> Piece {
+        if self.bitboard(Piece::White).contains(sq) {
+            Piece::White
+        } else if self.bitboard(Piece::Black).contains(sq) {
+            Piece::Black
         } else {
-            Color::None
+            Piece::None
         }
     }
 
     /// bitboard returns the BitBoard associated to the piece configuration of the
-    /// given Color. Only the Squares with a piece of the given Color on them are
+    /// given Piece. Only the Squares with a piece of the given Piece on them are
     /// contained inside the returned BitBoard.
     /// ```
     /// use ataxx::*;
@@ -231,11 +231,11 @@ impl Position {
     /// let position = Position::new(
     ///     BitBoard::UNIVERSE,
     ///     BitBoard::EMPTY,
-    ///     Color::White
+    ///     Piece::White
     /// );
-    /// assert_eq!(position.bitboard(Color::White), BitBoard::UNIVERSE);
+    /// assert_eq!(position.bitboard(Piece::White), BitBoard::UNIVERSE);
     /// ```
-    pub const fn bitboard(&self, color: Color) -> BitBoard {
+    pub const fn bitboard(&self, color: Piece) -> BitBoard {
         self.bitboards[color as usize]
     }
 }
@@ -257,14 +257,14 @@ impl Position {
     /// assert!(!ongoing.is_game_over());
     /// ```
     pub fn is_game_over(&self) -> bool {
-        let white = self.bitboard(Color::White);
-        let black = self.bitboard(Color::Black);
+        let white = self.bitboard(Piece::White);
+        let black = self.bitboard(Piece::Black);
         self.half_move_clock >= 100 ||                           // Fifty-move rule
 			white | black == BitBoard::UNIVERSE ||               // All squares occupied
 			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
     }
 
-    /// winner returns the Color which has won the game. It returns [`Color::None`]
+    /// winner returns the Piece which has won the game. It returns [`Piece::None`]
     /// if the game is a draw. If [`Board::is_game_over`] is false, then the
     /// behavior of this function is undefined.
     /// ```
@@ -275,40 +275,40 @@ impl Position {
     /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0").unwrap();
     /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100").unwrap();
     ///
-    /// assert_eq!(white_win.winner(), Color::White);
-    /// assert_eq!(black_win.winner(), Color::Black);
-    /// assert_eq!(draw_game.winner(), Color::None);
+    /// assert_eq!(white_win.winner(), Piece::White);
+    /// assert_eq!(black_win.winner(), Piece::Black);
+    /// assert_eq!(draw_game.winner(), Piece::None);
     /// ```
-    pub fn winner(&self) -> Color {
+    pub fn winner(&self) -> Piece {
         debug_assert!(self.is_game_over());
 
         if self.half_move_clock >= 100 {
             // Draw by 50 move rule.
-            return Color::None;
+            return Piece::None;
         }
 
-        let white = self.bitboard(Color::White);
-        let black = self.bitboard(Color::Black);
+        let white = self.bitboard(Piece::White);
+        let black = self.bitboard(Piece::Black);
 
         if white == BitBoard::EMPTY {
             // White lost all its pieces, black won.
-            return Color::Black;
+            return Piece::Black;
         } else if black == BitBoard::EMPTY {
             // Black lost all its pieces, white won.
-            return Color::White;
+            return Piece::White;
         }
 
         debug_assert!(white | black == BitBoard::UNIVERSE);
 
         // All the squares are occupied by pieces. Victory is decided by
-        // which Color has the most number of pieces on the Board.
+        // which Piece has the most number of pieces on the Board.
 
         let white_n = white.cardinality();
         let black_n = black.cardinality();
 
         match white_n.cmp(&black_n) {
-            cmp::Ordering::Less => Color::Black,
-            cmp::Ordering::Greater => Color::White,
+            cmp::Ordering::Less => Piece::Black,
+            cmp::Ordering::Greater => Piece::White,
             // Since there are an odd number of Squares and all of them are filled, there
             // can't be an equal number of black and white pieces on the Board.
             cmp::Ordering::Equal => unreachable!(),
@@ -366,7 +366,7 @@ impl Position {
             half_move_clock = self.half_move_clock + 1;
         };
 
-        let (white, black) = if stm == Color::White {
+        let (white, black) = if stm == Piece::White {
             (new_stm, new_xtm)
         } else {
             (new_xtm, new_stm)
@@ -519,14 +519,14 @@ pub enum PositionParseError {
     JumpTooLong,
 
     #[error("invalid color identifier '{0}'")]
-    InvalidColorIdent(char),
+    InvalidPieceIdent(char),
     #[error("insufficient data to fill the entire {0} file")]
     FileDataIncomplete(File),
     #[error("expected 7 ranks, found more")]
     TooManyRanks,
 
     #[error("parsing side to move: {0}")]
-    BadSideToMove(#[from] ColorParseError),
+    BadSideToMove(#[from] PieceParseError),
     #[error("parsing half-move clock: {0}")]
     BadHalfMoveClock(#[from] ParseIntError),
 }
@@ -546,7 +546,7 @@ impl FromStr for Position {
         let stm = parts[1];
         let hmc = parts[2];
 
-        let mut position = Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Color::None);
+        let mut position = Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Piece::None);
 
         // Spilt the position spec by the Ranks which are separated by '/'.
         let ranks: Vec<&str> = pos.split('/').collect();
@@ -569,8 +569,8 @@ impl FromStr for Position {
                 }
                 let square = Square::new(file.unwrap(), rank.unwrap());
                 match data {
-                    'O' | 'o' | 'w' => position.put(square, Color::White),
-                    'X' | 'x' | 'b' => position.put(square, Color::Black),
+                    'O' | 'o' | 'w' => position.put(square, Piece::White),
+                    'X' | 'x' | 'b' => position.put(square, Piece::Black),
 
                     // Numbers represent jump specs to jump over empty squares.
                     '1'..='8' => {
@@ -581,7 +581,7 @@ impl FromStr for Position {
                         }
                     }
 
-                    _ => return Err(PositionParseError::InvalidColorIdent(data)),
+                    _ => return Err(PositionParseError::InvalidPieceIdent(data)),
                 }
 
                 // On to the next Square spec in the Rank spec.
@@ -599,13 +599,13 @@ impl FromStr for Position {
             file = Ok(File::A);
         }
 
-        position.side_to_move = Color::from_str(stm)?;
+        position.side_to_move = Piece::from_str(stm)?;
         position.half_move_clock = hmc.parse::<u8>()?;
 
         // Calculate the Hash value for the Position.
         position.checksum = Hash::new(
-            position.bitboard(Color::White),
-            position.bitboard(Color::Black),
+            position.bitboard(Piece::White),
+            position.bitboard(Piece::Black),
             position.side_to_move,
         );
 

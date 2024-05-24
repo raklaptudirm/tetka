@@ -13,7 +13,7 @@
 
 use std::fmt;
 
-use crate::{BitBoard, Color};
+use crate::{BitBoard, Piece};
 
 /// Hash represents the semi-unique checksum of a Position used to efficiently
 /// check for Position equality. Some properties of a Hash include determinism,
@@ -25,7 +25,7 @@ impl Hash {
     /// new creates a new Hash from the given white and black piece BitBoards.
     /// This function is used in the backend by Position, and it is usually
     /// unnecessary for it to be used explicitly by end-users.
-    pub fn new(white: BitBoard, black: BitBoard, stm: Color) -> Hash {
+    pub fn new(white: BitBoard, black: BitBoard, stm: Piece) -> Hash {
         let a = white.0;
         let b = black.0;
 
@@ -51,9 +51,9 @@ impl Hash {
             .wrapping_add(part_3 as u64)
             .wrapping_add(part_4 as u64);
 
-        // The Hash is bitwise complemented if the given Color is Black. Therefore,
+        // The Hash is bitwise complemented if the given Piece is Black. Therefore,
         // if two Positions only differ in side to move, `a.Hash == !b.Hash`.
-        if stm == Color::Black {
+        if stm == Piece::Black {
             Hash(!hash)
         } else {
             Hash(hash)

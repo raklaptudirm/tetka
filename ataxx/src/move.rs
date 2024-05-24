@@ -47,8 +47,8 @@ impl Move {
     /// let old_pos = board.clone();
     /// let new_pos = old_pos.after_move(Move::PASS);
     ///
-    /// assert_eq!(old_pos.bitboard(Color::Black), new_pos.bitboard(Color::Black));
-    /// assert_eq!(old_pos.bitboard(Color::White), new_pos.bitboard(Color::White));
+    /// assert_eq!(old_pos.bitboard(Piece::Black), new_pos.bitboard(Piece::Black));
+    /// assert_eq!(old_pos.bitboard(Piece::White), new_pos.bitboard(Piece::White));
     /// assert_eq!(old_pos.side_to_move, !new_pos.side_to_move);
     /// ```
     pub const PASS: Move = Move(1 << 15 | 1 << 14);
