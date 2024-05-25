@@ -26,7 +26,7 @@ pub fn perft<const SPLIT: bool, const BULK: bool>(position: Position, depth: u8)
     let mut nodes: u64 = 0;
     let movelist = position.generate_moves();
 
-    for m in movelist.iter() {
+    for m in movelist {
         let new_position = position.after_move(m);
 
         // Spilt should always be disabled for child perft calls, and a child perft

@@ -290,14 +290,6 @@ impl MoveList {
         // the MoveList can only be increased by pushing Moves into it.
         unsafe { self.list[n].assume_init() }
     }
-
-    /// iter returns an [Iterator] which iterates over the moves in the MoveList.
-    pub fn iter(&self) -> MoveListIterator {
-        MoveListIterator {
-            list: self,
-            current: 0,
-        }
-    }
 }
 
 // Implement the MoveStore trait to allow usage in move-generation functions.
@@ -342,13 +334,27 @@ impl MoveStore for MoveList {
     }
 }
 
+impl IntoIterator for MoveList {
+    type Item = Move;
+    type IntoIter = MoveListIterator;
+
+    /// into_iter automatically converts a [MoveList] into an iterator when
+    /// necessary, like inside a for loop.
+    fn into_iter(self) -> Self::IntoIter {
+        MoveListIterator {
+            list: self,
+            current: 0,
+        }
+    }
+}
+
 /// MoveListIterator implements an [Iterator] for a [MoveList].
-pub struct MoveListIterator<'a> {
-    list: &'a MoveList,
+pub struct MoveListIterator {
+    list: MoveList,
     current: usize,
 }
 
-impl Iterator for MoveListIterator<'_> {
+impl Iterator for MoveListIterator {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {
