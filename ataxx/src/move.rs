@@ -152,10 +152,11 @@ impl FromStr for Move {
     type Err = MoveParseError;
 
     /// from_str converts the given string representation of a Move into a [Move].
-    /// The formats supported are '0000' for a [Move::PASS], <target> for a singular
-    /// Move, and <source><target> for a jump Move. For how <source> and <target>
-    /// are parsed, take a look at [`Square::FromStr`](Square::from_str). This
-    /// function can be treated as the inverse of [`Move::Display`].
+    /// The formats supported are '0000' for a [Move::PASS], `<target>` for a
+    /// singular Move, and `<source><target>` for a jump Move. For how `<source>`
+    /// and `<target>` are parsed, take a look at
+    /// [`Square::FromStr`](Square::from_str). This function can be treated as the
+    /// inverse of the [`fmt::Display`] trait for [Move].
     /// ```
     /// use ataxx::*;
     /// use std::str::FromStr;
@@ -239,8 +240,8 @@ impl fmt::Debug for Move {
 
 /// MoveStore is a trait implemented by types which are able to store [Move]s inside
 /// themselves and are thus usable in move-generation methods in
-/// [Board](super::Board) like
-/// [`Board::generate_moves_into<T>`](super::Board::generate_moves_into<T>).
+/// [Position](super::Position) like
+/// [`Position::generate_moves_into<T>`](super::Position::generate_moves_into<T>).
 pub trait MoveStore {
     /// push adds the given Move to the MoveStore.
     fn push(&mut self, m: Move);

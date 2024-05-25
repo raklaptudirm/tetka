@@ -27,8 +27,9 @@ use crate::{
     PieceParseError,
 };
 
-/// Position represents the snapshot of an Ataxx Board, the state of the Board
-/// at a single point in time. It is the functional backend of the [Board] type.
+/// Position represents the snapshot of an Ataxx Board, the state of the an
+/// ataxx game at a single point in time. It also provides all of the methods
+/// necessary to manipulate such a snapshot.
 #[derive(Copy, Clone)]
 pub struct Position {
     /// bitboards stores [BitBoard]s for the piece configuration of each [Piece].
@@ -162,7 +163,7 @@ impl Position {
     }
 
     /// winner returns the Piece which has won the game. It returns [`Piece::None`]
-    /// if the game is a draw. If [`Board::is_game_over`] is false, then the
+    /// if the game is a draw. If [`Position::is_game_over`] is false, then the
     /// behavior of this function is undefined.
     /// ```
     /// use ataxx::*;
