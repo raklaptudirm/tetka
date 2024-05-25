@@ -125,10 +125,10 @@ pub type CmdResult = Result<(), RunError>;
 /// RunError is the interface which the Client uses to understand custom errors
 /// returned by a Command. It allows the user to implement their own error types
 /// while allowing the Client to interpret and use those errors. This is
-/// achieved by requiring conversions from and into [`RunErrorType`].
-//pub trait RunError: Send + Into<RunErrorType> {}
+/// achieved by requiring conversions from and into [`RunError`].
+//pub trait RunError: Send + Into<RunError> {}
 
-/// `quit!()` resolves to a [`Err(~RunErrorType::Quit)`](RunErrorType::Quit)
+/// `quit!()` resolves to a [`Err(~RunError::Quit)`](RunError::Quit)
 /// kind of error, and thus can be called by itself inside a Command to instruct
 /// the Client to quit itself and stop executing commands.
 #[macro_export]
@@ -138,7 +138,7 @@ macro_rules! quit {
     };
 }
 
-/// `error!()` resolves to a [`Err(~RunErrorType::Error)`](RunErrorType::Error)
+/// `error!()` resolves to a [`Err(~RunError::Error)`](RunError::Error)
 /// kind of error, and thus can be called by itself inside a Command to exit the
 /// Command with the given error. It supports the same arguments as the
 /// [`format!`] macro.
@@ -151,7 +151,7 @@ macro_rules! error {
     };
 }
 
-/// `fatal!()` resolves to a [`Err(~RunErrorType::Fatal)`](RunErrorType::Fatal)
+/// `fatal!()` resolves to a [`Err(~RunError::Fatal)`](RunError::Fatal)
 /// kind of error, and thus can be called by itself inside a Command to exit the
 /// Command with the given error and to quit the Client. It is similar to the
 /// [`error!`] macro and supports the same arguments.
@@ -162,7 +162,7 @@ macro_rules! fatal {
     };
 }
 
-/// RunErrorType is the error that is used internally in Client. All user errors
+/// RunError is the error that is used internally in Client. All user errors
 /// must support conversion into this type so that the Client can handle them.
 #[derive(Debug, Clone)]
 pub enum RunError {
