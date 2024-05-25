@@ -22,215 +22,23 @@ use thiserror::Error;
 
 #[rustfmt::skip]
 use crate::{
-    BitBoard, Color, File, Hash, Move,
+    BitBoard, Piece, File, Hash, Move,
     MoveList, MoveStore, Rank, Square,
-    ColorParseError,
+    PieceParseError,
 };
 
-/// Board implements an ataxx game board which can start from a given
-/// Position and on which moves may be made and unmade to reach other
-/// positions. It supports a maximum of MAX_PLY moves to be played.
-pub struct Board {
-    history: [Position; Board::MAX_PLY],
-    current: usize,
-    mov_cnt: u16,
-}
-
-impl Board {
-    #[rustfmt::skip]
-    pub fn new(position: Position, movcount: u16) -> Board {
-        let mut board = Board {
-            history: [
-                Position::new(
-                    BitBoard::EMPTY, BitBoard::EMPTY, Color::None
-                ); Board::MAX_PLY
-            ],
-            current: 0,
-            mov_cnt: movcount,
-        };
-
-        board.history[0] = position;
-        board
-    }
-}
-
-impl Board {
-    /// MAX_PLY is the maximum number of plys than can be in a game.
-    /// Actually there can be more plys but this is a nice upper bound to
-    /// use for the length of the board's position history.
-    const MAX_PLY: usize = 1024;
-
-    /// position returns a copy of the current Position on the Board.
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
-    ///
-    /// assert_eq!(board.checksum(), position.checksum);
-    /// ```
-    pub fn position(&self) -> Position {
-        self.history[self.current]
-    }
-
-    /// side_to_move returns the current Color to move on the Board.
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// assert_eq!(board.side_to_move(), Color::Black);
-    /// ```
-    pub const fn side_to_move(&self) -> Color {
-        self.current_pos().side_to_move
-    }
-
-    /// checksum returns a semi-unique Hash to identify the Position by.
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    ///
-    /// assert_eq!(board.checksum(), board.position().checksum);
-    /// ```
-    pub const fn checksum(&self) -> Hash {
-        self.current_pos().checksum
-    }
-
-    pub const fn full_moves(&self) -> u16 {
-        self.mov_cnt
-    }
-
-    const fn current_pos(&self) -> &Position {
-        &self.history[self.current]
-    }
-}
-
-impl Board {
-    ///
-    pub const fn at(&self, sq: Square) -> Color {
-        self.current_pos().at(sq)
-    }
-
-    ///
-    pub const fn bitboard(&self, color: Color) -> BitBoard {
-        self.current_pos().bitboard(color)
-    }
-}
-
-impl Board {
-    /// is_game_over checks if the game represented by the current Board has ended.
-    /// It is a wrapper on top of [`Position::is_game_over`], so refer to it for
-    /// more in-depth documentation and examples.
-    pub fn is_game_over(&self) -> bool {
-        self.current_pos().is_game_over()
-    }
-
-    /// winner returns the Color which has won the game represented by the current
-    /// Board. It is a wrapper on top of [`Position::winner`], so refer to it for
-    /// more in-depth documentation and examples.
-    pub fn winner(&self) -> Color {
-        self.current_pos().winner()
-    }
-}
-
-impl Board {
-    /// make_move plays the given Move on the Board and updates state accordingly.
-    /// It is a wrapper on top of [`Position::after_move`], so refer to it for more
-    /// in-depth documentation and examples.
-    pub fn make_move(&mut self, m: Move) {
-        self.history[self.current + 1] = self.current_pos().after_move(m);
-        self.current += 1;
-        if self.side_to_move() == Color::Black {
-            self.mov_cnt += 1;
-        }
-    }
-
-    /// undo_move un-plays the last played Move on the Board.
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// let mut board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let old_checksum = board.position().checksum;
-    ///
-    /// board.make_move(Move::new_single(Square::B7));
-    /// board.undo_move();
-    ///
-    /// assert_eq!(board.checksum(), old_checksum);
-    /// ```
-    pub fn undo_move(&mut self) {
-        self.current -= 1;
-    }
-}
-
-#[derive(Error, Debug)]
-pub enum BoardParseError {
-    #[error("{0}")]
-    BadPosition(#[from] PositionParseError),
-    #[error("bad move count string \"{0}\"")]
-    BadMoveCount(#[from] ParseIntError),
-}
-
-impl FromStr for Board {
-    type Err = BoardParseError;
-
-    /// from_str converts the given FEN string into a [Board].
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // Split at the last space, the delimiter between the Position part and
-        // the move count part of the given FEN string.
-        let (pos, fm) = s.rsplit_once(' ').unwrap();
-
-        let position = Position::from_str(pos)?; // Parse the Position
-        let movcount = fm.parse::<u16>()?; // Parse the Move Count
-
-        Ok(Board::new(position, movcount))
-    }
-}
-
-impl fmt::Display for Board {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.current_pos())
-    }
-}
-
-impl Board {
-    /// generate_moves generates the legal Moves present in the current Position
-    /// on the Board into a [MoveList] and returns it. It is a wrapper on top of
-    /// the [`Position::generate_moves`] function, so refer to it for more in
-    /// depth documentation and examples.
-    pub fn generate_moves(&self) -> MoveList {
-        self.current_pos().generate_moves()
-    }
-
-    /// generate_moves_into generates the legal Moves present in the current
-    /// Position into the given type which implements [MoveStore]. It is a
-    /// wrapper on top of the [`Position::generate_moves_into<T>`] function, so
-    /// refer to it for more in depth documentation and examples.
-    pub fn generate_moves_into<T: MoveStore>(&self, movelist: &mut T) {
-        self.current_pos().generate_moves_into(movelist);
-    }
-
-    /// count_moves counts the number of legal Moves present in the current
-    /// Position. It is a wrapper on top of the [`Position::count_moves`]
-    /// function, so refer to it for more in depth documentation and examples.
-    pub fn count_moves(&self) -> usize {
-        self.current_pos().count_moves()
-    }
-}
-
-/// Position represents the snapshot of an Ataxx Board, the state of the Board
-/// at a single point in time. It is the functional backend of the [Board] type.
+/// Position represents the snapshot of an Ataxx Board, the state of the an
+/// ataxx game at a single point in time. It also provides all of the methods
+/// necessary to manipulate such a snapshot.
 #[derive(Copy, Clone)]
 pub struct Position {
-    /// bitboards stores [BitBoard]s for the piece configuration of each [Color].
-    pub bitboards: [BitBoard; Color::N],
+    /// bitboards stores [BitBoard]s for the piece configuration of each [Piece].
+    pub bitboards: [BitBoard; Piece::N],
     /// checksum stores the semi-unique [struct@Hash] of the current Position.
     pub checksum: Hash,
-    /// side_to_move stores the [Color] whose turn to move it currently is.
-    pub side_to_move: Color,
+    /// side_to_move stores the [Piece] whose turn to move it currently is.
+    pub side_to_move: Piece,
+    pub ply_count: u16,
     /// half-move clock stores the number of half-moves since the last irreversible
     /// Move. It is used to adjudicate games using the 50-move/100-ply rule.
     pub half_move_clock: u8,
@@ -238,27 +46,37 @@ pub struct Position {
 
 impl Position {
     /// new creates a new Position with the given BitBoards and side to move.
-    pub fn new(white: BitBoard, black: BitBoard, stm: Color) -> Position {
+    pub fn new(
+        black: BitBoard,
+        white: BitBoard,
+        block: BitBoard,
+        side_to_move: Piece,
+        ply_count: u16,
+        half_move_clock: u8,
+    ) -> Position {
         Position {
-            bitboards: [white, black],
-            checksum: Hash::new(white, black, stm),
-            side_to_move: stm,
-            half_move_clock: 0,
+            bitboards: [black, white, block],
+            checksum: Hash::new(black, white, side_to_move),
+            side_to_move,
+            ply_count,
+            half_move_clock,
         }
     }
 
-    /// put puts the given piece represented by its Color on the given Square.
+    /// put puts the given piece represented by its Piece on the given Square.
     /// ```
     /// use ataxx::*;
     ///
     /// let mut position = Position::new(
     ///     BitBoard::EMPTY,
     ///     BitBoard::EMPTY,
-    ///     Color::White
+    ///     BitBoard::EMPTY,
+    ///     Piece::Black,
+    ///     0, 0
     /// );
-    /// position.put(Square::A1, Color::White);
+    /// position.put(Square::A1, Piece::White);
     ///
-    /// assert_eq!(position.bitboard(Color::White), bitboard! {
+    /// assert_eq!(position.bitboard(Piece::White), bitboard! {
     ///     . . . . . . .
     ///     . . . . . . .
     ///     . . . . . . .
@@ -268,37 +86,38 @@ impl Position {
     ///     X . . . . . .
     /// });
     /// ```
-    pub fn put(&mut self, sq: Square, color: Color) {
-        match color {
-            Color::White => self.bitboards[Color::White as usize].insert(sq),
-            Color::Black => self.bitboards[Color::Black as usize].insert(sq),
-            Color::None => unreachable!(),
-        };
+    pub fn put(&mut self, sq: Square, piece: Piece) {
+        debug_assert_ne!(piece, Piece::None);
+        self.bitboards[piece as usize].insert(sq);
     }
 
-    /// at returns the Color of the piece present on the given Square.
+    /// at returns the Piece of the piece present on the given Square.
     /// ```
     /// use ataxx::*;
     ///
     /// let position = Position::new(
     ///     BitBoard::UNIVERSE,
     ///     BitBoard::EMPTY,
-    ///     Color::White
+    ///     BitBoard::EMPTY,
+    ///     Piece::Black,
+    ///     0, 0
     /// );
-    /// assert_eq!(position.at(Square::A1), Color::White);
+    /// assert_eq!(position.at(Square::A1), Piece::Black);
     /// ```
-    pub const fn at(&self, sq: Square) -> Color {
-        if self.bitboard(Color::White).contains(sq) {
-            Color::White
-        } else if self.bitboard(Color::Black).contains(sq) {
-            Color::Black
+    pub const fn at(&self, sq: Square) -> Piece {
+        if self.bitboard(Piece::Block).contains(sq) {
+            Piece::Block
+        } else if self.bitboard(Piece::Black).contains(sq) {
+            Piece::Black
+        } else if self.bitboard(Piece::White).contains(sq) {
+            Piece::White
         } else {
-            Color::None
+            Piece::None
         }
     }
 
     /// bitboard returns the BitBoard associated to the piece configuration of the
-    /// given Color. Only the Squares with a piece of the given Color on them are
+    /// given Piece. Only the Squares with a piece of the given Piece on them are
     /// contained inside the returned BitBoard.
     /// ```
     /// use ataxx::*;
@@ -306,12 +125,14 @@ impl Position {
     /// let position = Position::new(
     ///     BitBoard::UNIVERSE,
     ///     BitBoard::EMPTY,
-    ///     Color::White
+    ///     BitBoard::EMPTY,
+    ///     Piece::Black,
+    ///     0, 0
     /// );
-    /// assert_eq!(position.bitboard(Color::White), BitBoard::UNIVERSE);
+    /// assert_eq!(position.bitboard(Piece::Black), BitBoard::UNIVERSE);
     /// ```
-    pub const fn bitboard(&self, color: Color) -> BitBoard {
-        self.bitboards[color as usize]
+    pub const fn bitboard(&self, piece: Piece) -> BitBoard {
+        self.bitboards[piece as usize]
     }
 }
 
@@ -321,69 +142,72 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0").unwrap();
-    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0").unwrap();
-    /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100").unwrap();
-    /// let ongoing = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 0").unwrap();
+    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0 1").unwrap();
+    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0 1").unwrap();
+    /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100 1").unwrap();
+    /// let ongoing = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 0 1").unwrap();
     ///
-    /// assert!(white_win.is_game_over());
     /// assert!(black_win.is_game_over());
+    /// assert!(white_win.is_game_over());
     /// assert!(draw_game.is_game_over());
     /// assert!(!ongoing.is_game_over());
     /// ```
     pub fn is_game_over(&self) -> bool {
-        let white = self.bitboard(Color::White);
-        let black = self.bitboard(Color::Black);
+        let black = self.bitboard(Piece::Black);
+        let white = self.bitboard(Piece::White);
+        let block = self.bitboard(Piece::Block);
+
         self.half_move_clock >= 100 ||                           // Fifty-move rule
-			white | black == BitBoard::UNIVERSE ||               // All squares occupied
+			white | black | block == BitBoard::UNIVERSE ||       // All squares occupied
 			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
     }
 
-    /// winner returns the Color which has won the game. It returns [`Color::None`]
-    /// if the game is a draw. If [`Board::is_game_over`] is false, then the
+    /// winner returns the Piece which has won the game. It returns [`Piece::None`]
+    /// if the game is a draw. If [`Position::is_game_over`] is false, then the
     /// behavior of this function is undefined.
     /// ```
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0").unwrap();
-    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0").unwrap();
-    /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100").unwrap();
+    /// let black_win = Position::from_str("xxxxxxx/7/7/7/7/7/7 o 0 1").unwrap();
+    /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0 1").unwrap();
+    /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100 1").unwrap();
     ///
-    /// assert_eq!(white_win.winner(), Color::White);
-    /// assert_eq!(black_win.winner(), Color::Black);
-    /// assert_eq!(draw_game.winner(), Color::None);
+    /// assert_eq!(black_win.winner(), Piece::Black);
+    /// assert_eq!(white_win.winner(), Piece::White);
+    /// assert_eq!(draw_game.winner(), Piece::None);
     /// ```
-    pub fn winner(&self) -> Color {
+    pub fn winner(&self) -> Piece {
         debug_assert!(self.is_game_over());
 
         if self.half_move_clock >= 100 {
             // Draw by 50 move rule.
-            return Color::None;
+            return Piece::None;
         }
 
-        let white = self.bitboard(Color::White);
-        let black = self.bitboard(Color::Black);
+        let black = self.bitboard(Piece::Black);
+        let white = self.bitboard(Piece::White);
+        let block = self.bitboard(Piece::Block);
 
-        if white == BitBoard::EMPTY {
-            // White lost all its pieces, black won.
-            return Color::Black;
-        } else if black == BitBoard::EMPTY {
-            // Black lost all its pieces, white won.
-            return Color::White;
+        if black == BitBoard::EMPTY {
+            // Black lost all its pieces, White won.
+            return Piece::White;
+        } else if white == BitBoard::EMPTY {
+            // White lost all its pieces, Black won.
+            return Piece::Black;
         }
 
-        debug_assert!(white | black == BitBoard::UNIVERSE);
+        debug_assert!(black | white | block == BitBoard::UNIVERSE);
 
         // All the squares are occupied by pieces. Victory is decided by
-        // which Color has the most number of pieces on the Board.
+        // which Piece has the most number of pieces on the Board.
 
-        let white_n = white.cardinality();
         let black_n = black.cardinality();
+        let white_n = white.cardinality();
 
-        match white_n.cmp(&black_n) {
-            cmp::Ordering::Less => Color::Black,
-            cmp::Ordering::Greater => Color::White,
+        match black_n.cmp(&white_n) {
+            cmp::Ordering::Less => Piece::White,
+            cmp::Ordering::Greater => Piece::Black,
             // Since there are an odd number of Squares and all of them are filled, there
             // can't be an equal number of black and white pieces on the Board.
             cmp::Ordering::Equal => unreachable!(),
@@ -399,8 +223,8 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let mut pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
-    /// let new_pos = Position::from_str("xx4o/7/7/7/7/7/o5x o 0").unwrap();
+    /// let mut pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
+    /// let new_pos = Position::from_str("xx4o/7/7/7/7/7/o5x o 0 1").unwrap();
     ///
     /// let mov = Move::new_single(Square::B7);
     ///
@@ -413,8 +237,9 @@ impl Position {
         if m == Move::PASS {
             return Position {
                 bitboards: self.bitboards,
-                checksum: Hash(!self.checksum.0),
+                checksum: !self.checksum,
                 side_to_move: !self.side_to_move,
+                ply_count: self.ply_count + 1,
                 half_move_clock: self.half_move_clock + 1,
             };
         }
@@ -441,16 +266,17 @@ impl Position {
             half_move_clock = self.half_move_clock + 1;
         };
 
-        let (white, black) = if stm == Color::White {
+        let (white, black) = if stm == Piece::White {
             (new_stm, new_xtm)
         } else {
             (new_xtm, new_stm)
         };
 
         Position {
-            bitboards: [white, black],
-            checksum: Hash::new(white, black, !stm),
+            bitboards: [black, white, self.bitboard(Piece::Block)],
+            checksum: Hash::new(black, white, !stm),
             side_to_move: !stm,
+            ply_count: self.ply_count + 1,
             half_move_clock,
         }
     }
@@ -464,7 +290,7 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
+    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     /// let movelist = position.generate_moves();
     ///
     /// // There are 16 possible moves in startpos.
@@ -483,7 +309,7 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
+    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     /// let mut movelist = MoveList::new();
     ///
     /// position.generate_moves_into(&mut movelist);
@@ -499,9 +325,10 @@ impl Position {
 
         let stm = self.bitboard(self.side_to_move);
         let xtm = self.bitboard(!self.side_to_move);
+        let gap = self.bitboard(Piece::Block);
 
         // Pieces can only move to unoccupied Squares.
-        let allowed = !(stm | xtm);
+        let allowed = !(stm | xtm | gap);
 
         let mut single = BitBoard::EMPTY;
         for piece in stm {
@@ -526,7 +353,7 @@ impl Position {
 
         // If there are no legal moves possible on the Position and the game isn't
         // over, a pass move is the only move possible to be played.
-        if movelist.len() == 0 && !self.is_game_over() {
+        if movelist.len() == 0 {
             movelist.push(Move::PASS);
         }
     }
@@ -538,7 +365,7 @@ impl Position {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0").unwrap();
+    /// let position = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     ///
     /// // There are 16 possible moves in startpos.
     /// assert_eq!(position.count_moves(), 16);
@@ -553,9 +380,10 @@ impl Position {
 
         let stm = self.bitboard(self.side_to_move);
         let xtm = self.bitboard(!self.side_to_move);
+        let gap = self.bitboard(Piece::Block);
 
         // Pieces can only move to unoccupied Squares.
-        let allowed = !(stm | xtm);
+        let allowed = !(stm | xtm | gap);
 
         let mut single = BitBoard::EMPTY;
         for piece in stm {
@@ -575,7 +403,7 @@ impl Position {
 
         // If there are no legal moves possible on the Position and the game isn't
         // over, a pass move is the only move possible to be played.
-        if moves == 0 && !self.is_game_over() {
+        if moves == 0 {
             moves += 1;
         }
 
@@ -593,15 +421,15 @@ pub enum PositionParseError {
     #[error("a jump value was too long and overshot")]
     JumpTooLong,
 
-    #[error("invalid color identifier '{0}'")]
-    InvalidColorIdent(char),
+    #[error("invalid piece identifier '{0}'")]
+    InvalidPieceIdent(char),
     #[error("insufficient data to fill the entire {0} file")]
     FileDataIncomplete(File),
     #[error("expected 7 ranks, found more")]
     TooManyRanks,
 
     #[error("parsing side to move: {0}")]
-    BadSideToMove(#[from] ColorParseError),
+    BadSideToMove(#[from] PieceParseError),
     #[error("parsing half-move clock: {0}")]
     BadHalfMoveClock(#[from] ParseIntError),
 }
@@ -613,15 +441,23 @@ impl FromStr for Position {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts = s.split(' ').collect::<Vec<&str>>();
 
-        if parts.len() != 3 {
+        if parts.len() != 4 {
             return Err(PositionParseError::TooManyFields(parts.len()));
         }
 
         let pos = parts[0];
         let stm = parts[1];
         let hmc = parts[2];
+        let fmc = parts[3];
 
-        let mut position = Position::new(BitBoard::EMPTY, BitBoard::EMPTY, Color::None);
+        let mut position = Position::new(
+            BitBoard::EMPTY,
+            BitBoard::EMPTY,
+            BitBoard::EMPTY,
+            Piece::None,
+            0,
+            0,
+        );
 
         // Spilt the position spec by the Ranks which are separated by '/'.
         let ranks: Vec<&str> = pos.split('/').collect();
@@ -644,8 +480,9 @@ impl FromStr for Position {
                 }
                 let square = Square::new(file.unwrap(), rank.unwrap());
                 match data {
-                    'O' | 'o' | 'w' => position.put(square, Color::White),
-                    'X' | 'x' | 'b' => position.put(square, Color::Black),
+                    'o' | 'O' | 'w' | 'W' => position.put(square, Piece::White),
+                    'x' | 'X' | 'b' | 'B' => position.put(square, Piece::Black),
+                    '-' => position.put(square, Piece::Block),
 
                     // Numbers represent jump specs to jump over empty squares.
                     '1'..='8' => {
@@ -656,7 +493,7 @@ impl FromStr for Position {
                         }
                     }
 
-                    _ => return Err(PositionParseError::InvalidColorIdent(data)),
+                    _ => return Err(PositionParseError::InvalidPieceIdent(data)),
                 }
 
                 // On to the next Square spec in the Rank spec.
@@ -674,13 +511,17 @@ impl FromStr for Position {
             file = Ok(File::A);
         }
 
-        position.side_to_move = Color::from_str(stm)?;
+        position.side_to_move = Piece::from_str(stm)?;
         position.half_move_clock = hmc.parse::<u8>()?;
+        position.ply_count = fmc.parse::<u16>()? * 2 - 1;
+        if position.side_to_move == Piece::Black {
+            position.ply_count -= 1;
+        }
 
         // Calculate the Hash value for the Position.
         position.checksum = Hash::new(
-            position.bitboard(Color::White),
-            position.bitboard(Color::Black),
+            position.bitboard(Piece::Black),
+            position.bitboard(Piece::White),
             position.side_to_move,
         );
 
