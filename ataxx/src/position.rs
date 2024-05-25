@@ -237,7 +237,7 @@ impl Position {
         if m == Move::PASS {
             return Position {
                 bitboards: self.bitboards,
-                checksum: Hash(!self.checksum.0),
+                checksum: !self.checksum,
                 side_to_move: !self.side_to_move,
                 ply_count: self.ply_count + 1,
                 half_move_clock: self.half_move_clock + 1,

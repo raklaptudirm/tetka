@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
+use std::{fmt, ops};
 
 use crate::{BitBoard, Piece};
 
@@ -24,7 +24,9 @@ pub struct Hash(pub u64);
 impl Hash {
     /// new creates a new Hash from the given black and white piece BitBoards.
     /// This function is used in the backend by Position, and it is usually
-    /// unnecessary for it to be used explicitly by end-users.
+    /// unnecessary for it to be used explicitly by end-users. new doesn't take
+    /// the blocker configuration into account since that remains unchanged
+    /// throughout an ataxx game.
     pub fn new(black: BitBoard, white: BitBoard, stm: Piece) -> Hash {
         let a = black.0;
         let b = white.0;
@@ -58,6 +60,15 @@ impl Hash {
         } else {
             Hash(hash)
         }
+    }
+}
+
+impl ops::Not for Hash {
+    type Output = Self;
+
+    /// Not operator (!) switches the side to move for the Hash.
+    fn not(self) -> Self::Output {
+        Hash(!self.0)
     }
 }
 
