@@ -33,8 +33,8 @@ pub struct Client<T: Send> {
 impl<T: Send + 'static> Client<T> {
     /// start starts the Client so that it can now accept Commands from the GUI and
     /// send Commands back to the GUI as necessary. The Client will return only if
-    /// it encounters a fatal error while running a command ([`RunErrorType::Fatal`])
-    /// or one of the commands asks the Client to quit ([`RunErrorType::Quit`]).
+    /// it encounters a fatal error while running a command ([`RunError::Fatal`])
+    /// or one of the commands asks the Client to quit ([`RunError::Quit`]).
     pub fn start(&self, context: T) {
         // The GUI sends commands to the stdin.
         let stdin = io::stdin();

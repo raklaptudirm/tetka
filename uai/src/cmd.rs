@@ -24,7 +24,7 @@ use super::{Flag, FlagValues};
 /// Command represents a runnable UAI command. It contains all the metadata
 /// needed to parse and verify a Command request from the GUI for a Command, and
 /// to run that Command with the current context and the provided flag values.
-/// `T` is the context type of the [Client], while `E` is the error type. `E`
+/// `T` is the context type of the Client, while `E` is the error type. `E`
 /// must implement the [`RunError`] trait to be usable.
 pub struct Command<T: Send> {
     /// run_fn is the function used to run this Command.
@@ -114,10 +114,10 @@ impl<T: Send> Command<T> {
     }
 }
 
-/// RunFn<T> represents the run function of a Command. This function is called
+/// `RunFn<T>` represents the run function of a Command. This function is called
 /// with the context (`Arc<Mutex<T>>`) and the flag values ([`FlagValues`]) whenever
 /// the Command is to be executed. It returns a `Result<()>` where `E` implements
-/// [`RunError`] and is the error type for the [Client].
+/// [`RunError`] and is the error type for the Client.
 pub type RunFn<T> = fn(Bundle<T>) -> CmdResult;
 
 pub type CmdResult = Result<(), RunError>;
