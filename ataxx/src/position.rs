@@ -248,22 +248,17 @@ impl Position {
         let xtm_pieces = self.bitboard(!stm);
 
         let captured = BitBoard::single(m.target()) & xtm_pieces;
+        let from_to = BitBoard::from(m.target()) | BitBoard::from(m.source());
 
         // Move the captured pieces from xtm to stm.
         let new_xtm = xtm_pieces ^ captured;
-        let new_stm = stm_pieces ^ captured;
-
-        // Add a stm piece to the target square.
-        let mut new_stm = new_stm | BitBoard::from(m.target());
+        let new_stm = stm_pieces ^ captured ^ from_to;
 
         // Reset half move clock on a singular move.
-        let mut half_move_clock = 0;
-
-        // Remove the piece from the source square if the move is non-singular.
-        if !m.is_single() {
-            new_stm ^= BitBoard::from(m.source());
-            // Jump move, so don't reset half move clock.
-            half_move_clock = self.half_move_clock + 1;
+        let half_move_clock = if m.is_single() {
+            0
+        } else {
+            self.half_move_clock + 1
         };
 
         let (white, black) = if stm == Piece::White {
