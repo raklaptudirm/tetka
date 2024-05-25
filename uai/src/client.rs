@@ -177,12 +177,12 @@ impl<T: Send> Client<T> {
     }
 
     pub fn engine(mut self, name: &str) -> Self {
-        self.initial_context.engine = name.to_owned();
+        name.clone_into(&mut self.initial_context.engine);
         self
     }
 
     pub fn author(mut self, name: &str) -> Self {
-        self.initial_context.author = name.to_owned();
+        name.clone_into(&mut self.initial_context.author);
         self
     }
 }
