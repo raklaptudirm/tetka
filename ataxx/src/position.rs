@@ -325,25 +325,17 @@ impl Position {
         // Pieces can only move to unoccupied Squares.
         let allowed = !(stm | xtm | gap);
 
-        let mut single = BitBoard::EMPTY;
-        for piece in stm {
-            // All single moves to a single Square are equivalent, so a single
-            // BitBoard is sufficient to keep track of them all and cast out duplicates.
-            // An intersection with the allowed BitBoard is done once at the end.
-            single |= BitBoard::single(piece);
+        for target in stm.singles() & allowed {
+            movelist.push(Move::new_single(target));
+        }
 
+        for piece in stm {
             // There may be multiple jump moves to a single Square, so they need to be
             // verified (& allowed) and serialized into the movelist immediately.
             let double = BitBoard::double(piece) & allowed;
             for target in double {
                 movelist.push(Move::new(piece, target));
             }
-        }
-
-        // Serialize the single moves into the movelist.
-        single &= allowed;
-        for target in single {
-            movelist.push(Move::new_single(target));
         }
 
         // If there are no legal moves possible on the Position and the game isn't
@@ -371,8 +363,6 @@ impl Position {
             return 0;
         }
 
-        let mut moves: usize = 0;
-
         let stm = self.bitboard(self.side_to_move);
         let xtm = self.bitboard(!self.side_to_move);
         let gap = self.bitboard(Piece::Block);
@@ -380,26 +370,20 @@ impl Position {
         // Pieces can only move to unoccupied Squares.
         let allowed = !(stm | xtm | gap);
 
-        let mut single = BitBoard::EMPTY;
-        for piece in stm {
-            // All single moves to a single Square are equivalent, so a single
-            // BitBoard is sufficient to keep track of them all and cast out duplicates.
-            // An intersection with the allowed BitBoard is done once at the end.
-            single |= BitBoard::single(piece);
+        // Count the number single moves in the Position.
+        let mut moves: usize = (stm.singles() & allowed).cardinality();
 
+        for piece in stm {
             // There may be multiple jump moves to a single Square, so they need to be
             // verified (& allowed) and counted into the Position total immediately.
             let double = BitBoard::double(piece) & allowed;
             moves += double.cardinality();
         }
 
-        // Count the number single moves in the Position.
-        moves += (single & allowed).cardinality();
-
         // If there are no legal moves possible on the Position and the game isn't
         // over, a pass move is the only move possible to be played.
         if moves == 0 {
-            moves += 1;
+            return 1;
         }
 
         moves

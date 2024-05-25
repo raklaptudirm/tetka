@@ -374,6 +374,11 @@ impl BitBoard {
     pub fn msb(self) -> Square {
         Square::try_from(63 - self.0.leading_zeros()).unwrap()
     }
+
+    pub fn singles(self) -> BitBoard {
+        let bar = self | self.east() | self.west();
+        bar | bar.north() | bar.south()
+    }
 }
 
 // Iterator trait allows BitBoard to be used in a for loop.
