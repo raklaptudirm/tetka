@@ -17,9 +17,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::{Bundle, BundledCtx};
-
-use super::{Flag, FlagValues};
+use crate::{Bundle, BundledCtx, Flag, FlagValues};
 
 /// Command represents a runnable UAI command. It contains all the metadata
 /// needed to parse and verify a Command request from the GUI for a Command, and

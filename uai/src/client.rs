@@ -17,9 +17,7 @@ use std::sync::{Arc, Mutex};
 
 use std::default::Default;
 
-use crate::{error, inbuilt, BundledCtx, Parameter};
-
-use super::{Command, FlagValues, RunError};
+use crate::{error, inbuilt, BundledCtx, Command, FlagValues, Parameter, RunError};
 
 /// Client represents an UAI engine client. It can accept and parse commands
 /// from the GUI and send commands to the GUI though its input and output.
