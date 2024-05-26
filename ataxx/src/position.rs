@@ -230,14 +230,14 @@ impl Position {
     ///
     /// assert_eq!(pos.after_move(mov).checksum, new_pos.checksum);
     /// ```
-    pub fn after_move(&self, m: Move) -> Position {
+    pub fn after_move<const UPDATE_HASH: bool>(&self, m: Move) -> Position {
         let stm = self.side_to_move;
 
         // A pass move is a do nothing move; just change the side to move.
         if m == Move::PASS {
             return Position {
                 bitboards: self.bitboards,
-                checksum: !self.checksum,
+                checksum: if UPDATE_HASH { !self.checksum } else { Hash(0) },
                 side_to_move: !self.side_to_move,
                 ply_count: self.ply_count + 1,
                 half_move_clock: self.half_move_clock + 1,
@@ -269,7 +269,11 @@ impl Position {
 
         Position {
             bitboards: [black, white, self.bitboard(Piece::Block)],
-            checksum: Hash::new(black, white, !stm),
+            checksum: if UPDATE_HASH {
+                Hash::new(black, white, !stm)
+            } else {
+                Hash(0)
+            },
             side_to_move: !stm,
             ply_count: self.ply_count + 1,
             half_move_clock,

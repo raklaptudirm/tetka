@@ -27,7 +27,7 @@ pub fn perft<const SPLIT: bool, const BULK: bool>(position: Position, depth: u8)
     let movelist = position.generate_moves();
 
     for m in movelist {
-        let new_position = position.after_move(m);
+        let new_position = position.after_move::<false>(m);
 
         // Spilt should always be disabled for child perft calls, and a child perft
         // should have the same bulk counting behavior as the parent perft call.
