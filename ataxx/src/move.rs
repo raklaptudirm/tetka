@@ -44,7 +44,7 @@ impl Move {
     /// use std::str::FromStr;
     ///
     /// let old_pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let new_pos = old_pos.after_move(Move::PASS);
+    /// let new_pos = old_pos.after_move::<true>(Move::PASS);
     ///
     /// assert_eq!(old_pos.bitboard(Piece::Black), new_pos.bitboard(Piece::Black));
     /// assert_eq!(old_pos.bitboard(Piece::White), new_pos.bitboard(Piece::White));
