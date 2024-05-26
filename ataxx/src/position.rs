@@ -228,7 +228,7 @@ impl Position {
     ///
     /// let mov = Move::new_single(Square::B7);
     ///
-    /// assert_eq!(pos.after_move(mov)::<true>.checksum, new_pos.checksum);
+    /// assert_eq!(pos.after_move::<true>(mov).checksum, new_pos.checksum);
     /// ```
     pub fn after_move<const UPDATE_HASH: bool>(&self, m: Move) -> Position {
         let stm = self.side_to_move;
