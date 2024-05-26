@@ -1,7 +1,7 @@
 #[macro_export]
 #[doc(hidden)]
 macro_rules! impl_from_integer_for_enum {
-    (for $type:ident: $($num:ident, $fn:path;)*) => {$(
+    (for $type:ident $size:expr => $($num:ident, $fn:path;)*) => {$(
         impl TryFrom<$num> for $type {
             type Error = ();
             #[inline(always)]
@@ -19,7 +19,17 @@ macro_rules! impl_from_integer_for_enum {
                 number as Self
             }
         }
-    )*};
+    )*
+
+    impl $type {
+        #[inline(always)]
+        pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
+            debug_assert!(number.to_u64().unwrap() < $size as u64);
+            unsafe {
+                std::mem::transmute_copy(&number)
+            }
+        }
+    }};
 }
 
 pub use impl_from_integer_for_enum;

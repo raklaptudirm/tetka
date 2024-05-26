@@ -45,7 +45,7 @@ impl Square {
     /// assert_eq!(Square::new(File::A, Rank::First), Square::A1);
     /// ```
     pub fn new(file: File, rank: Rank) -> Square {
-        Square::try_from(rank as usize * File::N + file as usize).unwrap()
+        Square::unsafe_from(rank as usize * File::N + file as usize)
     }
 
     /// file returns the File of the current Square.
@@ -56,7 +56,7 @@ impl Square {
     /// ```
     #[inline(always)]
     pub fn file(self) -> File {
-        File::try_from(self as usize % File::N).unwrap()
+        File::unsafe_from(self as usize % File::N)
     }
 
     /// rank returns the Rank of the current Square.
@@ -67,7 +67,7 @@ impl Square {
     /// ```
     #[inline(always)]
     pub fn rank(self) -> Rank {
-        Rank::try_from(self as usize / File::N).unwrap()
+        Rank::unsafe_from(self as usize / File::N)
     }
 
     /// north returns the Square to the North of this one.
@@ -77,7 +77,7 @@ impl Square {
     /// assert_eq!(Square::D4.north(), Square::D5);
     /// ```
     pub fn north(self) -> Self {
-        Square::try_from(self as usize + File::N).unwrap()
+        Square::unsafe_from(self as usize + File::N)
     }
 
     /// south returns the Square to the South of this one.
@@ -87,7 +87,7 @@ impl Square {
     /// assert_eq!(Square::D4.south(), Square::D3);
     /// ```
     pub fn south(self) -> Self {
-        Square::try_from(self as usize - File::N).unwrap()
+        Square::unsafe_from(self as usize - File::N)
     }
 
     /// east returns the Square to the East of this one.
@@ -97,7 +97,7 @@ impl Square {
     /// assert_eq!(Square::D4.east(), Square::E4);
     /// ```
     pub fn east(self) -> Self {
-        Square::try_from(self as usize + 1).unwrap()
+        Square::unsafe_from(self as usize + 1)
     }
 
     /// west returns the Square to the West of this one.
@@ -107,7 +107,7 @@ impl Square {
     /// assert_eq!(Square::D4.west(), Square::C4);
     /// ```
     pub fn west(self) -> Self {
-        Square::try_from(self as usize - 1).unwrap()
+        Square::unsafe_from(self as usize - 1)
     }
 }
 
@@ -156,7 +156,7 @@ impl FromStr for Square {
 
 // Implement from and into traits for all primitive integer types.
 type_macros::impl_from_integer_for_enum! {
-    for Square:
+    for Square Square::N =>
 
     // Unsigned Integers.
     usize, Square::from_usize;
@@ -243,13 +243,13 @@ impl FromStr for File {
             return Err(FileParseError::InvalidFileString);
         }
 
-        Ok(File::try_from(ident - b'a').unwrap())
+        Ok(File::unsafe_from(ident - b'a'))
     }
 }
 
 // Implement from and into traits for all primitive integer types.
 type_macros::impl_from_integer_for_enum! {
-    for File:
+    for File File::N =>
 
     // Unsigned Integers.
     usize, File::from_usize;
@@ -336,13 +336,13 @@ impl FromStr for Rank {
             return Err(RankParseError::InvalidRankString);
         }
 
-        Ok(Rank::try_from(ident - b'1').unwrap())
+        Ok(Rank::unsafe_from(ident - b'1'))
     }
 }
 
 // Implement from and into traits for all primitive integer types.
 type_macros::impl_from_integer_for_enum! {
-    for Rank:
+    for Rank Rank::N =>
 
     // Unsigned Integers.
     usize, Rank::from_usize;

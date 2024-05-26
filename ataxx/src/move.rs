@@ -100,9 +100,9 @@ impl Move {
     #[inline(always)]
     #[rustfmt::skip]
     pub fn source(self) -> Square {
-        Square::try_from(
+        Square::unsafe_from(
             (self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK
-        ).unwrap()
+        )
     }
 
     /// Target returns the target Square of the moving piece.
@@ -116,9 +116,9 @@ impl Move {
     #[inline(always)]
     #[rustfmt::skip]
     pub fn target(self) -> Square {
-        Square::try_from(
+        Square::unsafe_from(
             (self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK
-        ).unwrap()
+        )
     }
 
     /// is_single checks if the given Move is singular in nature. The result of this

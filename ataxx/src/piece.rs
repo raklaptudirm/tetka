@@ -35,7 +35,7 @@ pub enum Piece {
 
 // Implement conversions from numerical types.
 type_macros::impl_from_integer_for_enum! {
-    for Piece:
+    for Piece Piece::N + 1 =>
 
     // unsigned integers
     usize, Piece::from_usize;
@@ -59,7 +59,7 @@ impl ops::Not for Piece {
     /// not implements the not unary operator (!) which switches the current Piece
     /// to its opposite, i.e. [`Piece::Black`] to [`Piece::White`] and vice versa.
     fn not(self) -> Self::Output {
-        Piece::try_from(self as usize ^ 1).unwrap()
+        Piece::unsafe_from(self as usize ^ 1)
     }
 }
 
