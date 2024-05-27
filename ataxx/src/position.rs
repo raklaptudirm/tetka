@@ -233,11 +233,21 @@ impl Position {
     pub fn after_move<const UPDATE_HASH: bool>(&self, m: Move) -> Position {
         let stm = self.side_to_move;
 
+        macro_rules! update_hash {
+            ($e:expr) => {
+                if UPDATE_HASH {
+                    $e
+                } else {
+                    Hash::ZERO
+                }
+            };
+        }
+
         // A pass move is a do nothing move; just change the side to move.
         if m == Move::PASS {
             return Position {
                 bitboards: self.bitboards,
-                checksum: if UPDATE_HASH { !self.checksum } else { Hash(0) },
+                checksum: update_hash!(!self.checksum),
                 side_to_move: !self.side_to_move,
                 ply_count: self.ply_count + 1,
                 half_move_clock: self.half_move_clock + 1,
@@ -269,11 +279,7 @@ impl Position {
 
         Position {
             bitboards: [black, white, self.bitboard(Piece::Block)],
-            checksum: if UPDATE_HASH {
-                Hash::new(black, white, !stm)
-            } else {
-                Hash(0)
-            },
+            checksum: update_hash!(Hash::new(black, white, !stm)),
             side_to_move: !stm,
             ply_count: self.ply_count + 1,
             half_move_clock,

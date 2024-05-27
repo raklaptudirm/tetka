@@ -44,7 +44,7 @@ use crate::{File, Rank, Square};
 /// assert_eq!(!x, BitBoard::UNIVERSE - x); // Complement
 /// ```
 #[derive(Copy, Clone, PartialEq, Eq, FromPrimitive)]
-pub struct BitBoard(pub u64);
+pub struct BitBoard(u64);
 
 /// bitboard is a macro which allows creation of BitBoard values from their
 /// graphical representation with (.)s and (X)s inside the macro call.
@@ -560,6 +560,12 @@ impl BitBoard {
     /// ```
     pub const fn double(square: Square) -> BitBoard {
         BitBoard::DOUBLES[square as usize]
+    }
+}
+
+impl From<BitBoard> for u64 {
+    fn from(value: BitBoard) -> Self {
+        value.0
     }
 }
 
