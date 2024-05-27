@@ -228,16 +228,26 @@ impl Position {
     ///
     /// let mov = Move::new_single(Square::B7);
     ///
-    /// assert_eq!(pos.after_move(mov).checksum, new_pos.checksum);
+    /// assert_eq!(pos.after_move::<true>(mov).checksum, new_pos.checksum);
     /// ```
-    pub fn after_move(&self, m: Move) -> Position {
+    pub fn after_move<const UPDATE_HASH: bool>(&self, m: Move) -> Position {
         let stm = self.side_to_move;
+
+        macro_rules! update_hash {
+            ($e:expr) => {
+                if UPDATE_HASH {
+                    $e
+                } else {
+                    Hash::ZERO
+                }
+            };
+        }
 
         // A pass move is a do nothing move; just change the side to move.
         if m == Move::PASS {
             return Position {
                 bitboards: self.bitboards,
-                checksum: !self.checksum,
+                checksum: update_hash!(!self.checksum),
                 side_to_move: !self.side_to_move,
                 ply_count: self.ply_count + 1,
                 half_move_clock: self.half_move_clock + 1,
@@ -248,22 +258,17 @@ impl Position {
         let xtm_pieces = self.bitboard(!stm);
 
         let captured = BitBoard::single(m.target()) & xtm_pieces;
+        let from_to = BitBoard::from(m.target()) | BitBoard::from(m.source());
 
         // Move the captured pieces from xtm to stm.
         let new_xtm = xtm_pieces ^ captured;
-        let new_stm = stm_pieces ^ captured;
-
-        // Add a stm piece to the target square.
-        let mut new_stm = new_stm | BitBoard::from(m.target());
+        let new_stm = stm_pieces ^ captured ^ from_to;
 
         // Reset half move clock on a singular move.
-        let mut half_move_clock = 0;
-
-        // Remove the piece from the source square if the move is non-singular.
-        if !m.is_single() {
-            new_stm ^= BitBoard::from(m.source());
-            // Jump move, so don't reset half move clock.
-            half_move_clock = self.half_move_clock + 1;
+        let half_move_clock = if m.is_single() {
+            0
+        } else {
+            self.half_move_clock + 1
         };
 
         let (white, black) = if stm == Piece::White {
@@ -274,7 +279,7 @@ impl Position {
 
         Position {
             bitboards: [black, white, self.bitboard(Piece::Block)],
-            checksum: Hash::new(black, white, !stm),
+            checksum: update_hash!(Hash::new(black, white, !stm)),
             side_to_move: !stm,
             ply_count: self.ply_count + 1,
             half_move_clock,
@@ -330,25 +335,17 @@ impl Position {
         // Pieces can only move to unoccupied Squares.
         let allowed = !(stm | xtm | gap);
 
-        let mut single = BitBoard::EMPTY;
-        for piece in stm {
-            // All single moves to a single Square are equivalent, so a single
-            // BitBoard is sufficient to keep track of them all and cast out duplicates.
-            // An intersection with the allowed BitBoard is done once at the end.
-            single |= BitBoard::single(piece);
+        for target in stm.singles() & allowed {
+            movelist.push(Move::new_single(target));
+        }
 
+        for piece in stm {
             // There may be multiple jump moves to a single Square, so they need to be
             // verified (& allowed) and serialized into the movelist immediately.
             let double = BitBoard::double(piece) & allowed;
             for target in double {
                 movelist.push(Move::new(piece, target));
             }
-        }
-
-        // Serialize the single moves into the movelist.
-        single &= allowed;
-        for target in single {
-            movelist.push(Move::new_single(target));
         }
 
         // If there are no legal moves possible on the Position and the game isn't
@@ -376,8 +373,6 @@ impl Position {
             return 0;
         }
 
-        let mut moves: usize = 0;
-
         let stm = self.bitboard(self.side_to_move);
         let xtm = self.bitboard(!self.side_to_move);
         let gap = self.bitboard(Piece::Block);
@@ -385,26 +380,20 @@ impl Position {
         // Pieces can only move to unoccupied Squares.
         let allowed = !(stm | xtm | gap);
 
-        let mut single = BitBoard::EMPTY;
-        for piece in stm {
-            // All single moves to a single Square are equivalent, so a single
-            // BitBoard is sufficient to keep track of them all and cast out duplicates.
-            // An intersection with the allowed BitBoard is done once at the end.
-            single |= BitBoard::single(piece);
+        // Count the number single moves in the Position.
+        let mut moves: usize = (stm.singles() & allowed).cardinality();
 
+        for piece in stm {
             // There may be multiple jump moves to a single Square, so they need to be
             // verified (& allowed) and counted into the Position total immediately.
             let double = BitBoard::double(piece) & allowed;
             moves += double.cardinality();
         }
 
-        // Count the number single moves in the Position.
-        moves += (single & allowed).cardinality();
-
         // If there are no legal moves possible on the Position and the game isn't
         // over, a pass move is the only move possible to be played.
         if moves == 0 {
-            moves += 1;
+            return 1;
         }
 
         moves
