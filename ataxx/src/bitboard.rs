@@ -361,7 +361,7 @@ impl BitBoard {
     /// ```
     #[inline(always)]
     pub fn lsb(self) -> Square {
-        Square::try_from(self.0.trailing_zeros()).unwrap()
+        Square::unsafe_from(self.0.trailing_zeros())
     }
 
     /// get_msb returns the most significant Square from the BitBoard.
@@ -372,7 +372,12 @@ impl BitBoard {
     /// ```
     #[inline(always)]
     pub fn msb(self) -> Square {
-        Square::try_from(63 - self.0.leading_zeros()).unwrap()
+        Square::unsafe_from(63 - self.0.leading_zeros())
+    }
+
+    pub fn singles(self) -> BitBoard {
+        let bar = self | self.east() | self.west();
+        bar | bar.north() | bar.south()
     }
 }
 
@@ -555,6 +560,12 @@ impl BitBoard {
     /// ```
     pub const fn double(square: Square) -> BitBoard {
         BitBoard::DOUBLES[square as usize]
+    }
+}
+
+impl From<BitBoard> for u64 {
+    fn from(value: BitBoard) -> Self {
+        value.0
     }
 }
 

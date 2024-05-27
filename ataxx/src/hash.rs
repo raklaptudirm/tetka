@@ -19,17 +19,20 @@ use crate::{BitBoard, Piece};
 /// check for Position equality. Some properties of a Hash include determinism,
 /// uniform distribution, avalanche effect, and collision resistance.
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
-pub struct Hash(pub u64);
+pub struct Hash(u64);
 
 impl Hash {
+    /// ZERO represents a usable zero or null Hash value.
+    pub const ZERO: Hash = Hash(0);
+
     /// new creates a new Hash from the given black and white piece BitBoards.
     /// This function is used in the backend by Position, and it is usually
     /// unnecessary for it to be used explicitly by end-users. new doesn't take
     /// the blocker configuration into account since that remains unchanged
     /// throughout an ataxx game.
     pub fn new(black: BitBoard, white: BitBoard, stm: Piece) -> Hash {
-        let a = black.0;
-        let b = white.0;
+        let a = black.into();
+        let b = white.into();
 
         // Currently, an 2^-63-almost delta universal hash function, based on
         // https://eprint.iacr.org/2011/116.pdf by Long Hoang Nguyen and Andrew
@@ -60,6 +63,12 @@ impl Hash {
         } else {
             Hash(hash)
         }
+    }
+}
+
+impl From<Hash> for u64 {
+    fn from(value: Hash) -> Self {
+        value.0
     }
 }
 

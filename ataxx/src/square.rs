@@ -17,6 +17,7 @@ use std::str::FromStr;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use strum_macros::EnumIter;
+use thiserror::Error;
 
 use crate::type_macros;
 
@@ -45,7 +46,7 @@ impl Square {
     /// assert_eq!(Square::new(File::A, Rank::First), Square::A1);
     /// ```
     pub fn new(file: File, rank: Rank) -> Square {
-        Square::try_from(rank as usize * File::N + file as usize).unwrap()
+        Square::unsafe_from(rank as usize * File::N + file as usize)
     }
 
     /// file returns the File of the current Square.
@@ -56,7 +57,7 @@ impl Square {
     /// ```
     #[inline(always)]
     pub fn file(self) -> File {
-        File::try_from(self as usize % File::N).unwrap()
+        File::unsafe_from(self as usize % File::N)
     }
 
     /// rank returns the Rank of the current Square.
@@ -67,7 +68,7 @@ impl Square {
     /// ```
     #[inline(always)]
     pub fn rank(self) -> Rank {
-        Rank::try_from(self as usize / File::N).unwrap()
+        Rank::unsafe_from(self as usize / File::N)
     }
 
     /// north returns the Square to the North of this one.
@@ -77,7 +78,7 @@ impl Square {
     /// assert_eq!(Square::D4.north(), Square::D5);
     /// ```
     pub fn north(self) -> Self {
-        Square::try_from(self as usize + File::N).unwrap()
+        Square::unsafe_from(self as usize + File::N)
     }
 
     /// south returns the Square to the South of this one.
@@ -87,7 +88,7 @@ impl Square {
     /// assert_eq!(Square::D4.south(), Square::D3);
     /// ```
     pub fn south(self) -> Self {
-        Square::try_from(self as usize - File::N).unwrap()
+        Square::unsafe_from(self as usize - File::N)
     }
 
     /// east returns the Square to the East of this one.
@@ -97,7 +98,7 @@ impl Square {
     /// assert_eq!(Square::D4.east(), Square::E4);
     /// ```
     pub fn east(self) -> Self {
-        Square::try_from(self as usize + 1).unwrap()
+        Square::unsafe_from(self as usize + 1)
     }
 
     /// west returns the Square to the West of this one.
@@ -107,17 +108,20 @@ impl Square {
     /// assert_eq!(Square::D4.west(), Square::C4);
     /// ```
     pub fn west(self) -> Self {
-        Square::try_from(self as usize - 1).unwrap()
+        Square::unsafe_from(self as usize - 1)
     }
 }
 
 /// SquareParseError represents the various errors that can
 /// be encountered while parsing a given string into a Square.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum SquareParseError {
+    #[error("wrong square string size")]
     WrongStringSize,
-    FileParseError(FileParseError),
-    RankParseError(RankParseError),
+    #[error("{0}")]
+    FileParseError(#[from] FileParseError),
+    #[error("{0}")]
+    RankParseError(#[from] RankParseError),
 }
 
 impl FromStr for Square {
@@ -138,17 +142,8 @@ impl FromStr for Square {
             return Err(SquareParseError::WrongStringSize);
         }
 
-        // Parse the File specification.
-        let file = match File::from_str(&s[..=0]) {
-            Ok(file) => file,
-            Err(err) => return Err(SquareParseError::FileParseError(err)),
-        };
-
-        // Parse the Rank specification.
-        let rank = match Rank::from_str(&s[1..]) {
-            Ok(rank) => rank,
-            Err(err) => return Err(SquareParseError::RankParseError(err)),
-        };
+        let file = File::from_str(&s[..1])?; // Parse the File specification.
+        let rank = Rank::from_str(&s[1..])?; // Parse the Rank specification.
 
         Ok(Square::new(file, rank))
     }
@@ -156,7 +151,7 @@ impl FromStr for Square {
 
 // Implement from and into traits for all primitive integer types.
 type_macros::impl_from_integer_for_enum! {
-    for Square:
+    for Square Square::N =>
 
     // Unsigned Integers.
     usize, Square::from_usize;
@@ -213,9 +208,11 @@ impl File {
 
 /// FileParseError represents the various errors that can
 /// be encountered while parsing a given string into a File.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum FileParseError {
+    #[error("wrong string size for file identifier")]
     WrongStringSize,
+    #[error("invalid file identifier string")]
     InvalidFileString,
 }
 
@@ -243,13 +240,13 @@ impl FromStr for File {
             return Err(FileParseError::InvalidFileString);
         }
 
-        Ok(File::try_from(ident - b'a').unwrap())
+        Ok(File::unsafe_from(ident - b'a'))
     }
 }
 
 // Implement from and into traits for all primitive integer types.
 type_macros::impl_from_integer_for_enum! {
-    for File:
+    for File File::N =>
 
     // Unsigned Integers.
     usize, File::from_usize;
@@ -305,9 +302,11 @@ impl Rank {
 
 /// RankParseError represents the various errors that can
 /// be encountered while parsing a given string into a Rank.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum RankParseError {
+    #[error("wrong string size for rank identifier")]
     WrongStringSize,
+    #[error("invalid rank identifier string")]
     InvalidRankString,
 }
 
@@ -336,13 +335,13 @@ impl FromStr for Rank {
             return Err(RankParseError::InvalidRankString);
         }
 
-        Ok(Rank::try_from(ident - b'1').unwrap())
+        Ok(Rank::unsafe_from(ident - b'1'))
     }
 }
 
 // Implement from and into traits for all primitive integer types.
 type_macros::impl_from_integer_for_enum! {
-    for Rank:
+    for Rank Rank::N =>
 
     // Unsigned Integers.
     usize, Rank::from_usize;
