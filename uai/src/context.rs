@@ -5,9 +5,9 @@ use crate::{flag, BundledCtx};
 /// Bundle is a packet containing all the relevant context necessary for a
 /// [Command](crate::Command) invocation. It provides access to the values of
 /// the flags provided to the command during invocation, the user specific
-/// context, and the inbuilt [context](inbuilt::Context) for use in a Command's
-/// body. A given Bundle is tied to a Command's invocation and can't be used
-/// outside that context.
+/// context, and the inbuilt context for use in a Command's run function. A
+/// given Bundle is tied to a Command's invocation and can't be used outside
+/// that context.
 pub struct Bundle<T: Send> {
     context: GuardedBundledCtx<T>,
     flags: flag::Values,

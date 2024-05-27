@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use crate::{parameter, GuardedBundledCtx, Number, Parameter};
 
 /// A BundledCtx bundles the user-provided context `C` and the inbuilt context
-/// ([`Context`]) into a single type of ease of mutex guarding.
+/// into a single type of ease of mutex guarding for concurrency.
 pub struct BundledCtx<T: Send> {
     pub user: T,
     client: Context,

@@ -114,9 +114,8 @@ impl<T: Send> Command<T> {
 }
 
 /// `RunFn<T>` represents the run function of a Command. This function is called
-/// with the context (`Arc<Mutex<T>>`) and the flag values ([`FlagValues`]) whenever
-/// the Command is to be executed. It returns a `Result<()>` where `E` implements
-/// [`RunError`] and is the error type for the Client.
+/// with the context ([`Bundle<T>`]) and the flag values whenever the Command
+/// is invoked. It returns a `CmdResult` which is then handled by the Client.
 pub type RunFn<T> = fn(Bundle<T>) -> CmdResult;
 
 pub type CmdResult = Result<(), RunError>;
