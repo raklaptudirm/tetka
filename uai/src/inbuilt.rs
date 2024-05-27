@@ -12,8 +12,34 @@
 // limitations under the License.
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
-use crate::{Parameter, ParameterValues};
+use crate::{parameter::ParameterValues, GuardedBundledCtx, Number, Parameter};
+
+/// A BundledCtx bundles the user-provided context `C` and the inbuilt context
+/// ([`Context`]) into a single type of ease of mutex guarding.
+pub struct BundledCtx<T: Send> {
+    pub user: T,
+    client: Context,
+}
+
+pub fn new_guarded_ctx<T: Send>(user: T, client: Context) -> GuardedBundledCtx<T> {
+    Arc::new(Mutex::new(BundledCtx { user, client }))
+}
+
+impl<T: Send> BundledCtx<T> {
+    pub fn get_check_option(&self, name: &str) -> Option<bool> {
+        self.client.option_values.get_check(name)
+    }
+
+    pub fn get_string_option(&self, name: &str) -> Option<String> {
+        self.client.option_values.get_string(name)
+    }
+
+    pub fn get_spin_option(&self, name: &str) -> Option<Number> {
+        self.client.option_values.get_spin(name)
+    }
+}
 
 pub mod commands {
     use crate::{error, quit, Command, Flag, Parameter, RunError};

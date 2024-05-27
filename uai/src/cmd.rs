@@ -17,7 +17,8 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::{Bundle, BundledCtx, Flag, FlagValues};
+use crate::context::new_bundle;
+use crate::{flag::FlagValues, Bundle, BundledCtx, Flag};
 
 /// Command represents a runnable UAI command. It contains all the metadata
 /// needed to parse and verify a Command request from the GUI for a Command, and
@@ -39,7 +40,7 @@ impl<T: Send + 'static> Command<T> {
     /// the error returned by the Command's execution, or [`Ok`] for parallel.
     pub fn run(&self, context: &Arc<Mutex<BundledCtx<T>>>, flags: FlagValues) -> CmdResult {
         // Clone values which might be moved by spawning a new thread.
-        let context = Bundle::new(context, flags);
+        let context = new_bundle(context, flags);
         let func = self.run_fn;
 
         if self.parallel {

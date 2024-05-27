@@ -13,11 +13,11 @@
 
 use std::collections::HashMap;
 use std::io::{self, BufRead};
-use std::sync::{Arc, Mutex};
 
 use std::default::Default;
 
-use crate::{error, inbuilt, BundledCtx, Command, FlagValues, Parameter, RunError};
+use crate::inbuilt::new_guarded_ctx;
+use crate::{error, flag::FlagValues, inbuilt, Command, GuardedBundledCtx, Parameter, RunError};
 
 /// Client represents an UAI engine client. It can accept and parse commands
 /// from the GUI and send commands to the GUI though its input and output.
@@ -38,10 +38,7 @@ impl<T: Send + 'static> Client<T> {
         let stdin = io::stdin();
 
         // Make the context thread safe to allow commands to run in parallel.
-        let context = Arc::new(Mutex::new(BundledCtx {
-            user: context,
-            client: self.initial_context.clone(),
-        }));
+        let context = new_guarded_ctx(context, self.initial_context.clone());
 
         // Iterate over the lines in the input, since Commands for the GUI are
         // separated by newlines and we want to parse each Command separately.
@@ -73,10 +70,10 @@ impl<T: Send + 'static> Client<T> {
         }
     }
 
-    pub fn run<CT: Send + 'static>(
+    fn run(
         &self,
-        cmd: &Command<CT>,
-        context: &Arc<Mutex<BundledCtx<CT>>>,
+        cmd: &Command<T>,
+        context: &GuardedBundledCtx<T>,
         args: &[&str],
     ) -> Result<(), RunError> {
         // Initialize an empty list of the Command's Flags' values.
