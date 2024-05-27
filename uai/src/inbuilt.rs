@@ -14,7 +14,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::{parameter::ParameterValues, GuardedBundledCtx, Number, Parameter};
+use crate::{parameter, GuardedBundledCtx, Number, Parameter};
 
 /// A BundledCtx bundles the user-provided context `C` and the inbuilt context
 /// ([`Context`]) into a single type of ease of mutex guarding.
@@ -125,7 +125,7 @@ pub struct Context {
     pub author: String,
 
     pub options: HashMap<String, Parameter>,
-    pub option_values: ParameterValues,
+    pub option_values: parameter::Values,
 }
 
 impl Context {

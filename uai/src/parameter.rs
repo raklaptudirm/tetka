@@ -32,13 +32,13 @@ pub enum Parameter {
 }
 
 #[derive(Clone, Default)]
-pub struct ParameterValues {
+pub struct Values {
     checks: HashMap<String, bool>,
     strings: HashMap<String, String>,
     numbers: HashMap<String, Number>,
 }
 
-impl ParameterValues {
+impl Values {
     pub fn get_check(&self, name: &str) -> Option<bool> {
         self.checks.get(name).copied()
     }
@@ -52,7 +52,7 @@ impl ParameterValues {
     }
 }
 
-impl ParameterValues {
+impl Values {
     pub fn insert(
         &mut self,
         name: String,

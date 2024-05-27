@@ -17,7 +17,7 @@ use std::io::{self, BufRead};
 use std::default::Default;
 
 use crate::inbuilt::new_guarded_ctx;
-use crate::{error, flag::FlagValues, inbuilt, Command, GuardedBundledCtx, Parameter, RunError};
+use crate::{error, flag, inbuilt, Command, GuardedBundledCtx, Parameter, RunError};
 
 /// Client represents an UAI engine client. It can accept and parse commands
 /// from the GUI and send commands to the GUI though its input and output.
@@ -77,7 +77,7 @@ impl<T: Send + 'static> Client<T> {
         args: &[&str],
     ) -> Result<(), RunError> {
         // Initialize an empty list of the Command's Flags' values.
-        let mut flags: FlagValues = Default::default();
+        let mut flags: flag::Values = Default::default();
 
         let mut args = args;
 

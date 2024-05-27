@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::{flag::FlagValues, BundledCtx};
+use crate::{flag, BundledCtx};
 
 /// Bundle is a packet containing all the relevant context necessary for a
 /// [Command](crate::Command) invocation. It provides access to the values of
@@ -10,11 +10,11 @@ use crate::{flag::FlagValues, BundledCtx};
 /// outside that context.
 pub struct Bundle<T: Send> {
     context: GuardedBundledCtx<T>,
-    flags: FlagValues,
+    flags: flag::Values,
 }
 
 /// new creates a new [`Bundle<T>`] with the given [`BundledCtx`] and [`FlagValues`].
-pub fn new_bundle<T: Send>(context: &GuardedBundledCtx<T>, flags: FlagValues) -> Bundle<T> {
+pub fn new_bundle<T: Send>(context: &GuardedBundledCtx<T>, flags: flag::Values) -> Bundle<T> {
     let context = Arc::clone(context);
     Bundle { context, flags }
 }

@@ -44,13 +44,13 @@ impl Flag {
 /// FlagValues stores the arguments provided to each Flag during a single
 /// invocation of the parent Command. It is provided to the run function.
 #[derive(Default)]
-pub struct FlagValues {
+pub struct Values {
     bool_flags: HashSet<String>,
     sing_flags: HashMap<String, String>,
     arry_flags: HashMap<String, Vec<String>>,
 }
 
-impl FlagValues {
+impl Values {
     /// is_set checks if the Flag with the given name was provided in the invocation.
     pub fn is_set(&self, flag: &str) -> bool {
         self.bool_flags.contains(flag)
@@ -69,7 +69,7 @@ impl FlagValues {
     }
 }
 
-impl FlagValues {
+impl Values {
     pub fn insert(&mut self, name: &str, flag: Flag, value: &[&str]) {
         let name = name.to_string();
         let value = Vec::from_iter(value.iter().map(|s| s.to_string()));
