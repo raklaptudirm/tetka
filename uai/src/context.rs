@@ -24,7 +24,7 @@ impl<T: Send> Bundle<T> {
     /// [`BundledCtx`] which allows access to the user provided and inbuilt contexts
     /// stored in the [Client](crate::Client). The mutex can be unlocked by calling
     /// the `drop` function on the variable storing the mutex guard.
-    /// ```rust
+    /// ```rust,ignore
     /// // bundle: Bundle<T>
     /// let context = bundle.lock(); // Locking the mutex.
     /// drop(context);               // Unlocking the mutex.
