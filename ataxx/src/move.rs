@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
-use crate::Square;
+use crate::{Square, SquareParseError};
 
 /// Move represents an Ataxx move which can be played on the Board.
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
@@ -143,9 +143,7 @@ pub enum MoveParseError {
     #[error("length of move string should be 2 or 4, not {0}")]
     BadLength(usize),
     #[error("bad source square string \"{0}\"")]
-    BadSourceSquare(String),
-    #[error("bad target square string \"{0}\"")]
-    BadTargetSquare(String),
+    BadSquare(#[from] SquareParseError),
 }
 
 impl FromStr for Move {
@@ -179,20 +177,14 @@ impl FromStr for Move {
         }
 
         let source = &s[..2];
-        let source = match Square::from_str(source) {
-            Ok(sq) => sq,
-            Err(_err) => return Err(MoveParseError::BadSourceSquare(source.to_string())),
-        };
+        let source = Square::from_str(source)?;
 
         if s.len() < 4 {
             return Ok(Move::new_single(source));
         }
 
         let target = &s[2..];
-        let target = match Square::from_str(target) {
-            Ok(sq) => sq,
-            Err(_err) => return Err(MoveParseError::BadTargetSquare(target.to_string())),
-        };
+        let target = Square::from_str(target)?;
 
         Ok(Move::new(source, target))
     }

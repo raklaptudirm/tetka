@@ -17,6 +17,7 @@ use std::str::FromStr;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use strum_macros::EnumIter;
+use thiserror::Error;
 
 use crate::type_macros;
 
@@ -113,11 +114,14 @@ impl Square {
 
 /// SquareParseError represents the various errors that can
 /// be encountered while parsing a given string into a Square.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum SquareParseError {
+    #[error("wrong square string size")]
     WrongStringSize,
-    FileParseError(FileParseError),
-    RankParseError(RankParseError),
+    #[error("{0}")]
+    FileParseError(#[from] FileParseError),
+    #[error("{0}")]
+    RankParseError(#[from] RankParseError),
 }
 
 impl FromStr for Square {
@@ -138,17 +142,8 @@ impl FromStr for Square {
             return Err(SquareParseError::WrongStringSize);
         }
 
-        // Parse the File specification.
-        let file = match File::from_str(&s[..=0]) {
-            Ok(file) => file,
-            Err(err) => return Err(SquareParseError::FileParseError(err)),
-        };
-
-        // Parse the Rank specification.
-        let rank = match Rank::from_str(&s[1..]) {
-            Ok(rank) => rank,
-            Err(err) => return Err(SquareParseError::RankParseError(err)),
-        };
+        let file = File::from_str(&s[..1])?; // Parse the File specification.
+        let rank = Rank::from_str(&s[1..])?; // Parse the Rank specification.
 
         Ok(Square::new(file, rank))
     }
@@ -213,9 +208,11 @@ impl File {
 
 /// FileParseError represents the various errors that can
 /// be encountered while parsing a given string into a File.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum FileParseError {
+    #[error("wrong string size for file identifier")]
     WrongStringSize,
+    #[error("invalid file identifier string")]
     InvalidFileString,
 }
 
@@ -305,9 +302,11 @@ impl Rank {
 
 /// RankParseError represents the various errors that can
 /// be encountered while parsing a given string into a Rank.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum RankParseError {
+    #[error("wrong string size for rank identifier")]
     WrongStringSize,
+    #[error("invalid rank identifier string")]
     InvalidRankString,
 }
 
