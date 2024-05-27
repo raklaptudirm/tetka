@@ -13,8 +13,11 @@
 
 use std::fmt;
 use std::mem::MaybeUninit;
+use std::str::FromStr;
 
-use crate::Square;
+use thiserror::Error;
+
+use crate::{Square, SquareParseError};
 
 /// Move represents an Ataxx move which can be played on the Board.
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
@@ -40,12 +43,11 @@ impl Move {
     /// use ataxx::*;
     /// use std::str::FromStr;
     ///
-    /// let board = Board::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
-    /// let old_pos = board.position();
-    /// let new_pos = old_pos.after_move(Move::PASS);
+    /// let old_pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
+    /// let new_pos = old_pos.after_move::<true>(Move::PASS);
     ///
-    /// assert_eq!(old_pos.bitboard(Color::Black), new_pos.bitboard(Color::Black));
-    /// assert_eq!(old_pos.bitboard(Color::White), new_pos.bitboard(Color::White));
+    /// assert_eq!(old_pos.bitboard(Piece::Black), new_pos.bitboard(Piece::Black));
+    /// assert_eq!(old_pos.bitboard(Piece::White), new_pos.bitboard(Piece::White));
     /// assert_eq!(old_pos.side_to_move, !new_pos.side_to_move);
     /// ```
     pub const PASS: Move = Move(1 << 15 | 1 << 14);
@@ -98,9 +100,9 @@ impl Move {
     #[inline(always)]
     #[rustfmt::skip]
     pub fn source(self) -> Square {
-        Square::try_from(
+        Square::unsafe_from(
             (self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK
-        ).unwrap()
+        )
     }
 
     /// Target returns the target Square of the moving piece.
@@ -114,9 +116,9 @@ impl Move {
     #[inline(always)]
     #[rustfmt::skip]
     pub fn target(self) -> Square {
-        Square::try_from(
+        Square::unsafe_from(
             (self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK
-        ).unwrap()
+        )
     }
 
     /// is_single checks if the given Move is singular in nature. The result of this
@@ -133,6 +135,58 @@ impl Move {
     #[inline(always)]
     pub fn is_single(self) -> bool {
         self.source() == self.target()
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum MoveParseError {
+    #[error("length of move string should be 2 or 4, not {0}")]
+    BadLength(usize),
+    #[error("bad source square string \"{0}\"")]
+    BadSquare(#[from] SquareParseError),
+}
+
+impl FromStr for Move {
+    type Err = MoveParseError;
+
+    /// from_str converts the given string representation of a Move into a [Move].
+    /// The formats supported are '0000' for a [Move::PASS], `<target>` for a
+    /// singular Move, and `<source><target>` for a jump Move. For how `<source>`
+    /// and `<target>` are parsed, take a look at
+    /// [`Square::FromStr`](Square::from_str). This function can be treated as the
+    /// inverse of the [`fmt::Display`] trait for [Move].
+    /// ```
+    /// use ataxx::*;
+    /// use std::str::FromStr;
+    ///
+    /// let pass = Move::PASS;
+    /// let sing = Move::new_single(Square::A1);
+    /// let jump = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert_eq!(Move::from_str(&pass.to_string()).unwrap(), pass);
+    /// assert_eq!(Move::from_str(&sing.to_string()).unwrap(), sing);
+    /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
+    /// ```
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "0000" {
+            return Ok(Move::PASS);
+        };
+
+        if s.len() != 2 && s.len() != 4 {
+            return Err(MoveParseError::BadLength(s.len()));
+        }
+
+        let source = &s[..2];
+        let source = Square::from_str(source)?;
+
+        if s.len() < 4 {
+            return Ok(Move::new_single(source));
+        }
+
+        let target = &s[2..];
+        let target = Square::from_str(target)?;
+
+        Ok(Move::new(source, target))
     }
 }
 
@@ -178,8 +232,8 @@ impl fmt::Debug for Move {
 
 /// MoveStore is a trait implemented by types which are able to store [Move]s inside
 /// themselves and are thus usable in move-generation methods in
-/// [Board](super::Board) like
-/// [`Board::generate_moves_into<T>`](super::Board::generate_moves_into<T>).
+/// [Position](super::Position) like
+/// [`Position::generate_moves_into<T>`](super::Position::generate_moves_into<T>).
 pub trait MoveStore {
     /// push adds the given Move to the MoveStore.
     fn push(&mut self, m: Move);
@@ -228,14 +282,6 @@ impl MoveList {
         // the MoveList can only be increased by pushing Moves into it.
         unsafe { self.list[n].assume_init() }
     }
-
-    /// iter returns an [Iterator] which iterates over the moves in the MoveList.
-    pub fn iter(&self) -> MoveListIterator {
-        MoveListIterator {
-            list: self,
-            current: 0,
-        }
-    }
 }
 
 // Implement the MoveStore trait to allow usage in move-generation functions.
@@ -280,13 +326,27 @@ impl MoveStore for MoveList {
     }
 }
 
+impl IntoIterator for MoveList {
+    type Item = Move;
+    type IntoIter = MoveListIterator;
+
+    /// into_iter automatically converts a [MoveList] into an iterator when
+    /// necessary, like inside a for loop.
+    fn into_iter(self) -> Self::IntoIter {
+        MoveListIterator {
+            list: self,
+            current: 0,
+        }
+    }
+}
+
 /// MoveListIterator implements an [Iterator] for a [MoveList].
-pub struct MoveListIterator<'a> {
-    list: &'a MoveList,
+pub struct MoveListIterator {
+    list: MoveList,
     current: usize,
 }
 
-impl Iterator for MoveListIterator<'_> {
+impl Iterator for MoveListIterator {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -11,23 +11,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
+use std::{fmt, ops};
 
-use crate::{BitBoard, Color};
+use crate::{BitBoard, Piece};
 
 /// Hash represents the semi-unique checksum of a Position used to efficiently
 /// check for Position equality. Some properties of a Hash include determinism,
 /// uniform distribution, avalanche effect, and collision resistance.
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
-pub struct Hash(pub u64);
+pub struct Hash(u64);
 
 impl Hash {
-    /// new creates a new Hash from the given white and black piece BitBoards.
+    /// ZERO represents a usable zero or null Hash value.
+    pub const ZERO: Hash = Hash(0);
+
+    /// new creates a new Hash from the given black and white piece BitBoards.
     /// This function is used in the backend by Position, and it is usually
-    /// unnecessary for it to be used explicitly by end-users.
-    pub fn new(white: BitBoard, black: BitBoard, stm: Color) -> Hash {
-        let a = white.0;
-        let b = black.0;
+    /// unnecessary for it to be used explicitly by end-users. new doesn't take
+    /// the blocker configuration into account since that remains unchanged
+    /// throughout an ataxx game.
+    pub fn new(black: BitBoard, white: BitBoard, stm: Piece) -> Hash {
+        let a = black.into();
+        let b = white.into();
 
         // Currently, an 2^-63-almost delta universal hash function, based on
         // https://eprint.iacr.org/2011/116.pdf by Long Hoang Nguyen and Andrew
@@ -51,13 +56,28 @@ impl Hash {
             .wrapping_add(part_3 as u64)
             .wrapping_add(part_4 as u64);
 
-        // The Hash is bitwise complemented if the given Color is Black. Therefore,
+        // The Hash is bitwise complemented if the given Piece is Black. Therefore,
         // if two Positions only differ in side to move, `a.Hash == !b.Hash`.
-        if stm == Color::Black {
+        if stm == Piece::Black {
             Hash(!hash)
         } else {
             Hash(hash)
         }
+    }
+}
+
+impl From<Hash> for u64 {
+    fn from(value: Hash) -> Self {
+        value.0
+    }
+}
+
+impl ops::Not for Hash {
+    type Output = Self;
+
+    /// Not operator (!) switches the side to move for the Hash.
+    fn not(self) -> Self::Output {
+        Hash(!self.0)
     }
 }
 
