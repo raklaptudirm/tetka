@@ -12,9 +12,8 @@
 // limitations under the License.
 
 use std::collections::HashMap;
-use std::io::{self, BufRead};
-
 use std::default::Default;
+use std::io::{self, BufRead};
 
 use crate::context::Context;
 use crate::inbuilt::new_guarded_ctx;
@@ -52,26 +51,28 @@ impl<T: Send + 'static> Client<T> {
             let (cmd_name, args) = (parts[0], &parts[1..]);
 
             // Try to find a Command with the given name.
-            let cmd = self.commands.get(cmd_name);
-            if cmd.is_none() {
-                // Command not found, return error and continue.
-                println!("info error command {} not found", cmd_name);
-                continue 'reading;
-            }
+            let cmd = match self.commands.get(cmd_name) {
+                Some(c) => c,
+                None => {
+                    // Command not found, return error and continue.
+                    println!("info error command {} not found", cmd_name);
+                    continue 'reading;
+                }
+            };
 
             // Parsing complete, run the Command and handle any errors.
-            match self.run(cmd.unwrap(), &context, args) {
-                Ok(_) => (),
-                Err(err) => {
-                    println!("{}", err);
-                    if err.should_quit() {
-                        break 'reading;
-                    }
+            if let Err(err) = self.run(cmd, &context, args) {
+                println!("{}", err);
+                if err.should_quit() {
+                    break 'reading;
                 }
             };
         }
     }
 
+    /// run runs the given Command with the given [context](GuardedBundledCtx) and
+    /// the given arguments. This function is used internally when a Client is
+    /// started. Only use this function if you know what you are doing.
     fn run(
         &self,
         cmd: &Command<T>,
@@ -125,7 +126,10 @@ impl<T: Send + 'static> Client<T> {
 
 impl<T: Send> Client<T> {
     /// new creates a new [Client]. The Client can be configured using builder
-    /// methods like [`Client::command`].
+    /// methods like [`Client::command`], [`Client::option`], etc. These functions
+    /// take the ownership of the given Client value and return that ownership
+    /// after adding the given option. This allows the usage of the builder pattern
+    /// while creating a new [Client].
     /// ```rust,ignore
     /// let client = Client::new()
     ///     .command("go", go_cmd)
@@ -149,10 +153,6 @@ impl<T: Send> Client<T> {
     /// command adds the given Command to the given Client. After this, the Client
     /// will be able to parse and run that Command when such a request is sent from
     /// the GUI.
-    ///
-    /// command takes ownership of the given Client value and returns that ownership
-    /// after adding the given Command. This allows the usage of the builder pattern
-    /// while creating a new [Client].
     /// ```rust,ignore
     /// let client = Client::new()
     ///     .command("go", go_cmd)
@@ -163,6 +163,16 @@ impl<T: Send> Client<T> {
         self
     }
 
+    /// option adds the given [option](Parameter) to the given Client. This will
+    /// register that option with the Client, and those options can then be set by
+    /// GUIs using the engine with a UXI type protocol. The options will also be
+    /// made available in the [context](crate::BundledCtx) so that Commands can
+    /// retrieve and use their values.
+    /// ```rust,ignore
+    /// let client = Client::new()
+    ///     .option("Hash", Parameter::Spin(16, 1, 33554432))
+    ///     .option("Threads", Parameter::Spin(1, 1, 1024));
+    /// ```
     pub fn option(mut self, name: &str, option: Parameter) -> Self {
         self.initial_context
             .options
@@ -173,6 +183,19 @@ impl<T: Send> Client<T> {
         self
     }
 
+    /// protocol configures the Client to support the given UXI protocol. UXI
+    /// protocols have a name in the format "uxi", where the x can be replaced by
+    /// any lowercase alphabet, usually the leading letter of the name of the game
+    /// played by the engine.
+    ///
+    /// Some popular protocols are "uci" for Chess and "uai" for Ataxx. The name
+    /// "ugi" however is reserved and may not be used as a protocol name. This is
+    /// because ugi is the identifier for the Universal Game Interface, which is a
+    /// game-agnostic protocol which is supported by all Clients by default.
+    /// ```rust,ignore
+    /// let client = Client::new()
+    ///     .protocol("uai");
+    /// ```
     pub fn protocol(mut self, name: &str) -> Self {
         assert!(!self.commands.contains_key(name));
 
@@ -186,11 +209,27 @@ impl<T: Send> Client<T> {
         self
     }
 
+    /// engine sets the name of the engine for the Client.
+    ///
+    /// This information is reported to the GUI when the uxi Command is invoked, and
+    /// is also accessible by Commands through their [bundles](crate::BundledCtx).
+    /// ```rust,ignore
+    /// let client = Client::new()
+    ///     .protocol("uai");
+    /// ```
     pub fn engine(mut self, name: &str) -> Self {
         name.clone_into(&mut self.initial_context.engine);
         self
     }
 
+    /// author sets the name of the author of the Client's engine.
+    ///
+    /// This information is reported to the GUI when the uxi Command is invoked, and
+    /// is also accessible by Commands through their [bundles](crate::BundledCtx).
+    /// ```rust,ignore
+    /// let client = Client::new()
+    ///     .protocol("uai");
+    /// ```
     pub fn author(mut self, name: &str) -> Self {
         name.clone_into(&mut self.initial_context.author);
         self
