@@ -70,6 +70,8 @@ pub struct Context {
     pub engine: String,
     pub author: String,
 
+    pub selected_protocol: String,
+
     pub options: HashMap<String, Parameter>,
     pub option_values: parameter::Values,
 }
@@ -92,6 +94,7 @@ impl Default for Context {
             protocol: "".to_string(),
             engine: "Nameless v0.0.0".to_string(),
             author: "Anonymous".to_string(),
+            selected_protocol: "".to_string(),
             options: HashMap::new(),
             option_values: Default::default(),
         }

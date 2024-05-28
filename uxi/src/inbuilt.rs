@@ -28,6 +28,10 @@ pub fn new_guarded_ctx<T: Send>(user: T, client: Context) -> GuardedBundledCtx<T
 }
 
 impl<T: Send> BundledCtx<T> {
+    pub fn protocol(&self) -> String {
+        self.client.selected_protocol.clone()
+    }
+
     pub fn get_check_option(&self, name: &str) -> Option<bool> {
         self.client.option_values.get_check(name)
     }
@@ -70,11 +74,14 @@ pub mod commands {
     }
 
     pub fn uxi<C: Send>() -> Command<C> {
+        #[allow(clippy::assigning_clones)]
         Command::new(|ctx| {
-            let ctx = ctx.lock();
+            let mut ctx = ctx.lock();
 
             print_protocol_info(&ctx.client);
             println!("{}ok", ctx.client.protocol);
+
+            ctx.client.selected_protocol = ctx.client.protocol.clone();
 
             Ok(())
         })
@@ -82,10 +89,12 @@ pub mod commands {
 
     pub fn ugi<C: Send>() -> Command<C> {
         Command::new(|ctx| {
-            let ctx = ctx.lock();
+            let mut ctx = ctx.lock();
 
             print_protocol_info(&ctx.client);
             println!("ugiok");
+
+            ctx.client.selected_protocol = "ugi".to_string();
 
             Ok(())
         })
