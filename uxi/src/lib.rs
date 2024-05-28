@@ -6,7 +6,7 @@ pub use self::cmd::*;
 pub use self::context::{Bundle, GuardedBundledCtx};
 pub use self::flag::Flag;
 pub use self::inbuilt::BundledCtx;
-pub use self::parameter::{Number, Parameter};
+pub use self::parameter::Parameter;
 
 // Non-namespaced modules.
 mod client;

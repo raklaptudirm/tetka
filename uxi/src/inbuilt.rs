@@ -14,38 +14,49 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex};
 
-use crate::{context::Context, GuardedBundledCtx, Number};
+use crate::{context::Context, GuardedBundledCtx};
 
 /// A BundledCtx bundles the user-provided context `C` and the inbuilt context
-/// into a single type of ease of mutex guarding for concurrency.
-pub struct BundledCtx<T: Send> {
-    user: T,
+/// into a single type of ease of mutex guarding for concurrency. It provides
+/// methods which allow Commands to retrieve information from those contexts.
+pub struct BundledCtx<C: Send> {
+    user: C,
     client: Context,
 }
 
-pub fn new_guarded_ctx<T: Send>(user: T, client: Context) -> GuardedBundledCtx<T> {
+/// new_guarded_ctx created a new [GuardedBundledCtx] from the given user and
+/// client contexts.
+pub fn new_guarded_ctx<C: Send>(user: C, client: Context) -> GuardedBundledCtx<C> {
     Arc::new(Mutex::new(BundledCtx { user, client }))
 }
 
 impl<T: Send> BundledCtx<T> {
+    /// protocol returns the last protocol command which was issues to the Client.
+    /// It returns "" if no protocol command has been issued to the engine till now.
     pub fn protocol(&self) -> String {
         self.client.selected_protocol.clone()
     }
 
+    /// get_check_option returns the value of a check option with the given name.
     pub fn get_check_option(&self, name: &str) -> Option<bool> {
         self.client.option_values.get_check(name)
     }
 
+    /// get_string_option returns the value of a combo/string option with the given
+    /// name.
     pub fn get_string_option(&self, name: &str) -> Option<String> {
         self.client.option_values.get_string(name)
     }
 
-    pub fn get_spin_option(&self, name: &str) -> Option<Number> {
+    /// get_spin_option returns the value of a spin option with the given name.
+    pub fn get_spin_option(&self, name: &str) -> Option<i64> {
         self.client.option_values.get_spin(name)
     }
 }
 
 impl<T: Send> Deref for BundledCtx<T> {
+    /// A BundledCtx can be dereferenced into the user's context and freely
+    /// manipulated. This is because both Deref and DerefMut are implemented.
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -59,13 +70,19 @@ impl<T: Send> DerefMut for BundledCtx<T> {
     }
 }
 
+/// The commands module contains functions which resolve into one of the inbuilt
+/// Commands which come pre-registered with the Client.
 pub mod commands {
-    use crate::{context::Context, error, quit, Command, Flag, Parameter, RunError};
+    use crate::context::Context;
+    use crate::{error, quit, Command, Flag, Parameter, RunError};
 
+    /// quit resolves into the quit Command which quits the Client.
     pub fn quit<C: Send>() -> Command<C> {
         Command::new(|_ctx| quit!())
     }
 
+    /// isready resolves into the isready command which is used to ping the Client
+    /// and check for responsiveness, i.e. if its ready for the next Command.
     pub fn isready<C: Send>() -> Command<C> {
         Command::new(|_ctx| {
             println!("readyok");
@@ -73,12 +90,14 @@ pub mod commands {
         })
     }
 
+    /// uxi resolves into one of the uxi commands which respond with information
+    /// about the Client and 'uxiok' to show support for that UXI protocol.
     pub fn uxi<C: Send>() -> Command<C> {
         #[allow(clippy::assigning_clones)]
         Command::new(|ctx| {
             let mut ctx = ctx.lock();
 
-            print_protocol_info(&ctx.client);
+            print_client_info(&ctx.client);
             println!("{}ok", ctx.client.protocol);
 
             ctx.client.selected_protocol = ctx.client.protocol.clone();
@@ -87,11 +106,12 @@ pub mod commands {
         })
     }
 
+    /// ugi is similar to the uxi Command, just for the UGI protocol.
     pub fn ugi<C: Send>() -> Command<C> {
         Command::new(|ctx| {
             let mut ctx = ctx.lock();
 
-            print_protocol_info(&ctx.client);
+            print_client_info(&ctx.client);
             println!("ugiok");
 
             ctx.client.selected_protocol = "ugi".to_string();
@@ -100,7 +120,9 @@ pub mod commands {
         })
     }
 
-    fn print_protocol_info(ctx: &Context) {
+    /// print_client_info prints information about the Client, which is reported in
+    /// response to a uxi type protocol command.
+    fn print_client_info(ctx: &Context) {
         println!("id name {}", ctx.engine);
         println!("id author {}", ctx.author);
         println!();
@@ -113,6 +135,8 @@ pub mod commands {
         }
     }
 
+    /// setoption is the Command to set the values of the different
+    /// [options](Parameter) supported by the Client.
     pub fn setoption<C: Send>() -> Command<C> {
         Command::new(|ctx| {
             let name = ctx.get_single_flag("name");
@@ -133,6 +157,8 @@ pub mod commands {
         .flag("value", Flag::Variadic)
     }
 
+    /// options lists the [options](Parameter) supported by the Client and their
+    /// currently set values. This command is not part of the UXI standard.
     pub fn options<C: Send>() -> Command<C> {
         Command::new(|ctx| {
             let ctx = ctx.lock();

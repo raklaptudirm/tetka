@@ -70,6 +70,8 @@ impl Values {
 }
 
 impl Values {
+    /// insert adds the given [Flag] with the given value to the current flag
+    /// value set which will be provided to the Command's run function.
     pub fn insert(&mut self, name: &str, flag: Flag, value: &[&str]) {
         let name = name.to_string();
         let value = Vec::from_iter(value.iter().map(|s| s.to_string()));

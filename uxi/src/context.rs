@@ -1,8 +1,21 @@
+// Copyright © 2024 Rak Laptudirm <rak@laptudirm.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, MutexGuard};
+
 use crate::{flag, parameter, BundledCtx, Parameter};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex, MutexGuard},
-};
+
 /// Bundle is a packet containing all the relevant context necessary for a
 /// [Command](crate::Command) invocation. It provides access to the values of
 /// the flags provided to the command during invocation, the user specific
@@ -65,18 +78,25 @@ pub type GuardedBundledCtx<T> = Arc<Mutex<BundledCtx<T>>>;
 
 #[derive(Clone)]
 pub struct Context {
-    pub protocol: String,
-
+    /// The name of this Client's engine.
     pub engine: String,
+    /// The author of this Client's engine.
     pub author: String,
 
+    /// The UXI protocol supported by this Client.
+    pub protocol: String,
+    /// The currently selected protocol. It can have the values "" for when no uxi
+    /// command has been received, "ugi", or <protocol> for those protocols.
     pub selected_protocol: String,
 
+    /// Schema of the options supported by this Client.
     pub options: HashMap<String, Parameter>,
+    /// Values of the options supported by this Client.
     pub option_values: parameter::Values,
 }
 
 impl Context {
+    /// setoption sets the value of the given option to the given value.
     pub fn setoption(&mut self, name: &str, value: &str) -> Result<(), String> {
         let option = self.options.get(name);
         if option.is_none() {
@@ -91,9 +111,9 @@ impl Context {
 impl Default for Context {
     fn default() -> Self {
         Context {
-            protocol: "".to_string(),
             engine: "Nameless v0.0.0".to_string(),
             author: "Anonymous".to_string(),
+            protocol: "".to_string(),
             selected_protocol: "".to_string(),
             options: HashMap::new(),
             option_values: Default::default(),

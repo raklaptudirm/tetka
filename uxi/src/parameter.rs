@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
-pub type Number = i32;
-
+/// Parameter is the schema for the Client's options.
 #[derive(Clone)]
 pub enum Parameter {
     /// Check represents a checkbox parameter which can be true or false.
@@ -21,7 +20,7 @@ pub enum Parameter {
     /// value, and the third argument is the maximum value of this parameter. The
     /// minimum and maximum bounds are inclusive and and the default must be in
     /// the range defined by them.
-    Spin(Number, Number, Number),
+    Spin(i64, i64, i64),
 
     /// Combo represents a combo box which can have the value of one of the
     /// predefined strings.
@@ -35,7 +34,7 @@ pub enum Parameter {
 pub struct Values {
     checks: HashMap<String, bool>,
     strings: HashMap<String, String>,
-    numbers: HashMap<String, Number>,
+    numbers: HashMap<String, i64>,
 }
 
 impl Values {
@@ -47,7 +46,7 @@ impl Values {
         self.strings.get(name).cloned()
     }
 
-    pub fn get_spin(&self, name: &str) -> Option<Number> {
+    pub fn get_spin(&self, name: &str) -> Option<i64> {
         self.numbers.get(name).copied()
     }
 }
