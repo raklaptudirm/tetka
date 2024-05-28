@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 use std::fmt;
 
-/// Parameter is the schema for the Client's options.
+/// A Parameter is the schema for one of the Client's options. An option is a
+/// variable whose state is maintained internally by the Client which can be
+/// used to configure various internal parameters of the game engine, like the
+/// number of threads it uses or its play style. An option's value can be
+/// changed using `setoption` Command.
 #[derive(Clone)]
 pub enum Parameter {
     /// Check represents a checkbox parameter which can be true or false.

@@ -24,6 +24,9 @@ use crate::{error, flag, inbuilt, Command, GuardedBundledCtx, Parameter, RunErro
 /// Commands sent from the GUI are automatically parsed and executed according
 /// to the Command schema provided by the user to the Client. The client supports
 /// any UXI type protocol, including but not limited to UCI, UGI, and UAI.
+/// Options can also be added to a Client in the form of [parameters](Parameter).
+/// See the documentation of [`Parameter`] and the [`Client::option`] function
+/// for more details.
 pub struct Client<T: Send> {
     initial_context: Context,
     commands: HashMap<String, Command<T>>,

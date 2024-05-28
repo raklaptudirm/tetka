@@ -24,6 +24,11 @@ use crate::{flag, Bundle, Flag, GuardedBundledCtx};
 /// to run that Command with the current context and the provided flag values.
 /// `T` is the context type of the Client, while `E` is the error type. `E`
 /// must implement the [`RunError`] trait to be usable.
+///
+/// A Command's schema is composed of its name, run function, flag schema, and
+/// whether it is run in parallel. When a Command is invoked by a GUI, the
+/// invocation starts with its name followed by any number of flags from its
+/// flag schema. See the documentation of [`Flag`] for more details.
 pub struct Command<T: Send> {
     /// run_fn is the function used to run this Command.
     pub run_fn: RunFn<T>,

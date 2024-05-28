@@ -15,6 +15,8 @@ use std::collections::{HashMap, HashSet};
 
 /// Flag is the schema for a single flag of a Command. It directs the Client
 /// about how to parse its arguments so that it can be used by its Command.
+/// When in a command invocation, a flag starts with its name followed by a
+/// number of arguments depending upon its type.
 #[derive(Clone, Copy)]
 pub enum Flag {
     /// A Boolean Flag takes no arguments.
