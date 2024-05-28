@@ -1,7 +1,8 @@
-use std::sync::{Arc, Mutex, MutexGuard};
-
-use crate::{flag, BundledCtx};
-
+use crate::{flag, parameter, BundledCtx, Parameter};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex, MutexGuard},
+};
 /// Bundle is a packet containing all the relevant context necessary for a
 /// [Command](crate::Command) invocation. It provides access to the values of
 /// the flags provided to the command during invocation, the user specific
@@ -61,3 +62,35 @@ impl<T: Send> Bundle<T> {
 /// A GuardedBundledCtx is a [BundledCtx] with a reference-counted mutex guard,
 /// which allows it to be used by multiple Commands concurrently without issues.
 pub type GuardedBundledCtx<T> = Arc<Mutex<BundledCtx<T>>>;
+
+#[derive(Clone)]
+pub struct Context {
+    pub engine: String,
+    pub author: String,
+
+    pub options: HashMap<String, Parameter>,
+    pub option_values: parameter::Values,
+}
+
+impl Context {
+    pub fn setoption(&mut self, name: &str, value: &str) -> Result<(), String> {
+        let option = self.options.get(name);
+        if option.is_none() {
+            return Err(format!("unknown option \"{}\"", name));
+        }
+
+        self.option_values
+            .insert(name.to_owned(), option.unwrap(), value)
+    }
+}
+
+impl Default for Context {
+    fn default() -> Self {
+        Context {
+            engine: "Nameless v0.0.0".to_string(),
+            author: "Anonymous".to_string(),
+            options: HashMap::new(),
+            option_values: Default::default(),
+        }
+    }
+}

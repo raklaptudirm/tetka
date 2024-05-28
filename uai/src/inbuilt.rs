@@ -11,11 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex};
 
-use crate::{parameter, GuardedBundledCtx, Number, Parameter};
+use crate::{context::Context, GuardedBundledCtx, Number};
 
 /// A BundledCtx bundles the user-provided context `C` and the inbuilt context
 /// into a single type of ease of mutex guarding for concurrency.
@@ -131,37 +130,5 @@ pub mod commands {
 
             Ok(())
         })
-    }
-}
-
-#[derive(Clone)]
-pub struct Context {
-    pub engine: String,
-    pub author: String,
-
-    pub options: HashMap<String, Parameter>,
-    pub option_values: parameter::Values,
-}
-
-impl Context {
-    fn setoption(&mut self, name: &str, value: &str) -> Result<(), String> {
-        let option = self.options.get(name);
-        if option.is_none() {
-            return Err(format!("unknown option \"{}\"", name));
-        }
-
-        self.option_values
-            .insert(name.to_owned(), option.unwrap(), value)
-    }
-}
-
-impl Default for Context {
-    fn default() -> Self {
-        Context {
-            engine: "Nameless v0.0.0".to_string(),
-            author: "Anonymous".to_string(),
-            options: HashMap::new(),
-            option_values: Default::default(),
-        }
     }
 }

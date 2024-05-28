@@ -16,6 +16,7 @@ use std::io::{self, BufRead};
 
 use std::default::Default;
 
+use crate::context::Context;
 use crate::inbuilt::new_guarded_ctx;
 use crate::{error, flag, inbuilt, Command, GuardedBundledCtx, Parameter, RunError};
 
@@ -24,7 +25,7 @@ use crate::{error, flag, inbuilt, Command, GuardedBundledCtx, Parameter, RunErro
 /// Commands sent from the GUI are automatically parsed and executed according
 /// to the Command schema provided by the user to the Client.
 pub struct Client<T: Send> {
-    initial_context: inbuilt::Context,
+    initial_context: Context,
     commands: HashMap<String, Command<T>>,
 }
 
