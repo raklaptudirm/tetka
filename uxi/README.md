@@ -26,15 +26,19 @@ fn main() {
         .start(Context { number: 0 });
 }
 
-// Context stores information which persists across different Commands for the
-// user. In this case, we are storing a number which is used differently inside
-// different Commands.
+// A custom user specified context stores information which persists across
+// different Commands. In this case, we are storing a number which is used
+// differently inside different Commands.
 pub struct Context {
     pub number: i32,
 }
 
-// The command i increases the current value of the number by delta.
+// The command i increases the current value of the number by delta. Commands
+// take a type parameter which specifies the type of the user defined Context.
 pub fn i() -> Command<Context> {
+    // The main part of a Command is its run function. The Bundle provided to the
+    // run function provides access to the user specified context, flags, and other
+    // things. Look at the documentation for more details.
     Command::new(|bundle: Bundle<Context>| {
         // Lock the mutex guarding the context bundle.
         let mut ctx = bundle.lock();
@@ -52,8 +56,13 @@ pub fn i() -> Command<Context> {
         // No error.
         Ok(())
     })
-    // The flag delta specifies the amount to increase number by.
+
+    // Commands can also take any number of flags as input during their invocation.
+    // This line define a flag delta which specifies the amount to increase number by.
     .flag("delta", Flag::Single)
+
+    // You can specify that a Command should run in parallel with this function.
+    .parallelize(true)
 }
 
 // The command d displays the current value of the number.
