@@ -12,6 +12,7 @@
 // limitations under the License.
 
 use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex};
 
 use crate::{parameter, GuardedBundledCtx, Number, Parameter};
@@ -19,7 +20,7 @@ use crate::{parameter, GuardedBundledCtx, Number, Parameter};
 /// A BundledCtx bundles the user-provided context `C` and the inbuilt context
 /// into a single type of ease of mutex guarding for concurrency.
 pub struct BundledCtx<T: Send> {
-    pub user: T,
+    user: T,
     client: Context,
 }
 
@@ -38,6 +39,20 @@ impl<T: Send> BundledCtx<T> {
 
     pub fn get_spin_option(&self, name: &str) -> Option<Number> {
         self.client.option_values.get_spin(name)
+    }
+}
+
+impl<T: Send> Deref for BundledCtx<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.user
+    }
+}
+
+impl<T: Send> DerefMut for BundledCtx<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.user
     }
 }
 
