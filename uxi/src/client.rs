@@ -20,10 +20,11 @@ use crate::context::Context;
 use crate::inbuilt::new_guarded_ctx;
 use crate::{error, flag, inbuilt, Command, GuardedBundledCtx, Parameter, RunError};
 
-/// Client represents an UAI engine client. It can accept and parse commands
+/// Client represents an UXI engine client. It can accept and parse commands
 /// from the GUI and send commands to the GUI though its input and output.
 /// Commands sent from the GUI are automatically parsed and executed according
-/// to the Command schema provided by the user to the Client.
+/// to the Command schema provided by the user to the Client. The client supports
+/// any UXI type protocol, including but not limited to UCI, UGI, and UAI.
 pub struct Client<T: Send> {
     initial_context: Context,
     commands: HashMap<String, Command<T>>,
@@ -138,7 +139,7 @@ impl<T: Send> Client<T> {
             commands: HashMap::from([
                 ("quit".to_owned(), inbuilt::commands::quit()),
                 ("isready".to_owned(), inbuilt::commands::isready()),
-                ("uai".to_owned(), inbuilt::commands::uai()),
+                ("ugi".to_owned(), inbuilt::commands::uxi()),
                 ("setoption".to_owned(), inbuilt::commands::setoption()),
                 ("options".to_owned(), inbuilt::commands::options()),
             ]),
@@ -169,6 +170,17 @@ impl<T: Send> Client<T> {
         self.initial_context
             .option_values
             .insert_default(name.to_string(), &option);
+        self
+    }
+
+    pub fn protocol(mut self, name: &str) -> Self {
+        // Move the previous protocol identifier command to the new name.
+        self.commands.remove(&self.initial_context.protocol);
+        self.commands
+            .insert(name.to_string(), inbuilt::commands::uxi());
+
+        // Change the protocol name.
+        name.clone_into(&mut self.initial_context.protocol);
         self
     }
 

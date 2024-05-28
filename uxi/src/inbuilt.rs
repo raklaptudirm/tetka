@@ -69,7 +69,7 @@ pub mod commands {
         })
     }
 
-    pub fn uai<C: Send>() -> Command<C> {
+    pub fn uxi<C: Send>() -> Command<C> {
         Command::new(|ctx| {
             let ctx = ctx.lock();
 
@@ -83,7 +83,7 @@ pub mod commands {
 
                 println!();
             }
-            println!("uaiok");
+            println!("{}ok", ctx.client.protocol);
 
             Ok(())
         })

@@ -65,6 +65,8 @@ pub type GuardedBundledCtx<T> = Arc<Mutex<BundledCtx<T>>>;
 
 #[derive(Clone)]
 pub struct Context {
+    pub protocol: String,
+
     pub engine: String,
     pub author: String,
 
@@ -87,6 +89,7 @@ impl Context {
 impl Default for Context {
     fn default() -> Self {
         Context {
+            protocol: "ugi".to_string(),
             engine: "Nameless v0.0.0".to_string(),
             author: "Anonymous".to_string(),
             options: HashMap::new(),
