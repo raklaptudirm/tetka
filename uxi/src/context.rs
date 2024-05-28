@@ -89,7 +89,7 @@ impl Context {
 impl Default for Context {
     fn default() -> Self {
         Context {
-            protocol: "ugi".to_string(),
+            protocol: "".to_string(),
             engine: "Nameless v0.0.0".to_string(),
             author: "Anonymous".to_string(),
             options: HashMap::new(),

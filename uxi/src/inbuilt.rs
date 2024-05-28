@@ -56,7 +56,7 @@ impl<T: Send> DerefMut for BundledCtx<T> {
 }
 
 pub mod commands {
-    use crate::{error, quit, Command, Flag, Parameter, RunError};
+    use crate::{context::Context, error, quit, Command, Flag, Parameter, RunError};
 
     pub fn quit<C: Send>() -> Command<C> {
         Command::new(|_ctx| quit!())
@@ -73,20 +73,35 @@ pub mod commands {
         Command::new(|ctx| {
             let ctx = ctx.lock();
 
-            println!("id name {}", ctx.client.engine);
-            println!("id author {}", ctx.client.author);
-            println!();
-            if !ctx.client.options.is_empty() {
-                for (name, option) in ctx.client.options.clone() {
-                    println!("option name {} type {}", name, option);
-                }
-
-                println!();
-            }
+            print_protocol_info(&ctx.client);
             println!("{}ok", ctx.client.protocol);
 
             Ok(())
         })
+    }
+
+    pub fn ugi<C: Send>() -> Command<C> {
+        Command::new(|ctx| {
+            let ctx = ctx.lock();
+
+            print_protocol_info(&ctx.client);
+            println!("ugiok");
+
+            Ok(())
+        })
+    }
+
+    fn print_protocol_info(ctx: &Context) {
+        println!("id name {}", ctx.engine);
+        println!("id author {}", ctx.author);
+        println!();
+        if !ctx.options.is_empty() {
+            for (name, option) in ctx.options.clone() {
+                println!("option name {} type {}", name, option);
+            }
+
+            println!();
+        }
     }
 
     pub fn setoption<C: Send>() -> Command<C> {

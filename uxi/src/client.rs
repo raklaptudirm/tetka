@@ -139,7 +139,7 @@ impl<T: Send> Client<T> {
             commands: HashMap::from([
                 ("quit".to_owned(), inbuilt::commands::quit()),
                 ("isready".to_owned(), inbuilt::commands::isready()),
-                ("ugi".to_owned(), inbuilt::commands::uxi()),
+                ("ugi".to_owned(), inbuilt::commands::ugi()),
                 ("setoption".to_owned(), inbuilt::commands::setoption()),
                 ("options".to_owned(), inbuilt::commands::options()),
             ]),
@@ -174,6 +174,8 @@ impl<T: Send> Client<T> {
     }
 
     pub fn protocol(mut self, name: &str) -> Self {
+        assert!(!self.commands.contains_key(name));
+
         // Move the previous protocol identifier command to the new name.
         self.commands.remove(&self.initial_context.protocol);
         self.commands
