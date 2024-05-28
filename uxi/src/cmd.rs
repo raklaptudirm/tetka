@@ -14,11 +14,10 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
-use std::sync::{Arc, Mutex};
 use std::thread;
 
 use crate::context::new_bundle;
-use crate::{flag, Bundle, BundledCtx, Flag};
+use crate::{flag, Bundle, Flag, GuardedBundledCtx};
 
 /// Command represents a runnable UAI command. It contains all the metadata
 /// needed to parse and verify a Command request from the GUI for a Command, and
@@ -38,7 +37,7 @@ impl<T: Send + 'static> Command<T> {
     /// run runs the current Command with the given context and flag values.
     /// A new thread is spawned and detached to run parallel Commands. It returns
     /// the error returned by the Command's execution, or [`Ok`] for parallel.
-    pub fn run(&self, context: &Arc<Mutex<BundledCtx<T>>>, flags: flag::Values) -> CmdResult {
+    pub fn run(&self, context: &GuardedBundledCtx<T>, flags: flag::Values) -> CmdResult {
         // Clone values which might be moved by spawning a new thread.
         let context = new_bundle(context, flags);
         let func = self.run_fn;
@@ -118,17 +117,13 @@ impl<T: Send> Command<T> {
 /// is invoked. It returns a `CmdResult` which is then handled by the Client.
 pub type RunFn<T> = fn(Bundle<T>) -> CmdResult;
 
+/// CmdResult is the [Result] type returned by a [run function](RunFn). It is
+/// a shorthand for `Result<(), RunError>`.
 pub type CmdResult = Result<(), RunError>;
 
-/// RunError is the interface which the Client uses to understand custom errors
-/// returned by a Command. It allows the user to implement their own error types
-/// while allowing the Client to interpret and use those errors. This is
-/// achieved by requiring conversions from and into [`RunError`].
-//pub trait RunError: Send + Into<RunError> {}
-
-/// `quit!()` resolves to a [`Err(~RunError::Quit)`](RunError::Quit)
-/// kind of error, and thus can be called by itself inside a Command to instruct
-/// the Client to quit itself and stop executing commands.
+/// `quit!()` resolves to a [`Err(~RunError::Quit)`](RunError::Quit) kind of
+/// error, and thus can be called by itself inside a Command to instruct the
+/// Client to quit itself and stop executing commands.
 #[macro_export]
 macro_rules! quit {
     () => {
@@ -136,23 +131,20 @@ macro_rules! quit {
     };
 }
 
-/// `error!()` resolves to a [`Err(~RunError::Error)`](RunError::Error)
-/// kind of error, and thus can be called by itself inside a Command to exit the
-/// Command with the given error. It supports the same arguments as the
-/// [`format!`] macro.
+/// `error!()` resolves to a [`Err(~RunError::Error)`](RunError::Error) kind of
+/// error, and thus can be called by itself inside a Command to exit the Command
+/// with the given error. It supports the same arguments as the [`format!`] macro.
 #[macro_export]
 macro_rules! error {
     ($($arg:tt)*) => {
-        {
-            Err(RunError::Error(format!($($arg)*)))
-        }
+        Err(RunError::Error(format!($($arg)*)))
     };
 }
 
-/// `fatal!()` resolves to a [`Err(~RunError::Fatal)`](RunError::Fatal)
-/// kind of error, and thus can be called by itself inside a Command to exit the
-/// Command with the given error and to quit the Client. It is similar to the
-/// [`error!`] macro and supports the same arguments.
+/// `fatal!()` resolves to a [`Err(~RunError::Fatal)`](RunError::Fatal) kind of
+/// error, and thus can be called by itself inside a Command to exit the Command
+/// with the given error and to quit the Client. It is similar to the [`error!`]
+/// macro and supports the same arguments.
 #[macro_export]
 macro_rules! fatal {
     ($($arg:tt)*) => {
@@ -176,6 +168,9 @@ impl<E> From<E> for RunError
 where
     E: Error + Send + Sync + 'static,
 {
+    /// `From<E>` is implemented on [RunError] for all [errors][Error], allowing the
+    /// usage of the `?` operator inside the body of a Command's run function to
+    /// make error handling much easier. Errors are mapped to [`RunError::Error`].
     fn from(value: E) -> Self {
         RunError::Error(value.to_string())
     }
