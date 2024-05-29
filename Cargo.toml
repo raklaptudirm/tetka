@@ -1,8 +1,4 @@
 [workspace]
-members = [
-    "uxi",
-    "ataxx"
-]
 
 [package]
 name = "mexx"
