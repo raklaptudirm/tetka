@@ -21,4 +21,4 @@ pgo-build:
     	cargo build --release
 	
 	# STEP 5: Move the built binary to the final location
-	mv ./target/release/bench $(EXE)
+	mv ./target/release/mexx $(EXE)
