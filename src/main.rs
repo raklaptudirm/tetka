@@ -11,7 +11,7 @@ mod options;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if !args.is_empty() {
+    if args.len() > 1 {
         if args.len() != 2 || args[1] != "bench" {
             eprintln!("error: unexpected number of command line arguments");
             return;
