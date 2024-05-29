@@ -99,15 +99,15 @@ pub fn go() -> Command<Context> {
 }
 
 #[allow(dead_code)]
-struct StandardTC {
-    btime: time::Duration,
-    wtime: time::Duration,
-    binc: time::Duration,
-    winc: time::Duration,
-    movestogo: Option<u8>,
+pub struct StandardTC {
+    pub btime: time::Duration,
+    pub wtime: time::Duration,
+    pub binc: time::Duration,
+    pub winc: time::Duration,
+    pub movestogo: Option<u8>,
 }
 
-fn search_std(position: ataxx::Position, tc: StandardTC) -> ataxx::Move {
+pub fn search_std(position: ataxx::Position, tc: StandardTC) -> ataxx::Move {
     let our_time = match position.side_to_move {
         ataxx::Piece::Black => tc.btime,
         ataxx::Piece::White => tc.wtime,
@@ -161,13 +161,13 @@ fn search_std(position: ataxx::Position, tc: StandardTC) -> ataxx::Move {
     tree.best_move()
 }
 
-struct InternalTC {
-    depth: Option<u16>,
-    nodes: Option<usize>,
-    movetime: Option<time::Duration>,
+pub struct InternalTC {
+    pub depth: Option<u16>,
+    pub nodes: Option<usize>,
+    pub movetime: Option<time::Duration>,
 }
 
-fn search_int(position: ataxx::Position, tc: InternalTC) -> ataxx::Move {
+pub fn search_int(position: ataxx::Position, tc: InternalTC) -> ataxx::Move {
     let mut tree = mcts::Tree::new(position);
     let start = time::Instant::now();
     let mut last_info = start;
