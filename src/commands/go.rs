@@ -39,17 +39,17 @@ pub fn go() -> Command<Context> {
                 return error!("bad flag set: unexpected non-standard time control flags");
             }
 
-            macro_rules! get_duration {
+            macro_rules! get_flag {
                 ($name:literal) => {
-                    time::Duration::from_millis(bundle.get_single_flag($name).unwrap().parse()?)
+                    bundle.get_single_flag($name).unwrap().parse()?
                 };
             }
 
             let tc = StandardTC {
-                btime: get_duration!("btime"),
-                wtime: get_duration!("wtime"),
-                binc: get_duration!("binc"),
-                winc: get_duration!("winc"),
+                btime: get_flag!("btime"),
+                wtime: get_flag!("wtime"),
+                binc: get_flag!("binc"),
+                winc: get_flag!("winc"),
                 movestogo: match bundle.get_single_flag("movestogo") {
                     Some(movestogo) => Some(movestogo.parse()?),
                     None => None,
@@ -100,27 +100,29 @@ pub fn go() -> Command<Context> {
 
 #[allow(dead_code)]
 pub struct StandardTC {
-    pub btime: time::Duration,
-    pub wtime: time::Duration,
-    pub binc: time::Duration,
-    pub winc: time::Duration,
+    pub btime: u64,
+    pub wtime: u64,
+    pub binc: u64,
+    pub winc: u64,
     pub movestogo: Option<u8>,
 }
 
 pub fn search_std(position: ataxx::Position, tc: StandardTC) -> ataxx::Move {
     let our_time = match position.side_to_move {
-        ataxx::Piece::Black => tc.btime,
-        ataxx::Piece::White => tc.wtime,
+        ataxx::Piece::Black => tc.wtime,
+        ataxx::Piece::White => tc.btime,
         _ => unreachable!(),
     };
 
     let our_inc = match position.side_to_move {
-        ataxx::Piece::Black => tc.binc,
-        ataxx::Piece::White => tc.winc,
+        ataxx::Piece::Black => tc.winc,
+        ataxx::Piece::White => tc.binc,
         _ => unreachable!(),
     };
 
-    let movetime = our_time / tc.movestogo.unwrap_or(20) as u32 + our_inc / 2;
+    let movetime = time::Duration::from_millis(
+        (our_time / tc.movestogo.unwrap_or(20) as u64 + our_inc / 2).max(1),
+    );
 
     let mut tree = mcts::Tree::new(position);
     let start = time::Instant::now();
