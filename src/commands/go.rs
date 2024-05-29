@@ -142,7 +142,7 @@ pub fn search_std(position: ataxx::Position, tc: StandardTC) -> ataxx::Move {
 
                 // Make a new info report.
                 println!(
-                    "info depth {} seldepth {} score {:.0} nodes {} nps {}",
+                    "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
                     new_depth,
                     seldepth,
                     node.q() * 100.0,
@@ -188,7 +188,7 @@ pub fn search_int(position: ataxx::Position, tc: InternalTC) -> ataxx::Move {
 
                 // Make a new info report.
                 println!(
-                    "info depth {} seldepth {} score {:.0} nodes {} nps {}",
+                    "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
                     new_depth,
                     seldepth,
                     node.q() * 100.0,
