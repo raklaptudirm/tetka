@@ -129,6 +129,8 @@ pub fn search_std(position: ataxx::Position, tc: StandardTC) -> ataxx::Move {
     let mut last_info = start;
     let mut seldepth = 0;
 
+    println!("node size {}", mem::size_of::<Node>());
+
     loop {
         let node = tree.playout();
         if tree.playouts() & 4095 == 0 {
@@ -148,7 +150,7 @@ pub fn search_std(position: ataxx::Position, tc: StandardTC) -> ataxx::Move {
                     new_depth,
                     seldepth,
                     node.q() * 100.0,
-                    tree.playouts(),
+                    tree.nodes(),
                     tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
                 );
             }
@@ -158,7 +160,8 @@ pub fn search_std(position: ataxx::Position, tc: StandardTC) -> ataxx::Move {
                 break;
             }
 
-            if tree.playouts() > 5_000_000_000 / mem::size_of::<Node>() {
+            //println!("nodes {}", tree.nodes());
+            if tree.nodes() > 2_000_000_000 / mem::size_of::<Node>() {
                 break;
             }
         }
