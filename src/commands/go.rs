@@ -1,9 +1,9 @@
-use std::time;
+use std::{mem, time};
 
 use uxi::{error, Bundle, Command, Flag, RunError};
 
 use super::Context;
-use crate::mcts;
+use crate::mcts::{self, Node};
 
 pub fn go() -> Command<Context> {
     Command::new(|bundle: Bundle<Context>| {
@@ -155,6 +155,10 @@ pub fn search_std(position: ataxx::Position, tc: StandardTC) -> ataxx::Move {
 
             //
             if start.elapsed() > movetime {
+                break;
+            }
+
+            if tree.playouts() > 5_000_000_000 / mem::size_of::<Node>() {
                 break;
             }
         }
