@@ -3,10 +3,6 @@ use ataxx::{BitBoard, Move, MoveStore};
 
 pub type Fn = fn(node: &Node, mov: Move) -> f64;
 
-pub fn uniform(node: &Node, _mov: Move) -> f64 {
-    1.0 / node.edges.len() as f64
-}
-
 pub fn handcrafted(node: &Node, mov: Move) -> f64 {
     let mut score = 0.0;
 
