@@ -1,5 +1,5 @@
 use super::Node;
-use ataxx::{BitBoard, Move, MoveStore};
+use ataxx::{BitBoard, Move};
 
 pub type Fn = fn(node: &Node, mov: Move) -> f64;
 
