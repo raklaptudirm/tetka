@@ -167,6 +167,9 @@ pub fn search_std(position: ataxx::Position, tc: StandardTC) -> ataxx::Move {
         }
     }
 
+    // Verify the tree.
+    debug_assert!(tree.verify().is_ok());
+
     tree.best_move()
 }
 

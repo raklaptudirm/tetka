@@ -17,7 +17,10 @@ impl Params {
 
 pub struct Param {
     val: f64,
+
+    #[allow(unused)]
     min: f64,
+    #[allow(unused)]
     max: f64,
 }
 
@@ -26,6 +29,7 @@ impl Param {
         Param { val, min, max }
     }
 
+    #[allow(unused)]
     pub fn set(&mut self, val: f64) {
         self.val = val;
     }
