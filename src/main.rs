@@ -1,6 +1,7 @@
+use core::time;
 use std::{env, str::FromStr};
 
-use commands::{search_int, InternalTC};
+use commands::{search, Limits};
 use uxi::Client;
 
 mod commands;
@@ -73,13 +74,14 @@ fn main() {
         for (i, fen) in BENCH_FENS.iter().enumerate() {
             println!("[#{}] {}", i + 1, fen);
             let position = ataxx::Position::from_str(fen).unwrap();
-            let tc = InternalTC {
-                nodes: Some(20000),
-                depth: None,
-                movetime: None,
+            let tc = Limits {
+                nodes: 20000,
+                depth: u16::MAX,
+                movetime: time::Duration::MAX,
+                movestogo: None,
             };
 
-            search_int(position, tc);
+            search(position, tc);
         }
 
         return
