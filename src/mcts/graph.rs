@@ -1,7 +1,7 @@
 use super::{policy, simulate, EdgePtr, Node, NodePtr, Params};
-use ataxx::MoveStore;
 
 pub struct Tree {
+    root_pos: ataxx::Position,
     nodes: Vec<Node>,
     params: Params,
     policy: policy::Fn,
@@ -13,10 +13,11 @@ impl Tree {
         let policy = policy::handcrafted;
         let simulator = simulate::material_count;
 
-        let mut root = Node::new(position, -1);
-        root.expand(policy);
+        let mut root = Node::new(-1);
+        root.expand(&position, policy);
 
         Tree {
+            root_pos: position,
             nodes: vec![root],
             params: Params::new(),
             policy,
@@ -57,15 +58,16 @@ impl Tree {
 
 impl Tree {
     pub fn playout(&mut self, depth: &mut usize) -> NodePtr {
-        let selected = self.select(depth); // Select Node to be expanded
-        let expanded = self.expand(selected); // Expand the selected Node
-        let simulate = self.simulate(expanded); // Simulate the Node's result
+        let mut position = self.root_pos;
+        let selected = self.select(&mut position, depth); // Select Node to be expanded
+        let expanded = self.expand(selected, &mut position); // Expand the selected Node
+        let simulate = self.simulate(&position); // Simulate the Node's result
         self.backpropagate(expanded, simulate); // Backpropagate the simulation
 
         expanded
     }
 
-    pub fn select(&mut self, depth: &mut usize) -> NodePtr {
+    pub fn select(&mut self, position: &mut ataxx::Position, depth: &mut usize) -> NodePtr {
         let policy = self.policy;
         let mut node_ptr: NodePtr = 0;
 
@@ -74,28 +76,30 @@ impl Tree {
 
             let node = self.node_mut(node_ptr);
 
+            if position.is_game_over() {
+                break;
+            }
+
             if node_ptr != 0 && node.playouts == 1 {
                 // If the selected Node's Edges haven't been expanded, expand.
-                node.expand(policy);
+                node.expand(position, policy);
             }
 
             let node = self.node(node_ptr);
 
-            if node.is_terminal() {
-                break;
-            }
-
             // Select a new Edge from the current Node, and get the child Node.
             let edge = self.select_edge(node_ptr);
-            let node = node.edge(edge).ptr;
+            let edge = node.edge(edge);
 
-            if node == -1 {
+            if edge.ptr == -1 {
                 // Selected Edge hasn't been expanded, so end selection for expansion.
                 break;
             }
 
+            *position = position.after_move::<true>(edge.mov);
+
             // Replace the Node pointer with the newly selected Node.
-            node_ptr = node;
+            node_ptr = edge.ptr;
         }
 
         node_ptr
@@ -142,8 +146,8 @@ impl Tree {
         best_ptr
     }
 
-    pub fn expand(&mut self, ptr: NodePtr) -> NodePtr {
-        if self.node(ptr).is_terminal() {
+    pub fn expand(&mut self, ptr: NodePtr, position: &mut ataxx::Position) -> NodePtr {
+        if position.is_game_over() {
             return ptr;
         }
 
@@ -153,8 +157,10 @@ impl Tree {
         let node = self.node(ptr);
         let edge = node.edge(edge_ptr);
 
+        *position = position.after_move::<true>(edge.mov);
+
         // Expand the Edge into a new Node.
-        let new_node = Node::new(node.position.after_move::<true>(edge.mov), ptr);
+        let new_node = Node::new(ptr);
 
         // Add the new Node to the Tree.
         self.nodes.push(new_node);
@@ -170,9 +176,7 @@ impl Tree {
         new_ptr
     }
 
-    pub fn simulate(&mut self, ptr: NodePtr) -> f64 {
-        let position = &self.node(ptr).position;
-
+    pub fn simulate(&mut self, position: &ataxx::Position) -> f64 {
         if position.is_game_over() {
             let winner = position.winner();
             return if winner == ataxx::Piece::None {
@@ -218,51 +222,51 @@ impl Tree {
     }
 }
 
-impl Tree {
-    pub fn verify(&self) -> Result<(), String> {
-        self.verify_node(0)
-    }
+// impl Tree {
+//     pub fn verify(&self) -> Result<(), String> {
+//         self.verify_node(0)
+//     }
 
-    fn verify_node(&self, ptr: NodePtr) -> Result<(), String> {
-        let node = self.node(ptr);
-        if !(node.total_score >= 0.0 && node.total_score <= node.playouts as f64) {
-            return Err("node score out of bounds [0, playouts]".to_string());
-        }
+//     fn verify_node(&self, ptr: NodePtr) -> Result<(), String> {
+//         let node = self.node(ptr);
+//         if !(node.total_score >= 0.0 && node.total_score <= node.playouts as f64) {
+//             return Err("node score out of bounds [0, playouts]".to_string());
+//         }
 
-        let mut child_playouts = 0;
-        let mut policy_sum = 0.0;
-        for edge in node.edges.iter() {
-            policy_sum += edge.policy;
+//         let mut child_playouts = 0;
+//         let mut policy_sum = 0.0;
+//         for edge in node.edges.iter() {
+//             policy_sum += edge.policy;
 
-            if edge.ptr == -1 {
-                continue;
-            }
+//             if edge.ptr == -1 {
+//                 continue;
+//             }
 
-            let child = self.node(edge.ptr);
+//             let child = self.node(edge.ptr);
 
-            if child.position.checksum != node.position.after_move::<true>(edge.mov).checksum {
-                return Err("position not matching after making node's move".to_string());
-            }
+//             if child.position.checksum != node.position.after_move::<true>(edge.mov).checksum {
+//                 return Err("position not matching after making node's move".to_string());
+//             }
 
-            self.verify_node(edge.ptr)?;
+//             self.verify_node(edge.ptr)?;
 
-            child_playouts += child.playouts;
-        }
+//             child_playouts += child.playouts;
+//         }
 
-        if node.edges.len() > 0 && (1.0 - policy_sum).abs() > 0.00001 {
-            return Err(format!("total playout probability {} not 1", policy_sum));
-        }
+//         if node.edges.len() > 0 && (1.0 - policy_sum).abs() > 0.00001 {
+//             return Err(format!("total playout probability {} not 1", policy_sum));
+//         }
 
-        if (ptr == 0 && node.playouts != child_playouts)
-            || (ptr != 0 && !node.is_terminal() && node.playouts != child_playouts + 1)
-        {
-            println!("{}", node.position);
-            Err(format!(
-                "node playouts {} while child playouts {}",
-                node.playouts, child_playouts
-            ))
-        } else {
-            Ok(())
-        }
-    }
-}
+//         if (ptr == 0 && node.playouts != child_playouts)
+//             || (ptr != 0 && !node.is_terminal() && node.playouts != child_playouts + 1)
+//         {
+//             println!("{}", node.position);
+//             Err(format!(
+//                 "node playouts {} while child playouts {}",
+//                 node.playouts, child_playouts
+//             ))
+//         } else {
+//             Ok(())
+//         }
+//     }
+// }

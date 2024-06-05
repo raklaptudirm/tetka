@@ -5,8 +5,6 @@ pub type NodePtr = isize;
 pub type Result = f64;
 
 pub struct Node {
-    pub position: ataxx::Position,
-
     pub edges: Edges,
 
     pub playouts: usize,
@@ -15,10 +13,9 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(position: ataxx::Position, parent_node: NodePtr) -> Node {
+    pub fn new(parent_node: NodePtr) -> Node {
         Node {
-            position,
-
+            // position,
             edges: Edges::new(),
 
             playouts: 0,
@@ -27,17 +24,13 @@ impl Node {
         }
     }
 
-    pub fn is_terminal(&self) -> bool {
-        self.position.is_game_over()
-    }
-
-    pub fn expand(&mut self, policy: policy::Fn) {
-        self.position.generate_moves_into(&mut self.edges);
+    pub fn expand(&mut self, position: &ataxx::Position, policy: policy::Fn) {
+        position.generate_moves_into(&mut self.edges);
 
         let mut sum = 0.0;
         let mut policies = vec![];
         for edge in self.edges.iter() {
-            let policy = policy(self, edge.mov).exp();
+            let policy = policy(position, edge.mov).exp();
             policies.push(policy);
             sum += policy;
         }
