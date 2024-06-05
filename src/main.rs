@@ -1,4 +1,4 @@
-use std::{env, str::FromStr};
+use std::{env, str::FromStr, time};
 
 use commands::{search, Limits};
 use uxi::Client;
@@ -70,6 +70,9 @@ fn main() {
             "x6/7/4x2/3x3/7/7/o5x o 2 2",
         ];
 
+        let mut total_nodes = 0;
+
+        let start = time::Instant::now();
         for (i, fen) in BENCH_FENS.iter().enumerate() {
             println!("[#{}] {}", i + 1, fen);
             let position = ataxx::Position::from_str(fen).unwrap();
@@ -80,8 +83,11 @@ fn main() {
                 movestogo: None,
             };
 
-            search(position, tc);
+            search(position, tc, &mut total_nodes);
         }
+        let elapsed = start.elapsed().as_millis();
+
+        println!("nodes {} nps {}", total_nodes, total_nodes as u128 * 1000 / elapsed);
 
         return
     }

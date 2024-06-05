@@ -11,11 +11,11 @@ pub fn go() -> Command<Context> {
         let winc = bundle.is_flag_set("winc");
         let btime = bundle.is_flag_set("btime");
         let wtime = bundle.is_flag_set("wtime");
-        // let movestogo = bundle.is_flag_set("movestogo");
+
         let depth = bundle.is_flag_set("depth");
         let nodes = bundle.is_flag_set("nodes");
         let movetime = bundle.is_flag_set("movetime");
-        // let ponder = bundle.is_flag_set("ponder");
+
         let infinite = bundle.is_flag_set("infinite");
 
         let std_tc = btime || wtime || binc || winc;
@@ -31,11 +31,6 @@ pub fn go() -> Command<Context> {
         let ctx = bundle.lock();
         let position = ctx.position;
         drop(ctx);
-
-        let movestogo = match bundle.get_single_flag("movestogo") {
-            Some(string) => Some(string.parse()?),
-            None => None,
-        };
 
         let limits = Limits {
             nodes: match bundle.get_single_flag("nodes") {
@@ -59,27 +54,19 @@ pub fn go() -> Command<Context> {
                         };
                     }
 
-                    let tc = StandardTC {
-                        btime: get_flag!("btime"),
-                        wtime: get_flag!("wtime"),
-                        binc: get_flag!("binc"),
-                        winc: get_flag!("winc"),
-                    };
-
-                    let our_time = match position.side_to_move {
-                        ataxx::Piece::Black => tc.wtime,
-                        ataxx::Piece::White => tc.btime,
+                    let our_time: u128 = match position.side_to_move {
+                        ataxx::Piece::Black => get_flag!("wtime"),
+                        ataxx::Piece::White => get_flag!("btime"),
                         _ => unreachable!(),
                     };
 
-                    let our_inc = match position.side_to_move {
-                        ataxx::Piece::Black => tc.winc,
-                        ataxx::Piece::White => tc.binc,
+                    let our_inc: u128 = match position.side_to_move {
+                        ataxx::Piece::Black => get_flag!("winc"),
+                        ataxx::Piece::White => get_flag!("binc"),
                         _ => unreachable!(),
                     };
 
-                    let usable_time =
-                        (our_time / movestogo.unwrap_or(20) as u128 + our_inc / 2).max(1);
+                    let usable_time = (our_time / 20 + our_inc / 2).max(1);
 
                     usable_time.min(movetime)
                 } else {
@@ -87,10 +74,14 @@ pub fn go() -> Command<Context> {
                 }
             },
 
-            movestogo,
+            movestogo: match bundle.get_single_flag("movestogo") {
+                Some(string) => Some(string.parse()?),
+                None => None,
+            },
         };
 
-        let bestmove = search(position, limits);
+        let mut nodes = 0;
+        let bestmove = search(position, limits, &mut nodes);
 
         println!("bestmove {}", bestmove);
 
@@ -114,14 +105,6 @@ pub fn go() -> Command<Context> {
     .parallelize(true)
 }
 
-#[allow(dead_code)]
-pub struct StandardTC {
-    pub btime: u128,
-    pub wtime: u128,
-    pub binc: u128,
-    pub winc: u128,
-}
-
 #[derive(Debug)]
 pub struct Limits {
     pub depth: usize,
@@ -130,7 +113,7 @@ pub struct Limits {
     pub movestogo: Option<usize>,
 }
 
-pub fn search(position: ataxx::Position, limits: Limits) -> ataxx::Move {
+pub fn search(position: ataxx::Position, limits: Limits, total_nodes: &mut u64) -> ataxx::Move {
     let mut tree = mcts::Tree::new(position);
     let start = time::Instant::now();
 
@@ -163,6 +146,8 @@ pub fn search(position: ataxx::Position, limits: Limits) -> ataxx::Move {
                 tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
             );
         }
+
+        *total_nodes += tree.nodes() as u64;
 
         if tree.playouts() & 127 == 0 {
             if start.elapsed().as_millis() >= limits.movetime
