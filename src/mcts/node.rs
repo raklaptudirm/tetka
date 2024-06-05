@@ -37,10 +37,9 @@ impl Node {
         let mut sum = 0.0;
         let mut policies = vec![];
         for edge in self.edges.iter() {
-            let policy = policy(self, edge.mov).max(0.0);
-            let square = policy;
-            policies.push(square);
-            sum += square;
+            let policy = policy(self, edge.mov).exp();
+            policies.push(policy);
+            sum += policy;
         }
 
         for (i, edge) in self.edges.iter_mut().enumerate() {
