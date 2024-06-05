@@ -1,4 +1,3 @@
-use core::time;
 use std::{env, str::FromStr};
 
 use commands::{search, Limits};
@@ -76,8 +75,8 @@ fn main() {
             let position = ataxx::Position::from_str(fen).unwrap();
             let tc = Limits {
                 nodes: 20000,
-                depth: u16::MAX,
-                movetime: time::Duration::MAX,
+                depth: 10,
+                movetime: u128::MAX,
                 movestogo: None,
             };
 

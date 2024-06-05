@@ -56,8 +56,8 @@ impl Tree {
 }
 
 impl Tree {
-    pub fn playout(&mut self) -> NodePtr {
-        let selected = self.select(); // Select Node to be expanded
+    pub fn playout(&mut self, depth: &mut usize) -> NodePtr {
+        let selected = self.select(depth); // Select Node to be expanded
         let expanded = self.expand(selected); // Expand the selected Node
         let simulate = self.simulate(expanded); // Simulate the Node's result
         self.backpropagate(expanded, simulate); // Backpropagate the simulation
@@ -65,11 +65,13 @@ impl Tree {
         expanded
     }
 
-    pub fn select(&mut self) -> NodePtr {
+    pub fn select(&mut self, depth: &mut usize) -> NodePtr {
         let policy = self.policy;
         let mut node_ptr: NodePtr = 0;
 
         loop {
+            *depth += 1;
+
             let node = self.node_mut(node_ptr);
 
             if node_ptr != 0 && node.playouts == 1 {

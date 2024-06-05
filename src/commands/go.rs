@@ -44,12 +44,12 @@ pub fn go() -> Command<Context> {
             },
             depth: match bundle.get_single_flag("depth") {
                 Some(depth) => depth.parse()?,
-                None => u16::MAX,
+                None => usize::MAX,
             },
             movetime: {
                 let movetime = match bundle.get_single_flag("movetime") {
-                    Some(movetime) => time::Duration::from_millis(movetime.parse()?),
-                    None => time::Duration::MAX,
+                    Some(movetime) => movetime.parse()?,
+                    None => u128::MAX,
                 };
 
                 if std_tc {
@@ -78,9 +78,8 @@ pub fn go() -> Command<Context> {
                         _ => unreachable!(),
                     };
 
-                    let usable_time = time::Duration::from_millis(
-                        (our_time / movestogo.unwrap_or(20) as u64 + our_inc / 2).max(1),
-                    );
+                    let usable_time =
+                        (our_time / movestogo.unwrap_or(20) as u128 + our_inc / 2).max(1);
 
                     usable_time.min(movetime)
                 } else {
@@ -117,56 +116,64 @@ pub fn go() -> Command<Context> {
 
 #[allow(dead_code)]
 pub struct StandardTC {
-    pub btime: u64,
-    pub wtime: u64,
-    pub binc: u64,
-    pub winc: u64,
+    pub btime: u128,
+    pub wtime: u128,
+    pub binc: u128,
+    pub winc: u128,
 }
 
 #[derive(Debug)]
 pub struct Limits {
-    pub depth: u16,
+    pub depth: usize,
     pub nodes: usize,
-    pub movetime: time::Duration,
-    pub movestogo: Option<u8>,
+    pub movetime: u128,
+    pub movestogo: Option<usize>,
 }
 
-pub fn search(position: ataxx::Position, tc: Limits) -> ataxx::Move {
+pub fn search(position: ataxx::Position, limits: Limits) -> ataxx::Move {
     let mut tree = mcts::Tree::new(position);
     let start = time::Instant::now();
-    let mut last_info = start;
-    let mut seldepth = 0;
 
-    println!("{:?}", tc);
+    let mut depth = 0;
+    let mut seldepth = 0;
+    let mut cumulative_depth = 0;
 
     loop {
-        let node = tree.playout();
-        if tree.playouts() & 4095 == 0 {
-            if last_info.elapsed() > time::Duration::from_secs(1) {
-                // Update last info report timestamp.
-                last_info = time::Instant::now();
+        let mut new_depth = 0;
+        let node = tree.playout(&mut new_depth);
 
-                let node = tree.node(node);
-                let new_depth = node.position.ply_count - position.ply_count;
-                if new_depth > seldepth {
-                    seldepth = new_depth;
-                }
+        cumulative_depth += new_depth;
+        if new_depth > seldepth {
+            seldepth = new_depth;
+        }
 
-                // Make a new info report.
-                println!(
-                    "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
-                    new_depth,
-                    seldepth,
-                    node.q() * 100.0,
-                    tree.playouts(),
-                    tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
-                );
-            }
+        let avg_depth = cumulative_depth / tree.playouts();
+        if avg_depth > depth {
+            depth = avg_depth;
 
-            if start.elapsed() > tc.movetime || seldepth > tc.depth || tree.nodes() > tc.nodes {
+            let node = tree.node(node);
+
+            // Make a new info report.
+            println!(
+                "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
+                depth,
+                seldepth,
+                node.q() * 100.0,
+                tree.playouts(),
+                tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
+            );
+        }
+
+        if tree.playouts() & 127 == 0 {
+            if start.elapsed().as_millis() >= limits.movetime
+                || depth >= limits.depth
+                || tree.nodes() >= limits.nodes
+            {
                 break;
             }
 
+            // Hard memory limit to prevent overuse.
+            // TODO: Fix this by removing old nodes and stuff.
             if tree.nodes() > 2_000_000_000 / mem::size_of::<Node>() {
                 break;
             }
@@ -175,7 +182,7 @@ pub fn search(position: ataxx::Position, tc: Limits) -> ataxx::Move {
 
     println!(
         "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
-        0,
+        cumulative_depth / tree.playouts(),
         seldepth,
         100.0,
         tree.playouts(),
