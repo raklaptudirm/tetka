@@ -147,8 +147,6 @@ pub fn search(position: ataxx::Position, limits: Limits, total_nodes: &mut u64) 
             );
         }
 
-        *total_nodes += tree.nodes() as u64;
-
         if tree.playouts() & 127 == 0 {
             if start.elapsed().as_millis() >= limits.movetime
                 || depth >= limits.depth
@@ -164,6 +162,8 @@ pub fn search(position: ataxx::Position, limits: Limits, total_nodes: &mut u64) 
             }
         }
     }
+
+    *total_nodes += tree.nodes() as u64;
 
     println!(
         "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
