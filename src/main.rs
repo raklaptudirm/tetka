@@ -77,7 +77,7 @@ fn main() {
             println!("[#{}] {}", i + 1, fen);
             let position = ataxx::Position::from_str(fen).unwrap();
             let tc = Limits {
-                nodes: 20000,
+                nodes: 50000,
                 depth: 10,
                 movetime: u128::MAX,
                 movestogo: None,
