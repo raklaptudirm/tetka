@@ -239,6 +239,8 @@ impl Searcher {
         let mut result = result;
 
         loop {
+            result = 1.0 - result;
+
             let node = self.tree.node(node_ptr);
             let parent_node = node.parent_node;
             let parent_edge = node.parent_edge;
@@ -254,7 +256,6 @@ impl Searcher {
             }
 
             node_ptr = parent_node;
-            result = 1.0 - result;
         }
     }
 }

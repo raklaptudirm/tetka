@@ -61,11 +61,11 @@ impl Tree {
         let mut best_mov = ataxx::Move::NULL;
         let mut best_scr = 0.0;
         for edge in root.edges.iter() {
-            if edge.ptr == -1 {
+            if edge.visits == 0 {
                 continue;
             }
 
-            let score = 1.0 - edge.q();
+            let score = edge.q();
 
             if best_mov == ataxx::Move::NULL || score > best_scr {
                 best_mov = edge.mov;
