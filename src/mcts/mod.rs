@@ -129,8 +129,6 @@ impl Searcher {
         let parent_node = node.parent_node;
         let parent_edge = node.parent_edge;
 
-        let edge_visits = self.tree.edge(parent_node, parent_edge).visits;
-
         let node = self.tree.node_mut(node_ptr);
 
         let score = if position.is_game_over() {
