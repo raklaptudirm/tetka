@@ -121,7 +121,7 @@ impl Searcher {
         expanded
     }
 
-    pub fn select(&mut self, position: &mut ataxx::Position, depth: &mut usize) -> NodePtr {
+    fn select(&mut self, position: &mut ataxx::Position, depth: &mut usize) -> NodePtr {
         let policy = self.policy;
         let mut node_ptr: NodePtr = 0;
 
@@ -163,7 +163,7 @@ impl Searcher {
     //  node-q + policy * cpuct * sqrt(node-visits) / (1 + child-visits = 1)
     // child-q + policy * cpuct * sqrt(node-visits) / (1 + child-visits)
     // ^-----^ score / visits
-    pub fn select_edge(&self, ptr: NodePtr) -> EdgePtr {
+    fn select_edge(&self, ptr: NodePtr) -> EdgePtr {
         let node = self.node(ptr);
 
         // Node exploitation factor (cpuct * sqrt(parent-playouts))
@@ -200,7 +200,7 @@ impl Searcher {
         best_ptr
     }
 
-    pub fn expand(&mut self, parent: NodePtr, position: &mut ataxx::Position) -> NodePtr {
+    fn expand(&mut self, parent: NodePtr, position: &mut ataxx::Position) -> NodePtr {
         if position.is_game_over() {
             return parent;
         }
@@ -227,7 +227,7 @@ impl Searcher {
         new_ptr
     }
 
-    pub fn simulate(&mut self, position: &ataxx::Position) -> f64 {
+    fn simulate(&mut self, position: &ataxx::Position) -> f64 {
         if position.is_game_over() {
             let winner = position.winner();
             return if winner == ataxx::Piece::None {
@@ -242,7 +242,7 @@ impl Searcher {
         (self.value)(position)
     }
 
-    pub fn backpropagate(&mut self, ptr: NodePtr, result: f64) {
+    fn backpropagate(&mut self, ptr: NodePtr, result: f64) {
         let mut node_ptr = ptr;
         let mut result = result;
 
