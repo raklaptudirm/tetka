@@ -81,6 +81,8 @@ pub fn go() -> Command<Context> {
             },
         };
 
+        searcher.update_position(position);
+
         let mut nodes = 0;
         let bestmove = searcher.search(limits, &mut nodes);
 

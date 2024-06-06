@@ -38,6 +38,10 @@ impl Searcher {
         }
     }
 
+    pub fn update_position(&mut self, position: ataxx::Position) {
+        self.tree = Tree::new(position);
+    }
+
     pub fn search(&mut self, limits: Limits, total_nodes: &mut u64) -> ataxx::Move {
         let maxdepth = limits.maxdepth.unwrap_or(usize::MAX);
         let maxnodes = limits.maxnodes.unwrap_or(usize::MAX);
