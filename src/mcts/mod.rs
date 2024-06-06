@@ -6,7 +6,6 @@ mod params;
 mod tree;
 
 use std::mem;
-use std::ops;
 use std::time;
 
 pub use self::node::*;
@@ -73,27 +72,27 @@ impl Searcher {
                     seldepth,
                     0.0,
                     playouts,
-                    self.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
+                    self.tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
                 );
             }
 
             if playouts & 127 == 0 {
                 if start.elapsed().as_millis() >= movetime
                     || depth >= maxdepth
-                    || self.nodes() >= maxnodes
+                    || self.tree.nodes() >= maxnodes
                 {
                     break;
                 }
 
                 // Hard memory limit to prevent overuse.
                 // TODO: Fix this by removing old nodes and stuff.
-                if self.nodes() > 2_000_000_000 / mem::size_of::<Node>() {
+                if self.tree.nodes() > 2_000_000_000 / mem::size_of::<Node>() {
                     break;
                 }
             }
         }
 
-        *total_nodes += self.nodes() as u64;
+        *total_nodes += self.tree.nodes() as u64;
 
         println!(
             "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
@@ -101,19 +100,19 @@ impl Searcher {
             seldepth,
             100.0,
             playouts,
-            self.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
+            self.tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
         );
 
         // Verify the self.
         // debug_assert!(self.verify().is_ok());
 
-        self.best_move()
+        self.tree.best_move()
     }
 }
 
 impl Searcher {
     pub fn playout(&mut self, depth: &mut usize) -> NodePtr {
-        let mut position = self.root_position();
+        let mut position = self.tree.root_position();
         let selected = self.select(&mut position, depth); // Select Node to be expanded
         let expanded = self.expand(selected, &mut position); // Expand the selected Node
         let simulate = self.simulate(&position); // Simulate the Node's result
@@ -129,7 +128,7 @@ impl Searcher {
         loop {
             *depth += 1;
 
-            let node = self.node_mut(node_ptr);
+            let node = self.tree.node_mut(node_ptr);
 
             if position.is_game_over() {
                 break;
@@ -140,7 +139,7 @@ impl Searcher {
                 node.expand(position, policy);
             }
 
-            let node = self.node(node_ptr);
+            let node = self.tree.node(node_ptr);
 
             // Select a new Edge from the current Node, and get the child Node.
             let edge = self.select_edge(node_ptr);
@@ -165,8 +164,8 @@ impl Searcher {
     // child-q + policy * cpuct * sqrt(node-visits) / (1 + child-visits)     // expanded
     // ^-----^ score / visits
     fn select_edge(&self, ptr: NodePtr) -> EdgePtr {
-        let node = self.node(ptr);
-        let parent = self.edge(node.parent_node, node.parent_edge);
+        let node = self.tree.node(ptr);
+        let parent = self.tree.edge(node.parent_node, node.parent_edge);
 
         // Node exploitation factor (cpuct * sqrt(parent-playouts))
         let e = self.params.cpuct() * f64::sqrt(parent.visits.max(1) as f64);
@@ -198,7 +197,7 @@ impl Searcher {
         // Select an Edge to expand from the current Node.
         let edge_ptr = self.select_edge(parent);
 
-        let node = self.node(parent);
+        let node = self.tree.node(parent);
         let edge = node.edge(edge_ptr);
 
         *position = position.after_move::<true>(edge.mov);
@@ -207,8 +206,8 @@ impl Searcher {
         let new_node = Node::new(parent, edge_ptr);
 
         // Add the new Node to the Tree.
-        let new_ptr = self.push_node(new_node);
-        let edge = self.edge_mut(parent, edge_ptr);
+        let new_ptr = self.tree.push_node(new_node);
+        let edge = self.tree.edge_mut(parent, edge_ptr);
 
         // Make the Edge point to the new Node.
         edge.ptr = new_ptr;
@@ -236,11 +235,11 @@ impl Searcher {
         let mut result = result;
 
         loop {
-            let node = self.node(node_ptr);
+            let node = self.tree.node(node_ptr);
             let parent_node = node.parent_node;
             let parent_edge = node.parent_edge;
 
-            let edge = self.edge_mut(parent_node, parent_edge);
+            let edge = self.tree.edge_mut(parent_node, parent_edge);
 
             edge.visits += 1;
             edge.scores += result;
@@ -253,19 +252,5 @@ impl Searcher {
             node_ptr = parent_node;
             result = 1.0 - result;
         }
-    }
-}
-
-impl ops::Deref for Searcher {
-    type Target = Tree;
-
-    fn deref(&self) -> &Self::Target {
-        &self.tree
-    }
-}
-
-impl ops::DerefMut for Searcher {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.tree
     }
 }
