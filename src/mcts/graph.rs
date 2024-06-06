@@ -1,4 +1,4 @@
-use super::{policy, simulate, EdgePtr, Node, NodePtr, Params};
+use super::{policy, value, EdgePtr, Node, NodePtr, Params};
 use ataxx::MoveStore;
 
 pub struct Tree {
@@ -6,13 +6,13 @@ pub struct Tree {
     nodes: Vec<Node>,
     params: Params,
     policy: policy::Fn,
-    simulator: simulate::Fn,
+    simulator: value::Fn,
 }
 
 impl Tree {
     pub fn new(position: ataxx::Position) -> Tree {
+        let value = value::material;
         let policy = policy::handcrafted;
-        let simulator = simulate::material_count;
 
         let mut root = Node::new(-1);
         root.expand(&position, policy);
@@ -22,7 +22,7 @@ impl Tree {
             nodes: vec![root],
             params: Params::new(),
             policy,
-            simulator,
+            simulator: value,
         }
     }
 

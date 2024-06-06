@@ -3,7 +3,7 @@ pub mod policy;
 mod graph;
 mod node;
 mod params;
-mod simulate;
+mod value;
 
 pub use self::graph::*;
 pub use self::node::*;
