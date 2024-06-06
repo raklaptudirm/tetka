@@ -1,6 +1,4 @@
 use std::{env, str::FromStr, time};
-
-use commands::{search, Limits};
 use uxi::Client;
 
 mod commands;
@@ -76,14 +74,15 @@ fn main() {
         for (i, fen) in BENCH_FENS.iter().enumerate() {
             println!("[#{}] {}", i + 1, fen);
             let position = ataxx::Position::from_str(fen).unwrap();
-            let tc = Limits {
-                nodes: 50000,
-                depth: 10,
-                movetime: u128::MAX,
+            let mut searcher = mcts::Searcher::new(position, mcts::policy::handcrafted, mcts::value::material);
+            let limits = mcts::Limits {
+                maxnodes: Some(50000),
+                maxdepth: Some(10),
+                movetime: None,
                 movestogo: None,
             };
 
-            search(position, tc, &mut total_nodes);
+            searcher.search(limits, &mut total_nodes);
         }
         let elapsed = start.elapsed().as_millis();
 

@@ -4,6 +4,7 @@ use core::slice;
 pub type NodePtr = isize;
 pub type Result = f64;
 
+#[derive(Clone)]
 pub struct Node {
     pub edges: Edges,
 
@@ -54,6 +55,7 @@ impl Node {
     }
 }
 
+#[derive(Clone)]
 pub struct Edges {
     edges: Vec<Edge>,
 }
@@ -87,6 +89,7 @@ impl ataxx::MoveStore for Edges {
 
 pub type EdgePtr = isize;
 
+#[derive(Clone)]
 pub struct Edge {
     pub mov: ataxx::Move,
     pub ptr: NodePtr,

@@ -1,9 +1,7 @@
-use std::{mem, time};
-
 use uxi::{error, Bundle, Command, Flag, RunError};
 
 use super::Context;
-use crate::mcts::{self, Node};
+use crate::mcts;
 
 pub fn go() -> Command<Context> {
     Command::new(|bundle: Bundle<Context>| {
@@ -30,19 +28,20 @@ pub fn go() -> Command<Context> {
 
         let ctx = bundle.lock();
         let position = ctx.position;
+        let mut searcher = ctx.searcher.clone();
         drop(ctx);
 
-        let limits = Limits {
-            nodes: match bundle.get_single_flag("nodes") {
-                Some(nodes) => nodes.parse()?,
-                None => usize::MAX,
+        let limits = mcts::Limits {
+            maxnodes: match bundle.get_single_flag("nodes") {
+                Some(nodes) => Some(nodes.parse()?),
+                None => None,
             },
-            depth: match bundle.get_single_flag("depth") {
-                Some(depth) => depth.parse()?,
-                None => usize::MAX,
+            maxdepth: match bundle.get_single_flag("depth") {
+                Some(depth) => Some(depth.parse()?),
+                None => None,
             },
             movetime: {
-                let movetime = match bundle.get_single_flag("movetime") {
+                let mov_time = match bundle.get_single_flag("movetime") {
                     Some(movetime) => movetime.parse()?,
                     None => u128::MAX,
                 };
@@ -68,9 +67,11 @@ pub fn go() -> Command<Context> {
 
                     let usable_time = (our_time / 20 + our_inc / 2).max(1);
 
-                    usable_time.min(movetime)
+                    Some(usable_time.min(mov_time))
+                } else if movetime {
+                    Some(mov_time)
                 } else {
-                    movetime
+                    None
                 }
             },
 
@@ -81,9 +82,13 @@ pub fn go() -> Command<Context> {
         };
 
         let mut nodes = 0;
-        let bestmove = search(position, limits, &mut nodes);
+        let bestmove = searcher.search(limits, &mut nodes);
 
         println!("bestmove {}", bestmove);
+
+        let mut ctx = bundle.lock();
+        ctx.searcher = searcher;
+        drop(ctx);
 
         Ok(())
     })
@@ -103,79 +108,4 @@ pub fn go() -> Command<Context> {
     // This command should be run in a separate thread so that the Client
     // can still respond to and run other Commands while this one is running.
     .parallelize(true)
-}
-
-#[derive(Debug)]
-pub struct Limits {
-    pub depth: usize,
-    pub nodes: usize,
-    pub movetime: u128,
-    pub movestogo: Option<usize>,
-}
-
-pub fn search(position: ataxx::Position, limits: Limits, total_nodes: &mut u64) -> ataxx::Move {
-    let mut tree = mcts::Tree::new(position);
-    let start = time::Instant::now();
-
-    let mut depth = 0;
-    let mut seldepth = 0;
-    let mut cumulative_depth = 0;
-
-    loop {
-        let mut new_depth = 0;
-        let node = tree.playout(&mut new_depth);
-
-        cumulative_depth += new_depth;
-        if new_depth > seldepth {
-            seldepth = new_depth;
-        }
-
-        let avg_depth = cumulative_depth / tree.playouts();
-        if avg_depth > depth {
-            depth = avg_depth;
-
-            let node = tree.node(node);
-
-            // Make a new info report.
-            println!(
-                "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
-                depth,
-                seldepth,
-                node.q() * 100.0,
-                tree.playouts(),
-                tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
-            );
-        }
-
-        if tree.playouts() & 127 == 0 {
-            if start.elapsed().as_millis() >= limits.movetime
-                || depth >= limits.depth
-                || tree.nodes() >= limits.nodes
-            {
-                break;
-            }
-
-            // Hard memory limit to prevent overuse.
-            // TODO: Fix this by removing old nodes and stuff.
-            if tree.nodes() > 2_000_000_000 / mem::size_of::<Node>() {
-                break;
-            }
-        }
-    }
-
-    *total_nodes += tree.nodes() as u64;
-
-    println!(
-        "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
-        cumulative_depth / tree.playouts(),
-        seldepth,
-        100.0,
-        tree.playouts(),
-        tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
-    );
-
-    // Verify the tree.
-    debug_assert!(tree.verify().is_ok());
-
-    tree.best_move()
 }
