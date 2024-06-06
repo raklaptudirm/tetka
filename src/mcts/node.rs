@@ -46,7 +46,7 @@ impl Node {
         &mut self.edges.edges[ptr as usize]
     }
 
-    pub fn expanded(&mut self) -> bool {
+    pub fn expanded(&self) -> bool {
         self.edges.len() > 0
     }
 }

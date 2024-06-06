@@ -49,7 +49,7 @@ impl Searcher {
 
         let start = time::Instant::now();
 
-        let mut playouts = 0;
+        let mut rollouts = 0;
 
         let mut depth = 0;
         let mut seldepth = 0;
@@ -57,15 +57,17 @@ impl Searcher {
 
         loop {
             let mut new_depth = 0;
-            self.playout(&mut new_depth);
-            playouts += 1;
+            let mut position = self.tree.root_position();
+
+            self.do_one_rollout(0, &mut position, &mut new_depth);
+            rollouts += 1;
 
             cumulative_depth += new_depth;
             if new_depth > seldepth {
                 seldepth = new_depth;
             }
 
-            let avg_depth = cumulative_depth / playouts;
+            let avg_depth = cumulative_depth / rollouts;
             if avg_depth > depth {
                 depth = avg_depth;
 
@@ -75,12 +77,12 @@ impl Searcher {
                     depth,
                     seldepth,
                     0.0,
-                    playouts,
+                    rollouts,
                     self.tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
                 );
             }
 
-            if playouts & 127 == 0 {
+            if rollouts & 127 == 0 {
                 if start.elapsed().as_millis() >= movetime
                     || depth >= maxdepth
                     || self.tree.nodes() >= maxnodes
@@ -100,10 +102,10 @@ impl Searcher {
 
         println!(
             "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
-            cumulative_depth / playouts,
+            cumulative_depth / rollouts,
             seldepth,
             100.0,
-            playouts,
+            rollouts,
             self.tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
         );
 
@@ -115,52 +117,50 @@ impl Searcher {
 }
 
 impl Searcher {
-    pub fn playout(&mut self, depth: &mut usize) -> NodePtr {
-        let mut position = self.tree.root_position();
-        let selected = self.select(&mut position, depth); // Select Node to be expanded
-        let expanded = self.expand(selected, &mut position); // Expand the selected Node
-        let simulate = self.simulate(&position); // Simulate the Node's result
-        self.backpropagate(expanded, simulate); // Backpropagate the simulation
+    fn do_one_rollout(
+        &mut self,
+        node_ptr: NodePtr,
+        position: &mut ataxx::Position,
+        depth: &mut usize,
+    ) -> Score {
+        *depth += 1;
 
-        expanded
-    }
+        let node = self.tree.node(node_ptr);
+        let parent_node = node.parent_node;
+        let parent_edge = node.parent_edge;
 
-    fn select(&mut self, position: &mut ataxx::Position, depth: &mut usize) -> NodePtr {
-        let policy = self.policy;
-        let mut node_ptr: NodePtr = 0;
+        let edge_visits = self.tree.edge(parent_node, parent_edge).visits;
 
-        loop {
-            *depth += 1;
+        let node = self.tree.node_mut(node_ptr);
 
-            let node = self.tree.node_mut(node_ptr);
-
-            if position.is_game_over() {
-                break;
-            }
-
+        let score = if position.is_game_over() {
+            self.simulate(position)
+        } else {
             if !node.expanded() {
-                // If the selected Node's Edges haven't been expanded, expand.
-                node.expand(position, policy);
+                node.expand(position, self.policy)
             }
 
-            let node = self.tree.node(node_ptr);
-
-            // Select a new Edge from the current Node, and get the child Node.
-            let edge = self.select_edge(node_ptr);
-            let edge = node.edge(edge);
-
-            if edge.ptr == -1 {
-                // Selected Edge hasn't been expanded, so end selection for expansion.
-                break;
-            }
-
+            let edge_ptr = self.select_edge(node_ptr);
+            let edge = self.tree.edge(node_ptr, edge_ptr);
             *position = position.after_move::<true>(edge.mov);
 
-            // Replace the Node pointer with the newly selected Node.
-            node_ptr = edge.ptr;
-        }
+            let mut child_ptr = edge.ptr;
+            if child_ptr == -1 {
+                child_ptr = self.tree.push_node(Node::new(node_ptr, edge_ptr));
+                self.tree.edge_mut(node_ptr, edge_ptr).ptr = child_ptr;
+            }
 
-        node_ptr
+            self.do_one_rollout(child_ptr, position, depth)
+        };
+
+        let score = 1.0 - score;
+
+        let edge = self.tree.edge_mut(parent_node, parent_edge);
+
+        edge.visits += 1;
+        edge.scores += score;
+
+        score
     }
 
     //                    v-----------------------v exploitation
@@ -193,32 +193,6 @@ impl Searcher {
         best_ptr
     }
 
-    fn expand(&mut self, parent: NodePtr, position: &mut ataxx::Position) -> NodePtr {
-        if position.is_game_over() {
-            return parent;
-        }
-
-        // Select an Edge to expand from the current Node.
-        let edge_ptr = self.select_edge(parent);
-
-        let node = self.tree.node(parent);
-        let edge = node.edge(edge_ptr);
-
-        *position = position.after_move::<true>(edge.mov);
-
-        // Expand the Edge into a new Node.
-        let new_node = Node::new(parent, edge_ptr);
-
-        // Add the new Node to the Tree.
-        let new_ptr = self.tree.push_node(new_node);
-        let edge = self.tree.edge_mut(parent, edge_ptr);
-
-        // Make the Edge point to the new Node.
-        edge.ptr = new_ptr;
-
-        new_ptr
-    }
-
     fn simulate(&mut self, position: &ataxx::Position) -> f64 {
         if position.is_game_over() {
             let winner = position.winner();
@@ -232,30 +206,5 @@ impl Searcher {
         };
 
         (self.value)(position)
-    }
-
-    fn backpropagate(&mut self, ptr: NodePtr, result: f64) {
-        let mut node_ptr = ptr;
-        let mut result = result;
-
-        loop {
-            result = 1.0 - result;
-
-            let node = self.tree.node(node_ptr);
-            let parent_node = node.parent_node;
-            let parent_edge = node.parent_edge;
-
-            let edge = self.tree.edge_mut(parent_node, parent_edge);
-
-            edge.visits += 1;
-            edge.scores += result;
-
-            // Stop backpropagation if root has been reached.
-            if node_ptr == 0 {
-                break;
-            }
-
-            node_ptr = parent_node;
-        }
     }
 }
