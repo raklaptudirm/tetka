@@ -175,7 +175,7 @@ pub fn search(position: ataxx::Position, limits: Limits, total_nodes: &mut u64) 
     );
 
     // Verify the tree.
-    // debug_assert!(tree.verify().is_ok());
+    debug_assert!(tree.verify().is_ok());
 
     tree.best_move()
 }

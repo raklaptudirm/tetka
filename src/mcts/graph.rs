@@ -1,4 +1,5 @@
 use super::{policy, simulate, EdgePtr, Node, NodePtr, Params};
+use ataxx::MoveStore;
 
 pub struct Tree {
     root_pos: ataxx::Position,
@@ -222,51 +223,52 @@ impl Tree {
     }
 }
 
-// impl Tree {
-//     pub fn verify(&self) -> Result<(), String> {
-//         self.verify_node(0)
-//     }
+impl Tree {
+    pub fn verify(&self) -> Result<(), String> {
+        self.verify_node(0, self.root_pos)
+    }
 
-//     fn verify_node(&self, ptr: NodePtr) -> Result<(), String> {
-//         let node = self.node(ptr);
-//         if !(node.total_score >= 0.0 && node.total_score <= node.playouts as f64) {
-//             return Err("node score out of bounds [0, playouts]".to_string());
-//         }
+    fn verify_node(&self, ptr: NodePtr, position: ataxx::Position) -> Result<(), String> {
+        let node = self.node(ptr);
+        if !(node.total_score >= 0.0 && node.total_score <= node.playouts as f64) {
+            return Err("node score out of bounds [0, playouts]".to_string());
+        }
 
-//         let mut child_playouts = 0;
-//         let mut policy_sum = 0.0;
-//         for edge in node.edges.iter() {
-//             policy_sum += edge.policy;
+        let mut child_playouts = 0;
+        let mut policy_sum = 0.0;
+        for edge in node.edges.iter() {
+            policy_sum += edge.policy;
 
-//             if edge.ptr == -1 {
-//                 continue;
-//             }
+            if edge.ptr == -1 {
+                continue;
+            }
 
-//             let child = self.node(edge.ptr);
+            let child_position = position.after_move::<true>(edge.mov);
+            let child = self.node(edge.ptr);
 
-//             if child.position.checksum != node.position.after_move::<true>(edge.mov).checksum {
-//                 return Err("position not matching after making node's move".to_string());
-//             }
+            if position.checksum != position.after_move::<true>(edge.mov).checksum {
+                return Err("position not matching after making node's move".to_string());
+            }
 
-//             self.verify_node(edge.ptr)?;
+            self.verify_node(edge.ptr, child_position)?;
 
-//             child_playouts += child.playouts;
-//         }
+            child_playouts += child.playouts;
+        }
 
-//         if node.edges.len() > 0 && (1.0 - policy_sum).abs() > 0.00001 {
-//             return Err(format!("total playout probability {} not 1", policy_sum));
-//         }
+        if node.edges.len() > 0 && (1.0 - policy_sum).abs() > 0.00001 {
+            return Err(format!("total playout probability {} not 1", policy_sum));
+        }
 
-//         if (ptr == 0 && node.playouts != child_playouts)
-//             || (ptr != 0 && !node.is_terminal() && node.playouts != child_playouts + 1)
-//         {
-//             println!("{}", node.position);
-//             Err(format!(
-//                 "node playouts {} while child playouts {}",
-//                 node.playouts, child_playouts
-//             ))
-//         } else {
-//             Ok(())
-//         }
-//     }
-// }
+        if (ptr == 0 && node.playouts != child_playouts)
+            || (ptr != 0 && !position.is_game_over() && node.playouts != child_playouts + 1)
+        {
+            println!("{}", position);
+            Err(format!(
+                "node playouts {} while child playouts {}",
+                node.playouts, child_playouts
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}
