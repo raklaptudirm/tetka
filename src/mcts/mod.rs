@@ -18,6 +18,13 @@ pub struct Searcher {
     params: Params,
     policy: policy::Fn,
     value: value::Fn,
+
+    start: time::Instant,
+
+    rollouts: usize,
+    avgdepth: usize,
+    seldepth: usize,
+    cumdepth: usize,
 }
 
 #[derive(Debug)]
@@ -35,6 +42,13 @@ impl Searcher {
             params: Params::new(),
             policy,
             value,
+
+            start: time::Instant::now(),
+
+            rollouts: 0,
+            avgdepth: 0,
+            seldepth: 0,
+            cumdepth: 0,
         }
     }
 
@@ -47,44 +61,37 @@ impl Searcher {
         let maxnodes = limits.maxnodes.unwrap_or(usize::MAX);
         let movetime = limits.movetime.unwrap_or(u128::MAX);
 
-        let start = time::Instant::now();
+        self.start = time::Instant::now();
 
-        let mut rollouts = 0;
+        self.rollouts = 0;
 
-        let mut depth = 0;
-        let mut seldepth = 0;
-        let mut cumulative_depth = 0;
+        self.avgdepth = 0;
+        self.seldepth = 0;
+        self.cumdepth = 0;
 
         loop {
             let mut new_depth = 0;
             let mut position = self.tree.root_position();
 
             self.do_one_rollout(0, &mut position, &mut new_depth);
-            rollouts += 1;
+            self.rollouts += 1;
 
-            cumulative_depth += new_depth;
-            if new_depth > seldepth {
-                seldepth = new_depth;
+            self.cumdepth += new_depth;
+            if new_depth > self.seldepth {
+                self.seldepth = new_depth;
             }
 
-            let avg_depth = cumulative_depth / rollouts;
-            if avg_depth > depth {
-                depth = avg_depth;
+            let avg_depth = self.cumdepth / self.rollouts;
+            if avg_depth > self.avgdepth {
+                self.avgdepth = avg_depth;
 
                 // Make a new info report.
-                println!(
-                    "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
-                    depth,
-                    seldepth,
-                    0.0,
-                    rollouts,
-                    self.tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
-                );
+                self.uci_report();
             }
 
-            if rollouts & 127 == 0 {
-                if start.elapsed().as_millis() >= movetime
-                    || depth >= maxdepth
+            if self.rollouts & 127 == 0 {
+                if self.start.elapsed().as_millis() >= movetime
+                    || self.avgdepth >= maxdepth
                     || self.tree.nodes() >= maxnodes
                 {
                     break;
@@ -100,19 +107,23 @@ impl Searcher {
 
         *total_nodes += self.tree.nodes() as u64;
 
-        println!(
-            "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
-            cumulative_depth / rollouts,
-            seldepth,
-            100.0,
-            rollouts,
-            self.tree.nodes() * 1000 / start.elapsed().as_millis().max(1) as usize
-        );
+        self.uci_report();
 
         // Verify the self.
         // debug_assert!(self.verify().is_ok());
 
         self.tree.best_move()
+    }
+
+    fn uci_report(&self) {
+        println!(
+            "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
+            self.avgdepth,
+            self.seldepth,
+            100.0,
+            self.tree.nodes(),
+            self.tree.nodes() * 1000 / self.start.elapsed().as_millis().max(1) as usize
+        );
     }
 }
 
