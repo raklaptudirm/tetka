@@ -1,17 +1,17 @@
 pub mod policy;
 pub mod value;
 
-mod graph;
 mod node;
 mod params;
+mod tree;
 
 use std::mem;
 use std::ops;
 use std::time;
 
-pub use self::graph::*;
 pub use self::node::*;
 pub use self::params::*;
+pub use self::tree::*;
 
 #[derive(Clone)]
 pub struct Searcher {

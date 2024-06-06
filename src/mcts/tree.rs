@@ -25,6 +25,23 @@ impl Tree {
         self.node(0).playouts
     }
 
+    pub fn root_position(&self) -> ataxx::Position {
+        self.root_pos
+    }
+
+    pub fn node(&self, ptr: NodePtr) -> &Node {
+        &self.nodes[ptr as usize]
+    }
+
+    pub fn node_mut(&mut self, ptr: NodePtr) -> &mut Node {
+        &mut self.nodes[ptr as usize]
+    }
+
+    pub fn push_node(&mut self, node: Node) -> NodePtr {
+        self.nodes.push(node);
+        self.nodes.len() as NodePtr - 1
+    }
+
     pub fn best_move(&self) -> ataxx::Move {
         let root = self.node(0);
 
@@ -45,10 +62,6 @@ impl Tree {
         }
 
         best_mov
-    }
-
-    pub fn root_position(&self) -> ataxx::Position {
-        self.root_pos
     }
 }
 
@@ -95,20 +108,5 @@ impl Tree {
         } else {
             Ok(())
         }
-    }
-}
-
-impl Tree {
-    pub fn node(&self, ptr: NodePtr) -> &Node {
-        &self.nodes[ptr as usize]
-    }
-
-    pub fn node_mut(&mut self, ptr: NodePtr) -> &mut Node {
-        &mut self.nodes[ptr as usize]
-    }
-
-    pub fn push_node(&mut self, node: Node) -> NodePtr {
-        self.nodes.push(node);
-        self.nodes.len() as NodePtr - 1
     }
 }
