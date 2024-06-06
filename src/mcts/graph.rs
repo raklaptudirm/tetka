@@ -246,10 +246,6 @@ impl Tree {
             let child_position = position.after_move::<true>(edge.mov);
             let child = self.node(edge.ptr);
 
-            if position.checksum != position.after_move::<true>(edge.mov).checksum {
-                return Err("position not matching after making node's move".to_string());
-            }
-
             self.verify_node(edge.ptr, child_position)?;
 
             child_playouts += child.playouts;
