@@ -1,4 +1,5 @@
 use super::{Edge, EdgePtr, Node, NodePtr, Score};
+use ataxx::MoveStore;
 
 #[derive(Clone)]
 pub struct Tree {
@@ -101,48 +102,48 @@ impl Tree {
     }
 }
 
-// impl Tree {
-//     pub fn verify(&self) -> Result<(), String> {
-//         self.verify_node(0, self.root_pos)
-//     }
+impl Tree {
+    pub fn verify(&self) -> Result<(), String> {
+        self.verify_node(0, self.root_pos)
+    }
 
-//     fn verify_node(&self, ptr: NodePtr, position: ataxx::Position) -> Result<(), String> {
-//         let node = self.node(ptr);
-//         if !(node.total_score >= 0.0 && node.total_score <= node.playouts as f64) {
-//             return Err("node score out of bounds [0, playouts]".to_string());
-//         }
+    fn verify_node(&self, ptr: NodePtr, position: ataxx::Position) -> Result<(), String> {
+        let node = self.node(ptr);
 
-//         let mut child_playouts = 0;
-//         let mut policy_sum = 0.0;
-//         for edge in node.edges.iter() {
-//             policy_sum += edge.policy;
+        let mut child_visits = 0;
+        let mut policy_sum = 0.0;
+        for edge in node.edges.iter() {
+            if !(edge.scores >= 0.0 && edge.scores <= edge.visits as f64) {
+                return Err("edge score out of bounds [0, playouts]".to_string());
+            }
 
-//             if edge.ptr == -1 {
-//                 continue;
-//             }
+            policy_sum += edge.policy;
 
-//             let child_position = position.after_move::<true>(edge.mov);
-//             let child = self.node(edge.ptr);
+            if edge.ptr == -1 {
+                if edge.visits != 0 {
+                    return Err("visits to an unexpanded edge".to_string());
+                }
+                continue;
+            }
 
-//             self.verify_node(edge.ptr, child_position)?;
+            self.verify_node(edge.ptr, position.after_move::<true>(edge.mov))?;
 
-//             child_playouts += child.playouts;
-//         }
+            child_visits += edge.visits;
+        }
 
-//         if node.edges.len() > 0 && (1.0 - policy_sum).abs() > 0.00001 {
-//             return Err(format!("total playout probability {} not 1", policy_sum));
-//         }
+        if node.edges.len() > 0 && (1.0 - policy_sum).abs() > 0.00001 {
+            return Err(format!("sum of all the policies is {}, not 1", policy_sum));
+        }
 
-//         if (ptr == 0 && node.playouts != child_playouts)
-//             || (ptr != 0 && !position.is_game_over() && node.playouts != child_playouts + 1)
-//         {
-//             println!("{}", position);
-//             Err(format!(
-//                 "node playouts {} while child playouts {}",
-//                 node.playouts, child_playouts
-//             ))
-//         } else {
-//             Ok(())
-//         }
-//     }
-// }
+        let parent = self.edge(node.parent_node, node.parent_edge);
+        if !position.is_game_over() && parent.visits != child_visits {
+            println!("{}", position);
+            Err(format!(
+                "edge total visits is {} while sum of child visits is {}",
+                parent.visits, child_visits
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}

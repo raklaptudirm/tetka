@@ -108,7 +108,7 @@ impl Searcher {
         self.uci_report();
 
         // Verify the self.
-        // debug_assert!(self.verify().is_ok());
+        debug_assert_eq!(self.tree.verify(), Ok(()));
 
         self.tree.best_move()
     }
