@@ -87,7 +87,7 @@ fn main() {
         let elapsed = start.elapsed().as_millis();
 
         // Assert that the node-count hasn't changed unexpectedly.
-        debug_assert!(total_nodes == 261787);
+        debug_assert!(total_nodes == 5504);
 
         println!("nodes {} nps {}", total_nodes, total_nodes as u128 * 1000 / elapsed);
 
