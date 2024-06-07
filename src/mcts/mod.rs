@@ -127,7 +127,7 @@ impl Searcher {
         } else if score <= 0.0 {
             format!("mate -{}", pv.len() / 2)
         } else {
-            format!("cp {:.0}", -400.0 * (1.0 / score - 1.0).ln())
+            format!("cp {:.0}", value::wdl_to_eval(score))
         };
 
         println!(
@@ -229,6 +229,6 @@ impl Searcher {
             };
         };
 
-        (self.value)(position)
+        value::eval_to_wdl((self.value)(position))
     }
 }
