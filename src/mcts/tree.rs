@@ -1,4 +1,4 @@
-use super::{Edge, EdgePtr, Node, NodePtr};
+use super::{Edge, EdgePtr, Node, NodePtr, Score};
 
 #[derive(Clone)]
 pub struct Tree {
@@ -15,6 +15,34 @@ impl Tree {
             root_pos: position,
             root_edge: Edge::new(ataxx::Move::NULL),
             nodes: vec![root],
+        }
+    }
+
+    pub fn pv(&self, node_ptr: NodePtr) -> (Vec<ataxx::Move>, Score) {
+        let node = self.node(node_ptr);
+
+        let mut best_edge = -1;
+        let mut best_score = 0.0;
+        for (edge_ptr, edge) in node.edges.iter().enumerate() {
+            if best_edge == -1 || edge.q() > best_score {
+                best_edge = edge_ptr as isize;
+                best_score = edge.q();
+            }
+        }
+
+        // No edges found in the current node.
+        if best_edge == -1 {
+            return (vec![], 0.0);
+        }
+
+        let edge = node.edge(best_edge);
+        if edge.ptr == -1 {
+            (vec![edge.mov], best_score)
+        } else {
+            let (mut child_pv, _score) = self.pv(edge.ptr);
+            let mut pv = vec![edge.mov];
+            pv.append(&mut child_pv);
+            (pv, best_score)
         }
     }
 

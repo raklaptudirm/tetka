@@ -116,13 +116,30 @@ impl Searcher {
     }
 
     fn uci_report(&self) {
+        let (pv, score) = self.tree.pv(0);
+
+        let pv_str = pv
+            .iter()
+            .map(|mov| mov.to_string())
+            .reduce(|acc, ele| format!("{} {}", acc, ele))
+            .unwrap_or("".to_string());
+
+        let score_str = if score >= 1.0 {
+            format!("mate {}", (pv.len() + 1) / 2)
+        } else if score <= 0.0 {
+            format!("mate -{}", pv.len() / 2)
+        } else {
+            format!("cp {:.0}", -400.0 * (1.0 / score - 1.0).ln())
+        };
+
         println!(
-            "info depth {} seldepth {} score cp {:.0} nodes {} nps {}",
+            "info depth {} seldepth {} score {} nodes {} nps {} pv {}",
             self.avgdepth,
             self.seldepth,
-            100.0,
+            score_str,
             self.rollouts,
-            self.rollouts * 1000 / self.start.elapsed().as_millis().max(1) as usize
+            self.rollouts * 1000 / self.start.elapsed().as_millis().max(1) as usize,
+            pv_str,
         );
     }
 }
