@@ -1,7 +1,7 @@
 use ataxx::MoveStore;
 
-use super::policy;
-use core::slice;
+use super::super::policy;
+use std::slice;
 
 pub type NodePtr = isize;
 pub type Score = f64;
