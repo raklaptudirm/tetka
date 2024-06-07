@@ -18,10 +18,6 @@ impl Tree {
         }
     }
 
-    pub fn nodes(&self) -> usize {
-        self.nodes.len()
-    }
-
     pub fn root_position(&self) -> ataxx::Position {
         self.root_pos
     }

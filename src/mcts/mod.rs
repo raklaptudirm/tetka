@@ -92,20 +92,20 @@ impl Searcher {
             if self.rollouts & 127 == 0 {
                 if self.start.elapsed().as_millis() >= movetime
                     || self.avgdepth >= maxdepth
-                    || self.tree.nodes() >= maxnodes
+                    || self.rollouts >= maxnodes
                 {
                     break;
                 }
 
                 // Hard memory limit to prevent overuse.
                 // TODO: Fix this by removing old nodes and stuff.
-                if self.tree.nodes() > 2_000_000_000 / mem::size_of::<Node>() {
+                if self.rollouts > 2_000_000_000 / mem::size_of::<Node>() {
                     break;
                 }
             }
         }
 
-        *total_nodes += self.tree.nodes() as u64;
+        *total_nodes += self.rollouts as u64;
 
         self.uci_report();
 
@@ -121,8 +121,8 @@ impl Searcher {
             self.avgdepth,
             self.seldepth,
             100.0,
-            self.tree.nodes(),
-            self.tree.nodes() * 1000 / self.start.elapsed().as_millis().max(1) as usize
+            self.rollouts,
+            self.rollouts * 1000 / self.start.elapsed().as_millis().max(1) as usize
         );
     }
 }
