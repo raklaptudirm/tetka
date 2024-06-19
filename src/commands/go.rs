@@ -54,14 +54,14 @@ pub fn go() -> Command<Context> {
                     }
 
                     let our_time: u128 = match position.side_to_move {
-                        ataxx::Piece::Black => get_flag!("wtime"),
-                        ataxx::Piece::White => get_flag!("btime"),
+                        ataxx::Piece::Black => get_flag!("btime"),
+                        ataxx::Piece::White => get_flag!("wtime"),
                         _ => unreachable!(),
                     };
 
                     let our_inc: u128 = match position.side_to_move {
-                        ataxx::Piece::Black => get_flag!("winc"),
-                        ataxx::Piece::White => get_flag!("binc"),
+                        ataxx::Piece::Black => get_flag!("binc"),
+                        ataxx::Piece::White => get_flag!("winc"),
                         _ => unreachable!(),
                     };
 
