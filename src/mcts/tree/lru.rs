@@ -126,6 +126,9 @@ impl Cache {
             self.remove(self.tail);
             self.tail
         };
+
+        self.void = self.get(self.void).next;
+
         let node = self.get_mut(node_ptr);
         node.val = val;
         self.attach(node_ptr);
@@ -138,6 +141,7 @@ impl Cache {
         let node = self.get_mut(ptr);
         node.next = void;
         node.prev = -1;
+        node.val = Default::default();
 
         self.void = ptr;
     }
