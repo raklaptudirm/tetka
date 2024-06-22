@@ -2,8 +2,8 @@
 //! the nodes of a Tree, allowing arbitrarily long searches as unused memory is
 //! continuously freed by the cache.
 use std::mem;
-use std::ops::Deref;
-use std::ops::DerefMut;
+
+use derive_more::{Deref, DerefMut};
 
 use super::Node;
 
@@ -160,25 +160,11 @@ impl Cache {
 
 /// Entry is one of the entries in the LRU [Cache]. Externally, it is mainly
 /// used by dereferencing it into a [Node] instead of directly using it.
-#[derive(Clone)]
+#[derive(Clone, Deref, DerefMut)]
 pub struct Entry {
+    #[deref]
+    #[deref_mut]
     val: Node,
     prev: i32,
     next: i32,
-}
-
-impl Deref for Entry {
-    type Target = Node;
-
-    /// Entry can be dereferenced into its Node value.
-    fn deref(&self) -> &Self::Target {
-        &self.val
-    }
-}
-
-impl DerefMut for Entry {
-    /// Entry can be mutably dereferenced into its Node value.
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.val
-    }
 }
