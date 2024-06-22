@@ -45,11 +45,12 @@ impl Cache {
     }
     pub fn new(cap: usize) -> Cache {
         Cache {
-            map: (1..cap)
+            map: (0..cap)
                 .map(|i| Entry {
                     val: Default::default(),
                     prev: -1,
-                    next: if i < cap { i as i32 } else { -1 },
+                    // The last element is not linked to anything
+                    next: if (i + 1) < cap { (i + 1) as i32 } else { -1 },
                 })
                 .collect(),
             cap,
@@ -83,8 +84,10 @@ impl Cache {
     }
 
     fn detach(&mut self, k: i32) {
-        let node = self.get(k);
+        let node = self.get_mut(k);
         let (prev_ptr, next_ptr) = (node.prev, node.next);
+        node.prev = -1;
+        node.next = -1;
 
         if prev_ptr != -1 {
             let prev = self.get_mut(prev_ptr);
@@ -118,32 +121,31 @@ impl Cache {
 
     pub fn push(&mut self, val: Node) -> i32 {
         let node_ptr = if self.void != -1 {
-            self.void
+            let void = self.void;
+            self.void = self.get(self.void).next;
+            void
         } else {
-            let node = self.get_mut(self.tail);
+            let tail = self.tail;
+
+            self.remove_lru(self.tail);
+
+            let node = self.get(self.tail);
             let (parent_node, parent_edge) = (node.parent_node, node.parent_edge);
             self.get_mut(parent_node).edge_mut(parent_edge).ptr = -1;
-            self.remove(self.tail);
-            self.tail
-        };
 
-        self.void = self.get(self.void).next;
+            tail
+        };
 
         let node = self.get_mut(node_ptr);
         node.val = val;
         self.attach(node_ptr);
+
         node_ptr
     }
 
-    pub fn remove(&mut self, ptr: i32) {
+    fn remove_lru(&mut self, ptr: i32) {
         self.detach(ptr);
-        let void = self.void;
-        let node = self.get_mut(ptr);
-        node.next = void;
-        node.prev = -1;
-        node.val = Default::default();
-
-        self.void = ptr;
+        self.get_mut(ptr).val = Default::default();
     }
 }
 
