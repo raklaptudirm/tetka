@@ -151,6 +151,8 @@ impl Searcher {
     ) -> Score {
         *depth += 1;
 
+        self.tree.nodes.promote(node_ptr);
+
         let node = self.tree.node(node_ptr);
         let parent_node = node.parent_node;
         let parent_edge = node.parent_edge;
@@ -183,6 +185,8 @@ impl Searcher {
 
         edge.visits += 1;
         edge.scores += score;
+
+        self.tree.nodes.promote(node_ptr);
 
         score
     }
