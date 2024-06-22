@@ -29,6 +29,8 @@ pub struct Limits {
     pub maxdepth: Option<usize>,
     pub maxnodes: Option<usize>,
     pub movetime: Option<u128>,
+
+    #[allow(unused)]
     pub movestogo: Option<usize>,
 }
 
