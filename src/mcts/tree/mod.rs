@@ -1,23 +1,25 @@
 mod node;
 pub use self::node::*;
 
+mod lru;
+
 use ataxx::MoveStore;
 
 #[derive(Clone)]
 pub struct Tree {
     root_pos: ataxx::Position,
     root_edge: Edge,
-    nodes: Vec<Node>,
+    pub nodes: lru::Cache,
 }
 
 impl Tree {
     pub fn new(position: ataxx::Position) -> Tree {
-        let root = Node::new(-1, -1);
-
+        let mut cache = lru::Cache::new_mib(64);
+        cache.push(Node::new(-1, -1));
         Tree {
             root_pos: position,
             root_edge: Edge::new(ataxx::Move::NULL),
-            nodes: vec![root],
+            nodes: cache,
         }
     }
 
@@ -28,7 +30,7 @@ impl Tree {
         let mut best_score = 0.0;
         for (edge_ptr, edge) in node.edges.iter().enumerate() {
             if best_edge == -1 || edge.q() > best_score {
-                best_edge = edge_ptr as isize;
+                best_edge = edge_ptr as i32;
                 best_score = edge.q();
             }
         }
@@ -54,11 +56,11 @@ impl Tree {
     }
 
     pub fn node(&self, ptr: NodePtr) -> &Node {
-        &self.nodes[ptr as usize]
+        self.nodes.get(ptr)
     }
 
     pub fn node_mut(&mut self, ptr: NodePtr) -> &mut Node {
-        &mut self.nodes[ptr as usize]
+        self.nodes.get_mut(ptr)
     }
 
     pub fn edge(&self, parent: NodePtr, edge_ptr: EdgePtr) -> &Edge {
@@ -78,8 +80,7 @@ impl Tree {
     }
 
     pub fn push_node(&mut self, node: Node) -> NodePtr {
-        self.nodes.push(node);
-        self.nodes.len() as NodePtr - 1
+        self.nodes.push(node)
     }
 
     pub fn best_move(&self) -> ataxx::Move {

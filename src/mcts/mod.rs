@@ -4,7 +4,6 @@ pub mod value;
 mod params;
 mod tree;
 
-use std::mem;
 use std::time;
 
 pub use self::params::*;
@@ -87,19 +86,12 @@ impl Searcher {
                 self.uci_report();
             }
 
-            if self.rollouts & 127 == 0 {
-                if self.start.elapsed().as_millis() >= movetime
+            if self.rollouts & 127 == 0
+                && (self.start.elapsed().as_millis() >= movetime
                     || self.avgdepth >= maxdepth
-                    || self.rollouts >= maxnodes
-                {
-                    break;
-                }
-
-                // Hard memory limit to prevent overuse.
-                // TODO: Fix this by removing old nodes and stuff.
-                if self.rollouts > 2_000_000_000 / mem::size_of::<Node>() {
-                    break;
-                }
+                    || self.rollouts >= maxnodes)
+            {
+                break;
             }
         }
 
@@ -151,6 +143,8 @@ impl Searcher {
     ) -> Score {
         *depth += 1;
 
+        self.tree.nodes.promote(node_ptr);
+
         let node = self.tree.node(node_ptr);
         let parent_node = node.parent_node;
         let parent_edge = node.parent_edge;
@@ -183,6 +177,8 @@ impl Searcher {
 
         edge.visits += 1;
         edge.scores += score;
+
+        self.tree.nodes.promote(node_ptr);
 
         score
     }

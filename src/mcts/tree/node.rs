@@ -3,7 +3,7 @@ use ataxx::MoveStore;
 use super::super::policy;
 use std::slice;
 
-pub type NodePtr = isize;
+pub type NodePtr = i32;
 pub type Score = f64;
 
 #[derive(Clone)]
@@ -82,7 +82,17 @@ impl ataxx::MoveStore for Edges {
     }
 }
 
-pub type EdgePtr = isize;
+impl Default for Node {
+    fn default() -> Self {
+        Node {
+            edges: Edges::new(),
+            parent_node: -1,
+            parent_edge: -1,
+        }
+    }
+}
+
+pub type EdgePtr = i32;
 
 #[derive(Clone)]
 pub struct Edge {
