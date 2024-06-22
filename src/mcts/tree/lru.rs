@@ -1,5 +1,4 @@
 use core::fmt;
-use core::i32;
 
 use std::mem;
 use std::ops::Deref;
