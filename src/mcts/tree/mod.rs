@@ -4,21 +4,22 @@ pub use self::node::*;
 mod lru;
 
 use ataxx::MoveStore;
+use derive_more::{Deref, DerefMut};
 
-#[derive(Clone)]
+#[derive(Clone, Deref, DerefMut)]
 pub struct Tree {
+    #[deref]
+    #[deref_mut]
+    nodes: lru::Cache,
     root_pos: ataxx::Position,
-    root_edge: Edge,
-    pub nodes: lru::Cache,
 }
 
 impl Tree {
     pub fn new(position: ataxx::Position) -> Tree {
         let mut cache = lru::Cache::new_mib(64);
-        cache.push(Node::new(-1, -1));
+        cache.push(Default::default());
         Tree {
             root_pos: position,
-            root_edge: Edge::new(ataxx::Move::NULL),
             nodes: cache,
         }
     }
@@ -53,34 +54,6 @@ impl Tree {
 
     pub fn root_position(&self) -> ataxx::Position {
         self.root_pos
-    }
-
-    pub fn node(&self, ptr: NodePtr) -> &Node {
-        self.nodes.get(ptr)
-    }
-
-    pub fn node_mut(&mut self, ptr: NodePtr) -> &mut Node {
-        self.nodes.get_mut(ptr)
-    }
-
-    pub fn edge(&self, parent: NodePtr, edge_ptr: EdgePtr) -> &Edge {
-        if parent == -1 {
-            &self.root_edge
-        } else {
-            self.node(parent).edge(edge_ptr)
-        }
-    }
-
-    pub fn edge_mut(&mut self, parent: NodePtr, edge_ptr: EdgePtr) -> &mut Edge {
-        if parent == -1 {
-            &mut self.root_edge
-        } else {
-            self.node_mut(parent).edge_mut(edge_ptr)
-        }
-    }
-
-    pub fn push_node(&mut self, node: Node) -> NodePtr {
-        self.nodes.push(node)
     }
 
     pub fn best_move(&self) -> ataxx::Move {

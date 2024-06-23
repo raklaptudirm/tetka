@@ -145,7 +145,7 @@ impl Searcher {
     ) -> Score {
         *depth += 1;
 
-        self.tree.nodes.promote(node_ptr);
+        self.tree.promote(node_ptr);
 
         let node = self.tree.node(node_ptr);
         let parent_node = node.parent_node;
@@ -166,7 +166,7 @@ impl Searcher {
 
             let mut child_ptr = edge.ptr;
             if child_ptr == -1 {
-                child_ptr = self.tree.push_node(Node::new(node_ptr, edge_ptr));
+                child_ptr = self.tree.push(Node::new(node_ptr, edge_ptr));
                 self.tree.edge_mut(node_ptr, edge_ptr).ptr = child_ptr;
             }
 
@@ -180,7 +180,7 @@ impl Searcher {
         edge.visits += 1;
         edge.scores += score;
 
-        self.tree.nodes.promote(node_ptr);
+        self.tree.promote(node_ptr);
 
         score
     }

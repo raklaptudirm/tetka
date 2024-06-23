@@ -5,12 +5,13 @@ use std::mem;
 
 use derive_more::{Deref, DerefMut};
 
-use super::Node;
+use super::{Edge, Node};
 
 /// Cache is a Least Recently Used (LRU) Cache for [Nodes](Node), which allows
 /// the search tree to utilize limited memory efficiently.
 #[derive(Clone)]
 pub struct Cache {
+    root_edge: Edge, // Root edge of the whole tree.
     map: Vec<Entry>, // Backing storage of the cache.
 
     void: i32, // Pointer to the first void in the cache.
@@ -43,6 +44,7 @@ impl Cache {
                     next: if (i + 1) < cap { (i + 1) as i32 } else { -1 },
                 })
                 .collect(),
+            root_edge: Edge::new(ataxx::Move::NULL),
             void: 0,  // The first (0) entry is currently a void.
             head: -1, // Currently there is no most recently used entry.
             tail: -1, // Currently there is no least recently used entry.
@@ -51,16 +53,6 @@ impl Cache {
 }
 
 impl Cache {
-    /// get returns a reference to the Entry at the given pointer.
-    pub fn get(&self, ptr: i32) -> &Entry {
-        &self.map[ptr as usize]
-    }
-
-    /// get_mut returns a mutable reference to the Entry at the given pointer.
-    pub fn get_mut(&mut self, ptr: i32) -> &mut Entry {
-        &mut self.map[ptr as usize]
-    }
-
     /// promote makes the given Entry the most recently used one.
     pub fn promote(&mut self, ptr: i32) {
         self.detach(ptr);
@@ -71,7 +63,7 @@ impl Cache {
     pub fn attach(&mut self, ptr: i32) {
         // Update old head's links if there is one.
         if self.head != -1 {
-            self.get_mut(self.head).prev = ptr;
+            self.node_mut(self.head).prev = ptr;
         }
 
         // Create a copy of the pointer to the old head and make the attached
@@ -80,7 +72,7 @@ impl Cache {
         self.head = ptr;
 
         // Update the new head's links.
-        let node = self.get_mut(ptr);
+        let node = self.node_mut(ptr);
         node.next = head_ptr;
         node.prev = -1;
     }
@@ -93,7 +85,7 @@ impl Cache {
             let void = self.void;
             // This pointer will no longer be empty so, update it to
             // the next void spot in the void entry linked list.
-            self.void = self.get(self.void).next;
+            self.void = self.node(self.void).next;
             void
         } else {
             // No void spots left, so purge the least recently used entry (also
@@ -104,15 +96,15 @@ impl Cache {
             self.remove_lru(self.tail);
 
             // Update the links to the newly purged entry to prevent invalid accesses.
-            let node = self.get(self.tail);
+            let node = self.node(self.tail);
             let (parent_node, parent_edge) = (node.parent_node, node.parent_edge);
-            self.get_mut(parent_node).edge_mut(parent_edge).ptr = -1;
+            self.edge_mut(parent_node, parent_edge).ptr = -1;
 
             tail
         };
 
         // Update the value of the entry and attach it to the cache.
-        self.get_mut(node_ptr).val = val;
+        self.node_mut(node_ptr).val = val;
         self.attach(node_ptr);
 
         // Return the pointer to the newly added entry.
@@ -122,7 +114,7 @@ impl Cache {
     /// detach removes the given entry from the cache, but keeps its data. To
     /// also remove the entry's data, use [`Self::remove_lru`].
     fn detach(&mut self, ptr: i32) {
-        let node = self.get_mut(ptr);
+        let node = self.node_mut(ptr);
         let (prev_ptr, next_ptr) = (node.prev, node.next);
 
         // Update the links for the detached node.
@@ -131,7 +123,7 @@ impl Cache {
 
         // Update the links for the Node's predecessor, if any.
         if prev_ptr != -1 {
-            let prev = self.get_mut(prev_ptr);
+            let prev = self.node_mut(prev_ptr);
             prev.next = next_ptr;
         } else {
             // If there is no predecessor, this was the head node.
@@ -141,7 +133,7 @@ impl Cache {
 
         // Update the links for the Node's successor, if any.
         if next_ptr != -1 {
-            let next = self.get_mut(next_ptr);
+            let next = self.node_mut(next_ptr);
             next.prev = prev_ptr;
         } else {
             // If there is no successor, this was the tail node.
@@ -154,7 +146,35 @@ impl Cache {
     /// data, use [`Self::detach`] instead.
     fn remove_lru(&mut self, ptr: i32) {
         self.detach(ptr); // Detach the given entry.
-        self.get_mut(ptr).val = Default::default(); // Purge its data.
+        self.node_mut(ptr).val = Default::default(); // Purge its data.
+    }
+}
+
+impl Cache {
+    /// node returns a reference to the Entry at the given pointer.
+    pub fn node(&self, ptr: i32) -> &Entry {
+        &self.map[ptr as usize]
+    }
+
+    /// node_mut returns a mutable reference to the Entry at the given pointer.
+    pub fn node_mut(&mut self, ptr: i32) -> &mut Entry {
+        &mut self.map[ptr as usize]
+    }
+
+    pub fn edge(&self, parent: i32, edge_ptr: i32) -> &Edge {
+        if parent == -1 {
+            &self.root_edge
+        } else {
+            self.node(parent).edge(edge_ptr)
+        }
+    }
+
+    pub fn edge_mut(&mut self, parent: i32, edge_ptr: i32) -> &mut Edge {
+        if parent == -1 {
+            &mut self.root_edge
+        } else {
+            self.node_mut(parent).edge_mut(edge_ptr)
+        }
     }
 }
 
