@@ -92,13 +92,13 @@ impl Cache {
             // called the tail of the cache) and use that spot for storage.
             let tail = self.tail; // Store a copy of the current tail.
 
-            // Remove the tail from the cache.
-            self.remove_lru(self.tail);
-
             // Update the links to the newly purged entry to prevent invalid accesses.
             let node = self.node(self.tail);
             let (parent_node, parent_edge) = (node.parent_node, node.parent_edge);
             self.edge_mut(parent_node, parent_edge).ptr = -1;
+
+            // Remove the tail from the cache.
+            self.remove_lru(self.tail);
 
             tail
         };
