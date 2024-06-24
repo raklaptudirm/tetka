@@ -24,10 +24,12 @@ pub struct Cache {
 
 impl Cache {
     /// new_mib creates a new Cache with the given number of mebibytes of
-    /// capacity for storing Nodes. Note that the actual memory usage will be
-    /// much higher due to the fact that each Node will have multiple Edges.
+    /// capacity for storing Nodes. Note that the actual memory usage will not
+    /// be exactly the provided capacity as the memory used by edges cannot be
+    /// determined but only guessed from the number of nodes.
     pub fn new_mib(mib: usize) -> Cache {
-        Cache::new(1024 * 1024 * mib / mem::size_of::<Entry>())
+        // The / 60 is an adjustment to allow space for the edges.
+        Cache::new(1024 * 1024 * mib / mem::size_of::<Entry>() / 60)
     }
 
     /// new creates a new Cache with the given capacity for storing Nodes.
