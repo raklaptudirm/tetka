@@ -4,6 +4,7 @@
 use std::mem;
 
 use derive_more::{Deref, DerefMut};
+use derive_new::new;
 
 use super::{Edge, Node};
 
@@ -14,15 +15,17 @@ pub struct Cache {
     root_edge: Edge, // Root edge of the whole tree.
     map: Vec<Entry>, // Backing storage of the cache.
 
+    cap: usize,
+
     void: i32, // Pointer to the first void in the cache.
     head: i32, // Pointer to the most recently used entry.
     tail: i32, // Pointer to the least recently used entry.
 }
 
 impl Cache {
-    /// new_mib creates a new Cache with the given number of mebibytes of capacity
-    /// for storing Nodes. Note that the actual memory usage will be much higher
-    /// due to the fact that each Node will have multiple Edges.
+    /// new_mib creates a new Cache with the given number of mebibytes of
+    /// capacity for storing Nodes. Note that the actual memory usage will be
+    /// much higher due to the fact that each Node will have multiple Edges.
     pub fn new_mib(mib: usize) -> Cache {
         Cache::new(1024 * 1024 * mib / mem::size_of::<Entry>())
     }
@@ -30,21 +33,9 @@ impl Cache {
     /// new creates a new Cache with the given capacity for storing Nodes.
     pub fn new(cap: usize) -> Cache {
         Cache {
-            // Initialize the map with the complete void list. The cache can
-            // essentially be broken into two mutually exclusive and exhaustive
-            // linked lists, one with filled entries and another with void
-            // entries. At the start, the entire cache is part of the void list.
-            map: (0..cap)
-                .map(|i| Entry {
-                    val: Default::default(),
-                    prev: -1,
-                    // Each entry is linked to the next (i + 1) entry. The last
-                    // entry where i + 1 = cap has no forward link, so use -1,
-                    // which marks the absence of a link.
-                    next: if (i + 1) < cap { (i + 1) as i32 } else { -1 },
-                })
-                .collect(),
+            map: vec![Entry::new(); cap],
             root_edge: Edge::new(ataxx::Move::NULL),
+            cap,
             void: 0,  // The first (0) entry is currently a void.
             head: -1, // Currently there is no most recently used entry.
             tail: -1, // Currently there is no least recently used entry.
@@ -80,13 +71,13 @@ impl Cache {
     /// push adds the given Node to the cache as its head.
     pub fn push(&mut self, val: Node) -> i32 {
         // Find an Entry to store the node in.
-        let node_ptr = if self.void != -1 {
-            // Empty entry found, so use that.
-            let void = self.void;
-            // This pointer will no longer be empty so, update it to
-            // the next void spot in the void entry linked list.
-            self.void = self.node(self.void).next;
-            void
+        let node_ptr = if (self.void as usize) < self.cap {
+            // Void Entry found, so we will use that. This pointer will no
+            // longer be empty so, update it to the next void spot, which due
+            // to the way the cache works will be next pointer.
+            self.void += 1;
+            // Return the pointer to the void Entry.
+            self.void - 1
         } else {
             // No void spots left, so purge the least recently used entry (also
             // called the tail of the cache) and use that spot for storage.
@@ -106,10 +97,6 @@ impl Cache {
     fn detach(&mut self, ptr: i32) {
         let node = self.node_mut(ptr);
         let (prev_ptr, next_ptr) = (node.prev, node.next);
-
-        // Update the links for the detached node.
-        node.prev = -1;
-        node.next = -1;
 
         // Update the links for the Node's predecessor, if any.
         if prev_ptr != -1 {
@@ -138,9 +125,6 @@ impl Cache {
     fn remove_lru(&mut self) -> i32 {
         let tail = self.tail;
         let node = self.node_mut(tail);
-
-        // Purge the LRU Entry's data.
-        node.val = Default::default();
 
         // Remove all links to the detached Entry.
         let (parent_node, parent_edge) = (node.parent_node, node.parent_edge);
@@ -184,11 +168,14 @@ impl Cache {
 
 /// Entry is one of the entries in the LRU [Cache]. Externally, it is mainly
 /// used by dereferencing it into a [Node] instead of directly using it.
-#[derive(Clone, Deref, DerefMut)]
+#[derive(Clone, Deref, DerefMut, new)]
 pub struct Entry {
     #[deref]
     #[deref_mut]
+    #[new(value = "Default::default()")]
     val: Node,
+    #[new(value = "-1")]
     prev: i32,
+    #[new(value = "-1")]
     next: i32,
 }
