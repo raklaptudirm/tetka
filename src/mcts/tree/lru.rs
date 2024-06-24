@@ -95,13 +95,12 @@ impl Cache {
     /// detach removes the given entry from the cache, but keeps its data. To
     /// also remove the entry's data, use [`Self::remove_lru`].
     fn detach(&mut self, ptr: i32) {
-        let node = self.node_mut(ptr);
+        let node = self.node(ptr);
         let (prev_ptr, next_ptr) = (node.prev, node.next);
 
         // Update the links for the Node's predecessor, if any.
         if prev_ptr != -1 {
-            let prev = self.node_mut(prev_ptr);
-            prev.next = next_ptr;
+            self.node_mut(prev_ptr).next = next_ptr;
         } else {
             // If there is no predecessor, this was the head node.
             // Update the pointer to the head node to the successor.
@@ -110,8 +109,7 @@ impl Cache {
 
         // Update the links for the Node's successor, if any.
         if next_ptr != -1 {
-            let next = self.node_mut(next_ptr);
-            next.prev = prev_ptr;
+            self.node_mut(next_ptr).prev = prev_ptr;
         } else {
             // If there is no successor, this was the tail node.
             // Update the pointer to the tail node to the predecessor.
@@ -124,7 +122,7 @@ impl Cache {
     /// the pointer to the purged Entry.
     fn remove_lru(&mut self) -> i32 {
         let tail = self.tail;
-        let node = self.node_mut(tail);
+        let node = self.node(tail);
 
         // Remove all links to the detached Entry.
         let (parent_node, parent_edge) = (node.parent_node, node.parent_edge);
