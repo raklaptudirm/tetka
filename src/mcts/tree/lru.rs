@@ -90,17 +90,7 @@ impl Cache {
         } else {
             // No void spots left, so purge the least recently used entry (also
             // called the tail of the cache) and use that spot for storage.
-            let tail = self.tail; // Store a copy of the current tail.
-
-            // Update the links to the newly purged entry to prevent invalid accesses.
-            let node = self.node(self.tail);
-            let (parent_node, parent_edge) = (node.parent_node, node.parent_edge);
-            self.edge_mut(parent_node, parent_edge).ptr = -1;
-
-            // Remove the tail from the cache.
-            self.remove_lru(self.tail);
-
-            tail
+            self.remove_lru()
         };
 
         // Update the value of the entry and attach it to the cache.
@@ -142,11 +132,25 @@ impl Cache {
         }
     }
 
-    /// detach removes the given entry and its data from the cache. To keep the
-    /// data, use [`Self::detach`] instead.
-    fn remove_lru(&mut self, ptr: i32) {
-        self.detach(ptr); // Detach the given entry.
-        self.node_mut(ptr).val = Default::default(); // Purge its data.
+    /// remove_lru purges the data of the Least Recently Used Entry, removes all
+    /// links to it, and detaches it from the used LRU cache space. It returns
+    /// the pointer to the purged Entry.
+    fn remove_lru(&mut self) -> i32 {
+        let tail = self.tail;
+        let node = self.node_mut(tail);
+
+        // Purge the LRU Entry's data.
+        node.val = Default::default();
+
+        // Remove all links to the detached Entry.
+        let (parent_node, parent_edge) = (node.parent_node, node.parent_edge);
+        self.edge_mut(parent_node, parent_edge).ptr = -1;
+
+        // Detach the Entry.
+        self.detach(tail);
+
+        // Return the pointer to the purged LRU entry.
+        tail
     }
 }
 
