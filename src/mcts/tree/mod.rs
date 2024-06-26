@@ -1,10 +1,11 @@
-mod node;
+use derive_more::{Deref, DerefMut};
+
+use ataxx::MoveStore;
+
 pub use self::node::*;
 
 mod lru;
-
-use ataxx::MoveStore;
-use derive_more::{Deref, DerefMut};
+mod node;
 
 #[derive(Clone, Deref, DerefMut)]
 pub struct Tree {
@@ -96,8 +97,8 @@ impl Tree {
             policy_sum += edge.policy;
 
             if edge.ptr == -1 {
-                if edge.visits != 0 {
-                    return Err("visits to an unexpanded edge".to_string());
+                if edge.visits > 1 {
+                    return Err("multiple visits to an unexpanded edge".to_string());
                 }
                 continue;
             }
@@ -112,7 +113,7 @@ impl Tree {
         }
 
         let parent = self.edge(node.parent_node, node.parent_edge);
-        if !position.is_game_over() && parent.visits != child_visits {
+        if !position.is_game_over() && parent.visits - 1 != child_visits {
             println!("{}", position);
             Err(format!(
                 "edge total visits is {} while sum of child visits is {}",
