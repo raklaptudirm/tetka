@@ -100,8 +100,6 @@ impl Tree {
             }
 
             self.verify_node(edge.ptr, position.after_move::<true>(edge.mov))?;
-
-            child_visits += edge.visits;
         }
 
         if node.edges.len() > 0 && (1.0 - policy_sum).abs() > 0.00001 {
