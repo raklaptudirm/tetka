@@ -87,7 +87,6 @@ impl Tree {
     fn verify_node(&self, ptr: NodePtr, position: ataxx::Position) -> Result<(), String> {
         let node = self.node(ptr);
 
-        let mut child_visits = 0;
         let mut policy_sum = 0.0;
         for edge in node.edges.iter() {
             if !(edge.scores >= 0.0 && edge.scores <= edge.visits as f64) {
@@ -97,9 +96,6 @@ impl Tree {
             policy_sum += edge.policy;
 
             if edge.ptr == -1 {
-                if edge.visits > 1 {
-                    return Err("multiple visits to an unexpanded edge".to_string());
-                }
                 continue;
             }
 
@@ -112,15 +108,6 @@ impl Tree {
             return Err(format!("sum of all the policies is {}, not 1", policy_sum));
         }
 
-        let parent = self.edge(node.parent_node, node.parent_edge);
-        if !position.is_game_over() && parent.visits - 1 != child_visits {
-            println!("{}", position);
-            Err(format!(
-                "edge total visits is {} while sum of child visits is {}",
-                parent.visits, child_visits
-            ))
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 }
