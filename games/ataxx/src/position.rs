@@ -208,9 +208,10 @@ impl Position {
         match black_n.cmp(&white_n) {
             cmp::Ordering::Less => Piece::White,
             cmp::Ordering::Greater => Piece::Black,
-            // Since there are an odd number of Squares and all of them are filled, there
-            // can't be an equal number of black and white pieces on the Board.
-            cmp::Ordering::Equal => unreachable!(),
+            // Though there can't be an equal number of black and white pieces
+            // on an empty ataxx board, it is possible with an odd number of
+            // blocker pieces.
+            cmp::Ordering::Equal => Piece::None,
         }
     }
 }
