@@ -15,11 +15,8 @@ use std::fmt;
 use std::str::FromStr;
 
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 use strum_macros::EnumIter;
 use thiserror::Error;
-
-use crate::type_macros;
 
 /// Square represents all the squares present on an Ataxx Board.
 /// The index of each Square is equal to `rank-index * 8 + file-index`.
@@ -110,6 +107,12 @@ impl Square {
     pub fn west(self) -> Self {
         Square::unsafe_from(self as usize - 1)
     }
+
+    #[inline(always)]
+    pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
+        debug_assert!(number.to_u64().unwrap() < Self::N as u64);
+        unsafe { std::mem::transmute_copy(&number) }
+    }
 }
 
 /// SquareParseError represents the various errors that can
@@ -147,21 +150,6 @@ impl FromStr for Square {
 
         Ok(Square::new(file, rank))
     }
-}
-
-// Implement from and into traits for all primitive integer types.
-type_macros::impl_from_integer_for_enum! {
-    for Square Square::N =>
-
-    // Unsigned Integers.
-    usize, Square::from_usize;
-    u8, Square::from_u8; u16, Square::from_u16;
-    u32, Square::from_u32; u64, Square::from_u64;
-
-    // Signed Integers.
-    isize, Square::from_isize;
-    i8, Square::from_i8; i16, Square::from_i16;
-    i32, Square::from_i32; i64, Square::from_i64;
 }
 
 impl fmt::Display for Square {
@@ -204,6 +192,12 @@ pub enum File {
 impl File {
     /// N represents the total number of Files in an Ataxx Board.
     pub const N: usize = 7;
+
+    #[inline(always)]
+    pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
+        debug_assert!(number.to_u64().unwrap() < Self::N as u64);
+        unsafe { std::mem::transmute_copy(&number) }
+    }
 }
 
 /// FileParseError represents the various errors that can
@@ -242,21 +236,6 @@ impl FromStr for File {
 
         Ok(File::unsafe_from(ident - b'a'))
     }
-}
-
-// Implement from and into traits for all primitive integer types.
-type_macros::impl_from_integer_for_enum! {
-    for File File::N =>
-
-    // Unsigned Integers.
-    usize, File::from_usize;
-    u8, File::from_u8; u16, File::from_u16;
-    u32, File::from_u32; u64, File::from_u64;
-
-    // Signed Integers.
-    isize, File::from_isize;
-    i8, File::from_i8; i16, File::from_i16;
-    i32, File::from_i32; i64, File::from_i64;
 }
 
 impl fmt::Display for File {
@@ -298,6 +277,12 @@ pub enum Rank {
 impl Rank {
     /// N represents the total number of Ranks in an Ataxx Board.
     pub const N: usize = 7;
+
+    #[inline(always)]
+    pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
+        debug_assert!(number.to_u64().unwrap() < Self::N as u64);
+        unsafe { std::mem::transmute_copy(&number) }
+    }
 }
 
 /// RankParseError represents the various errors that can
@@ -337,21 +322,6 @@ impl FromStr for Rank {
 
         Ok(Rank::unsafe_from(ident - b'1'))
     }
-}
-
-// Implement from and into traits for all primitive integer types.
-type_macros::impl_from_integer_for_enum! {
-    for Rank Rank::N =>
-
-    // Unsigned Integers.
-    usize, Rank::from_usize;
-    u8, Rank::from_u8; u16, Rank::from_u16;
-    u32, Rank::from_u32; u64, Rank::from_u64;
-
-    // Signed Integers.
-    isize, Rank::from_isize;
-    i8, Rank::from_i8; i16, Rank::from_i16;
-    i32, Rank::from_i32; i64, Rank::from_i64;
 }
 
 impl fmt::Display for Rank {

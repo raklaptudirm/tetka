@@ -16,11 +16,8 @@ use std::ops;
 use std::str::FromStr;
 
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 
 use thiserror::Error;
-
-use crate::type_macros;
 
 /// Piece represents all the possible pieces that an ataxx piece can have,
 /// specifically Black, White, and None(no Piece/no piece).
@@ -33,24 +30,15 @@ pub enum Piece {
     None,
 }
 
-// Implement conversions from numerical types.
-type_macros::impl_from_integer_for_enum! {
-    for Piece Piece::N + 1 =>
-
-    // unsigned integers
-    usize, Piece::from_usize;
-    u8, Piece::from_u8; u16, Piece::from_u16;
-    u32, Piece::from_u32; u64, Piece::from_u64;
-
-    // signed integers
-    isize, Piece::from_isize;
-    i8, Piece::from_i8; i16, Piece::from_i16;
-    i32, Piece::from_i32; i64, Piece::from_i64;
-}
-
 impl Piece {
     /// N is the number of possible Pieces, excluding None.
     pub const N: usize = 3;
+
+    #[inline(always)]
+    pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
+        debug_assert!(number.to_u64().unwrap() < (Self::N + 1) as u64);
+        unsafe { std::mem::transmute_copy(&number) }
+    }
 }
 
 impl ops::Not for Piece {

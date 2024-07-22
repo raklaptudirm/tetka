@@ -14,10 +14,13 @@
 use std::fmt;
 use std::ops;
 
+use derive_more::{
+    BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, ShlAssign, Shr, ShrAssign,
+    SubAssign,
+};
 use num_derive::FromPrimitive;
 use strum::IntoEnumIterator;
 
-use crate::type_macros;
 use crate::{File, Rank, Square};
 
 /// BitBoard represents a set of squares as a 64 bit bitset.
@@ -43,7 +46,24 @@ use crate::{File, Rank, Square};
 ///
 /// assert_eq!(!x, BitBoard::UNIVERSE - x); // Complement
 /// ```
-#[derive(Copy, Clone, PartialEq, Eq, FromPrimitive)]
+#[derive(
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    FromPrimitive,
+    BitOr,
+    BitAnd,
+    BitXor,
+    Shl,
+    Shr,
+    BitAndAssign,
+    BitOrAssign,
+    BitXorAssign,
+    ShlAssign,
+    ShrAssign,
+    SubAssign,
+)]
 pub struct BitBoard(pub u64);
 
 /// bitboard is a macro which allows creation of BitBoard values from their
@@ -409,32 +429,6 @@ impl ops::Not for BitBoard {
         // ! will set the unused bits so remove them with an &.
         BitBoard(!self.0) & BitBoard::UNIVERSE
     }
-}
-
-// Implementation of various binary operations.
-type_macros::impl_binary_ops_for_tuple! {
-    for BitBoard:
-
-    ops::BitOr, bitor, |;
-    ops::BitXor, bitxor, ^;
-    ops::BitAnd, bitand, &;
-
-    ops::Shl, shl, <<;
-    ops::Shr, shr, >>;
-}
-
-// Implementation of various assignment operations.
-type_macros::impl_assign_ops_for_tuple! {
-    for BitBoard:
-
-    ops::SubAssign, sub_assign, -;
-
-    ops::BitOrAssign, bitor_assign, |;
-    ops::BitXorAssign, bitxor_assign, ^;
-    ops::BitAndAssign, bitand_assign, &;
-
-    ops::ShlAssign, shl_assign, <<;
-    ops::ShrAssign, shr_assign, >>;
 }
 
 // Implementation of subtraction(removal) of BitBoards.
