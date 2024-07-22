@@ -15,5 +15,6 @@ categories = ["games"]
 thiserror = "1.0"
 num-traits = "0.2"
 num-derive = "0.4"
+derive_more = "0.99.18"
 strum = "0.26"
 strum_macros = "0.26"
