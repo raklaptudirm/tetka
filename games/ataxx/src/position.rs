@@ -25,7 +25,7 @@ use thiserror::Error;
 use crate::{
     BitBoard, Piece, File, Hash, Move,
     MoveList, MoveStore, Rank, Square,
-    PieceParseError,
+    ColorParseError, Color
 };
 
 /// Position represents the snapshot of an Ataxx Board, the state of the an
@@ -38,7 +38,7 @@ pub struct Position {
     /// checksum stores the semi-unique [struct@Hash] of the current Position.
     pub checksum: Hash,
     /// side_to_move stores the [Piece] whose turn to move it currently is.
-    pub side_to_move: Piece,
+    pub side_to_move: Color,
     pub ply_count: u16,
     /// half-move clock stores the number of half-moves since the last irreversible
     /// Move. It is used to adjudicate games using the 50-move/100-ply rule.
@@ -51,7 +51,7 @@ impl Position {
         black: BitBoard,
         white: BitBoard,
         block: BitBoard,
-        side_to_move: Piece,
+        side_to_move: Color,
         ply_count: u16,
         half_move_clock: u8,
     ) -> Position {
@@ -88,7 +88,6 @@ impl Position {
     /// });
     /// ```
     pub fn put(&mut self, sq: Square, piece: Piece) {
-        debug_assert_ne!(piece, Piece::None);
         self.bitboards[piece as usize].insert(sq);
     }
 
@@ -105,15 +104,15 @@ impl Position {
     /// );
     /// assert_eq!(position.at(Square::A1), Piece::Black);
     /// ```
-    pub const fn at(&self, sq: Square) -> Piece {
+    pub const fn at(&self, sq: Square) -> Option<Piece> {
         if self.bitboard(Piece::Block).contains(sq) {
-            Piece::Block
+            Some(Piece::Block)
         } else if self.bitboard(Piece::Black).contains(sq) {
-            Piece::Black
+            Some(Piece::Black)
         } else if self.bitboard(Piece::White).contains(sq) {
-            Piece::White
+            Some(Piece::White)
         } else {
-            Piece::None
+            None
         }
     }
 
@@ -178,12 +177,12 @@ impl Position {
     /// assert_eq!(white_win.winner(), Piece::White);
     /// assert_eq!(draw_game.winner(), Piece::None);
     /// ```
-    pub fn winner(&self) -> Piece {
+    pub fn winner(&self) -> Option<Piece> {
         debug_assert!(self.is_game_over());
 
         if self.half_move_clock >= 100 {
             // Draw by 50 move rule.
-            return Piece::None;
+            return None;
         }
 
         let black = self.bitboard(Piece::Black);
@@ -192,10 +191,10 @@ impl Position {
 
         if black == BitBoard::EMPTY {
             // Black lost all its pieces, White won.
-            return Piece::White;
+            return Some(Piece::White);
         } else if white == BitBoard::EMPTY {
             // White lost all its pieces, Black won.
-            return Piece::Black;
+            return Some(Piece::Black);
         }
 
         debug_assert!(black | white | block == BitBoard::UNIVERSE);
@@ -207,12 +206,12 @@ impl Position {
         let white_n = white.cardinality();
 
         match black_n.cmp(&white_n) {
-            cmp::Ordering::Less => Piece::White,
-            cmp::Ordering::Greater => Piece::Black,
+            cmp::Ordering::Less => Some(Piece::White),
+            cmp::Ordering::Greater => Some(Piece::Black),
             // Though there can't be an equal number of black and white pieces
             // on an empty ataxx board, it is possible with an odd number of
             // blocker pieces.
-            cmp::Ordering::Equal => Piece::None,
+            cmp::Ordering::Equal => None,
         }
     }
 }
@@ -256,8 +255,8 @@ impl Position {
             };
         }
 
-        let stm_pieces = self.bitboard(stm);
-        let xtm_pieces = self.bitboard(!stm);
+        let stm_pieces = self.bitboard(stm.into());
+        let xtm_pieces = self.bitboard((!stm).into());
 
         let captured = BitBoard::single(m.target()) & xtm_pieces;
         let from_to = BitBoard::from(m.target()) | BitBoard::from(m.source());
@@ -273,7 +272,7 @@ impl Position {
             self.half_move_clock + 1
         };
 
-        let (white, black) = if stm == Piece::White {
+        let (white, black) = if stm == Color::White {
             (new_stm, new_xtm)
         } else {
             (new_xtm, new_stm)
@@ -330,8 +329,8 @@ impl Position {
             return;
         }
 
-        let stm = self.bitboard(self.side_to_move);
-        let xtm = self.bitboard(!self.side_to_move);
+        let stm = self.bitboard(self.side_to_move.into());
+        let xtm = self.bitboard((!self.side_to_move).into());
         let gap = self.bitboard(Piece::Block);
 
         // Pieces can only move to unoccupied Squares.
@@ -375,8 +374,8 @@ impl Position {
             return 0;
         }
 
-        let stm = self.bitboard(self.side_to_move);
-        let xtm = self.bitboard(!self.side_to_move);
+        let stm = self.bitboard(self.side_to_move.into());
+        let xtm = self.bitboard((!self.side_to_move).into());
         let gap = self.bitboard(Piece::Block);
 
         // Pieces can only move to unoccupied Squares.
@@ -420,7 +419,7 @@ pub enum PositionParseError {
     TooManyRanks,
 
     #[error("parsing side to move: {0}")]
-    BadSideToMove(#[from] PieceParseError),
+    BadSideToMove(#[from] ColorParseError),
     #[error("parsing half-move clock: {0}")]
     BadHalfMoveClock(#[from] ParseIntError),
 }
@@ -445,7 +444,7 @@ impl FromStr for Position {
             BitBoard::EMPTY,
             BitBoard::EMPTY,
             BitBoard::EMPTY,
-            Piece::None,
+            Color::Black,
             0,
             0,
         );
@@ -502,10 +501,10 @@ impl FromStr for Position {
             file = Some(File::A);
         }
 
-        position.side_to_move = Piece::from_str(stm)?;
+        position.side_to_move = Color::from_str(stm)?;
         position.half_move_clock = hmc.parse::<u8>()?;
         position.ply_count = fmc.parse::<u16>()? * 2 - 1;
-        if position.side_to_move == Piece::Black {
+        if position.side_to_move == Color::Black {
             position.ply_count -= 1;
         }
 
@@ -529,7 +528,11 @@ impl fmt::Display for Position {
         for rank in Rank::iter().rev() {
             for file in File::iter() {
                 let square = Square::new(file, rank);
-                string_rep += &format!("{} ", board.at(square));
+                let square_str = match board.at(square) {
+                    Some(piece) => format!("{} ", piece),
+                    None => ". ".to_string(),
+                };
+                string_rep += &square_str;
             }
 
             // Append the rank marker.
