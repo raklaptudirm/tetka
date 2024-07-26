@@ -13,7 +13,7 @@
 
 use std::{fmt, ops};
 
-use crate::{BitBoard, Piece};
+use crate::{BitBoard, Color};
 
 /// Hash represents the semi-unique checksum of a Position used to efficiently
 /// check for Position equality. Some properties of a Hash include determinism,
@@ -30,7 +30,7 @@ impl Hash {
     /// unnecessary for it to be used explicitly by end-users. new doesn't take
     /// the blocker configuration into account since that remains unchanged
     /// throughout an ataxx game.
-    pub fn new(black: BitBoard, white: BitBoard, stm: Piece) -> Hash {
+    pub fn new(black: BitBoard, white: BitBoard, stm: Color) -> Hash {
         let a = black.into();
         let b = white.into();
 
@@ -56,9 +56,10 @@ impl Hash {
             .wrapping_add(part_3 as u64)
             .wrapping_add(part_4 as u64);
 
-        // The Hash is bitwise complemented if the given Piece is Black. Therefore,
-        // if two Positions only differ in side to move, `a.Hash == !b.Hash`.
-        if stm == Piece::Black {
+        // The Hash is bitwise complemented if the given side to move is Black.
+        // Therefore, if two Positions only differ in side to move,
+        // `a.Hash == !b.Hash`.
+        if stm == Color::Black {
             Hash(!hash)
         } else {
             Hash(hash)
