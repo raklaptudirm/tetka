@@ -157,3 +157,11 @@ impl fmt::Display for Piece {
         )
     }
 }
+
+impl fmt::Debug for Piece {
+    /// Debug implements debug printing of a Piece in a human-readable form. It uses
+    /// `Piece::Display` under the hood to format and print the Piece.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}

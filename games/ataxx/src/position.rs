@@ -72,12 +72,12 @@ impl Position {
     ///     BitBoard::EMPTY,
     ///     BitBoard::EMPTY,
     ///     BitBoard::EMPTY,
-    ///     Piece::Black,
+    ///     Color::Black,
     ///     0, 0
     /// );
     /// position.put(Square::A1, Piece::White);
     ///
-    /// assert_eq!(position.bitboard(Piece::White), bitboard! {
+    /// assert_eq!(position.color_bb(Color::White), bitboard! {
     ///     . . . . . . .
     ///     . . . . . . .
     ///     . . . . . . .
@@ -99,10 +99,10 @@ impl Position {
     ///     BitBoard::UNIVERSE,
     ///     BitBoard::EMPTY,
     ///     BitBoard::EMPTY,
-    ///     Piece::Black,
+    ///     Color::Black,
     ///     0, 0
     /// );
-    /// assert_eq!(position.at(Square::A1), Piece::Black);
+    /// assert_eq!(position.at(Square::A1), Some(Piece::Black));
     /// ```
     pub const fn at(&self, sq: Square) -> Option<Piece> {
         if self.piece_bb(Piece::Block).contains(sq) {
@@ -126,10 +126,10 @@ impl Position {
     ///     BitBoard::UNIVERSE,
     ///     BitBoard::EMPTY,
     ///     BitBoard::EMPTY,
-    ///     Piece::Black,
+    ///     Color::Black,
     ///     0, 0
     /// );
-    /// assert_eq!(position.bitboard(Piece::Black), BitBoard::UNIVERSE);
+    /// assert_eq!(position.color_bb(Color::Black), BitBoard::UNIVERSE);
     /// ```
     pub const fn piece_bb(&self, piece: Piece) -> BitBoard {
         self.bitboards[piece as usize]
@@ -177,9 +177,9 @@ impl Position {
     /// let white_win = Position::from_str("ooooooo/7/7/7/7/7/7 x 0 1").unwrap();
     /// let draw_game = Position::from_str("xxx1ooo/7/7/7/7/7/7 x 100 1").unwrap();
     ///
-    /// assert_eq!(black_win.winner(), Piece::Black);
-    /// assert_eq!(white_win.winner(), Piece::White);
-    /// assert_eq!(draw_game.winner(), Piece::None);
+    /// assert_eq!(black_win.winner(), Some(Piece::Black));
+    /// assert_eq!(white_win.winner(), Some(Piece::White));
+    /// assert_eq!(draw_game.winner(), None);
     /// ```
     pub fn winner(&self) -> Option<Piece> {
         debug_assert!(self.is_game_over());

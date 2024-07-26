@@ -46,8 +46,8 @@ impl Move {
     /// let old_pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     /// let new_pos = old_pos.after_move::<true>(Move::PASS);
     ///
-    /// assert_eq!(old_pos.bitboard(Piece::Black), new_pos.bitboard(Piece::Black));
-    /// assert_eq!(old_pos.bitboard(Piece::White), new_pos.bitboard(Piece::White));
+    /// assert_eq!(old_pos.color_bb(Color::Black), new_pos.color_bb(Color::Black));
+    /// assert_eq!(old_pos.color_bb(Color::White), new_pos.color_bb(Color::White));
     /// assert_eq!(old_pos.side_to_move, !new_pos.side_to_move);
     /// ```
     pub const PASS: Move = Move(1 << 15 | 1 << 14);
