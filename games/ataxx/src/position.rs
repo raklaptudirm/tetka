@@ -166,7 +166,7 @@ impl Position {
 			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
     }
 
-    /// winner returns the Piece which has won the game. It returns [`Piece::None`]
+    /// winner returns the Piece which has won the game. It returns [`None`]
     /// if the game is a draw. If [`Position::is_game_over`] is false, then the
     /// behavior of this function is undefined.
     /// ```
