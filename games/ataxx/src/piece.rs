@@ -49,12 +49,6 @@ impl ops::Not for Color {
     }
 }
 
-impl From<Color> for Piece {
-    fn from(value: Color) -> Self {
-        Piece::unsafe_from(value)
-    }
-}
-
 #[derive(Error, Debug)]
 pub enum ColorParseError {
     #[error("piece identifier string has more than 1 character")]
@@ -108,7 +102,7 @@ impl FromStr for Color {
 
 /// Piece represents all the possible pieces that an ataxx piece can have,
 /// specifically Black, White, and None(no Piece/no piece).
-#[derive(Copy, Clone, PartialEq, Eq, FromPrimitive)]
+#[derive(Copy, Clone, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum Piece {
     Black,
     White,
@@ -118,6 +112,14 @@ pub enum Piece {
 impl Piece {
     /// N is the number of possible Pieces, excluding None.
     pub const N: usize = 3;
+
+    pub fn new(color: Color) -> Self {
+        Self::unsafe_from(color)
+    }
+
+    pub fn color(self) -> Color {
+        Color::unsafe_from(self)
+    }
 
     #[inline(always)]
     pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
