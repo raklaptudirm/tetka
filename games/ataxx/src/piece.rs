@@ -114,11 +114,18 @@ impl Piece {
     pub const N: usize = 3;
 
     pub fn new(color: Color) -> Self {
-        Self::unsafe_from(color)
+        match color {
+            Color::Black => Piece::Black,
+            Color::White => Piece::White,
+        }
     }
 
     pub fn color(self) -> Color {
-        Color::unsafe_from(self)
+        match self {
+            Piece::Black => Color::Black,
+            Piece::White => Color::White,
+            _ => panic!("Piece::color() called on Piece::Block"),
+        }
     }
 
     #[inline(always)]
