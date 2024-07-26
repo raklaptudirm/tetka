@@ -20,8 +20,8 @@ use num_derive::FromPrimitive;
 use num_derive::ToPrimitive;
 use thiserror::Error;
 
-/// Piece represents all the possible pieces that an ataxx piece can have,
-/// specifically Black, White, and None(no Piece/no piece).
+/// Color represents all the possible colors that an ataxx piece can have,
+/// specifically, Black and White.
 #[derive(Copy, Clone, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum Color {
     Black,
@@ -29,7 +29,7 @@ pub enum Color {
 }
 
 impl Color {
-    /// N is the number of possible Pieces, excluding None.
+    /// N is the number of possible Colors.
     pub const N: usize = 2;
 
     #[inline(always)]
@@ -42,8 +42,8 @@ impl Color {
 impl ops::Not for Color {
     type Output = Color;
 
-    /// not implements the not unary operator (!) which switches the current Piece
-    /// to its opposite, i.e. [`Piece::Black`] to [`Piece::White`] and vice versa.
+    /// not implements the not unary operator (!) which switches the current Color
+    /// to its opposite, i.e. [`Color::Black`] to [`Color::White`] and vice versa.
     fn not(self) -> Self::Output {
         Color::unsafe_from(self as usize ^ 1)
     }
@@ -51,15 +51,15 @@ impl ops::Not for Color {
 
 #[derive(Error, Debug)]
 pub enum ColorParseError {
-    #[error("piece identifier string has more than 1 character")]
+    #[error("color identifier string has more than 1 character")]
     StringTooLong,
-    #[error("unknown piece identifier '{0}'")]
+    #[error("unknown color identifier '{0}'")]
     StringFormatInvalid(String),
 }
 
 impl fmt::Display for Color {
-    /// Implements displaying the Piece in a human-readable form. [`Piece::Black`]
-    /// is formatted as `x` and [`Piece::White`] is formatted as `o`.
+    /// Implements displaying the Color in a human-readable form. [`Color::Black`]
+    /// is formatted as `x` and [`Color::White`] is formatted as `o`.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -73,8 +73,8 @@ impl fmt::Display for Color {
 }
 
 impl fmt::Debug for Color {
-    /// Debug implements debug printing of a Piece in a human-readable form. It uses
-    /// `Piece::Display` under the hood to format and print the Piece.
+    /// Debug implements debug printing of a Color in a human-readable form. It uses
+    /// `Color::Display` under the hood to format and print the Color.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
@@ -84,9 +84,9 @@ impl FromStr for Color {
     type Err = ColorParseError;
 
     /// from_str converts the given human-readable string into its corresponding
-    /// [`Piece`]. `x`, `X`, `b`, `B` are parsed as [`Piece::Black`] and `o`, `O`,
-    /// `w`, `W` are parsed as [`Piece::White`]. Best practice is to use `x` and `o`
-    /// respectively for black and white.
+    /// [`Color`]. `x`, `X`, `b`, `B` are parsed as [`Color::Black`] and `o`, `O`,
+    /// `w`, `W` are parsed as [`Color::White`]. Best practice is to use `x` and `o`
+    /// respectively for Black and White.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() != 1 {
             return Err(ColorParseError::StringTooLong);
@@ -100,8 +100,7 @@ impl FromStr for Color {
     }
 }
 
-/// Piece represents all the possible pieces that an ataxx piece can have,
-/// specifically Black, White, and None(no Piece/no piece).
+/// Piece represents all the possible ataxx pieces.
 #[derive(Copy, Clone, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum Piece {
     Black,
@@ -110,7 +109,7 @@ pub enum Piece {
 }
 
 impl Piece {
-    /// N is the number of possible Pieces, excluding None.
+    /// N is the number of possible Pieces.
     pub const N: usize = 3;
 
     pub fn new(color: Color) -> Self {
