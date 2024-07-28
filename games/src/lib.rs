@@ -105,10 +105,9 @@ where
 }
 pub trait BitBoard {}
 
-/// MoveStore is a trait implemented by types which are able to store moves inside
-/// themselves and are thus usable in move-generation methods in
-/// [Position](super::Position) like
-/// [`Position::generate_moves_into<T>`](super::Position::generate_moves_into<T>).
+/// MoveStore is a trait implemented by types which are able to store moves
+/// inside themselves and are thus usable in move-generation methods in
+/// [Position] like [`Position::generate_moves_into<T>`].
 pub trait MoveStore<M>: Default {
     /// push adds the given Move to the MoveStore.
     fn push(&mut self, m: M);
