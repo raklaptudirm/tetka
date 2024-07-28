@@ -24,9 +24,11 @@ use thiserror::Error;
 #[rustfmt::skip]
 use crate::ataxx::{
     BitBoard, Piece, File, Hash, Move,
-    MoveList, MoveStore, Rank, Square,
+    Rank, Square,
     ColorParseError, Color
 };
+use crate::MoveList;
+use crate::MoveStore;
 
 /// Position represents the snapshot of an Ataxx Board, the state of the an
 /// ataxx game at a single point in time. It also provides all of the methods
@@ -306,8 +308,8 @@ impl Position {
     /// // There are 16 possible moves in startpos.
     /// assert_eq!(movelist.len(), 16);
     /// ```
-    pub fn generate_moves(&self) -> MoveList {
-        let mut movelist = MoveList::new();
+    pub fn generate_moves(&self) -> MoveList<Move> {
+        let mut movelist = Default::default();
         self.generate_moves_into(&mut movelist);
         movelist
     }
@@ -327,7 +329,7 @@ impl Position {
     /// // There are 16 possible moves in startpos.
     /// assert_eq!(movelist.len(), 16);
     /// ```
-    pub fn generate_moves_into<T: MoveStore>(&self, movelist: &mut T) {
+    pub fn generate_moves_into<T: MoveStore<Move>>(&self, movelist: &mut T) {
         if self.is_game_over() {
             // Game is over, so don't generate any moves.
             return;

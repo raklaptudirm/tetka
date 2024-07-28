@@ -14,7 +14,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use arrayvec::ArrayVec;
 use thiserror::Error;
 
 use crate::ataxx::{Square, SquareParseError};
@@ -227,39 +226,5 @@ impl fmt::Debug for Move {
     /// `Move::Display` trait under the hood for formatting the Move.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
-    }
-}
-
-/// MoveStore is a trait implemented by types which are able to store [Move]s inside
-/// themselves and are thus usable in move-generation methods in
-/// [Position](super::Position) like
-/// [`Position::generate_moves_into<T>`](super::Position::generate_moves_into<T>).
-pub trait MoveStore {
-    /// push adds the given Move to the MoveStore.
-    fn push(&mut self, m: Move);
-
-    /// len returns the number of [Move]s stored in the MoveStore.
-    fn len(&self) -> usize;
-
-    /// is_empty checks if no [Move]s are stored in the MoveStore.
-    fn is_empty(&self) -> bool;
-}
-
-/// MoveList is a basic implementation of [`MoveStore`] that is used to allow users
-/// to utilize move-generation methods without having to implement a [MoveStore] by
-/// themselves. It also has utility methods other than the [`MoveStore`] trait.
-pub type MoveList = ArrayVec<Move, 256>;
-
-impl MoveStore for MoveList {
-    fn push(&mut self, m: Move) {
-        self.push(m);
-    }
-
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.is_empty()
     }
 }
