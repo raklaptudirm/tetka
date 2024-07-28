@@ -58,11 +58,11 @@ pub trait Move: FromStr + Display + From<u16> + Into<u16> {
     const MAX_IN_GAME: usize;
     const MAX_IN_POSITION: usize;
 }
-pub trait Color: TypeEnum<u8> + Not {}
+
 pub trait ColoredPiece: TypeEnum<u8>
 where
     Self::Piece: TypeEnum<u8>,
-    Self::Color: Color,
+    Self::Color: TypeEnum<u8> + Not,
 {
     type Piece;
     type Color;
