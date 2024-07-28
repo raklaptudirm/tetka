@@ -5,6 +5,8 @@ use std::str::FromStr;
 use arrayvec::ArrayVec;
 
 pub mod ataxx;
+mod bitboard;
+pub use bitboard::*;
 
 /// Position is a generalized interface for board representations of a wide
 /// range of games. It can be used to create game-agnostic software. Tetka
@@ -20,13 +22,10 @@ where
     <Self as Index<Self::ColoredPiece>>::Output: Into<Self::BitBoard>,
     <Self as Index<<Self::ColoredPiece as ColoredPiece>::Piece>>::Output: Into<Self::BitBoard>,
     <Self as Index<<Self::ColoredPiece as ColoredPiece>::Color>>::Output: Into<Self::BitBoard>,
-    Self::Square: Square,
-    Self::BitBoard: BitBoard,
+    Self::BitBoard: bitboard::BitBoard,
     Self::ColoredPiece: ColoredPiece,
     Self::Move: Move,
 {
-    /// The type for the squares used by this board representation.
-    type Square;
     /// The type for the bitboards used by this board representation.
     type BitBoard;
 
@@ -40,11 +39,11 @@ where
 
     /// insert puts the given piece at the given square. The implementation is
     /// free to assume that the square is currently empty.
-    fn insert(&mut self, sq: Self::Square, piece: <Self::ColoredPiece as ColoredPiece>::Piece);
+    fn insert(&mut self, sq: <Self::BitBoard as BitBoard>::Square, piece: <Self::ColoredPiece as ColoredPiece>::Piece);
     /// remove clears the given square, and returns the piece that was there.
-    fn remove(&mut self, sq: Self::Square) -> Option<<Self::ColoredPiece as ColoredPiece>::Piece>;
+    fn remove(&mut self, sq: <Self::BitBoard as BitBoard>::Square) -> Option<<Self::ColoredPiece as ColoredPiece>::Piece>;
     /// at returns the piece that is in the given square.
-    fn at(&self, sq: Self::Square) -> Option<<Self::ColoredPiece as ColoredPiece>::Piece>;
+    fn at(&self, sq: <Self::BitBoard as BitBoard>::Square) -> Option<<Self::ColoredPiece as ColoredPiece>::Piece>;
 
     // Game Result functions.
 
@@ -117,58 +116,6 @@ where
     fn piece(&self) -> Self::Piece;
     /// color returns the Color part of the given ColoredPiece.
     fn color(&self) -> Self::Color;
-}
-pub trait Square: RepresentableType<u8>
-where
-    Self::File: RepresentableType<u8>,
-    Self::Rank: RepresentableType<u8>,
-{
-    type File;
-    type Rank;
-
-    fn new(file: Self::File, rank: Self::Rank) -> Self {
-        Self::unsafe_from(rank.into() * Self::File::N as u8 + file.into())
-    }
-
-    fn file(self) -> Self::File {
-        Self::File::unsafe_from(self.into() % Self::File::N as u8)
-    }
-
-    fn rank(self) -> Self::Rank {
-        Self::Rank::unsafe_from(self.into() / Self::File::N as u8)
-    }
-
-    fn north(self) -> Self {
-        Self::unsafe_from(self.into() + Self::File::N as u8)
-    }
-
-    fn south(self) -> Self {
-        Self::unsafe_from(self.into() - Self::File::N as u8)
-    }
-
-    fn east(self) -> Self {
-        Self::unsafe_from(self.into() + 1)
-    }
-
-    fn west(self) -> Self {
-        Self::unsafe_from(self.into() - 1)
-    }
-}
-pub trait BitBoard {}
-
-/// RepresentableType is a basic trait which is implemented by enums with both a
-/// binary and string representation and backed by an integer.
-pub trait RepresentableType<B: Into<usize>>:
-    Copy + Eq + FromStr + Display + From<B> + Into<B>
-{
-    /// N is the number of specializations of the enum.
-    const N: usize;
-
-    /// unsafe_from unsafely converts the given number into Self.
-    fn unsafe_from<T: Copy + Into<usize>>(number: T) -> Self {
-        debug_assert!(number.into() < Self::N);
-        unsafe { std::mem::transmute_copy(&number) }
-    }
 }
 
 /// MoveStore is a trait implemented by types which are able to store moves
