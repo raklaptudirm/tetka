@@ -3,36 +3,35 @@ use std::ops::{Index, Not};
 use std::str::FromStr;
 
 use arrayvec::ArrayVec;
-use num_traits::ToPrimitive;
 
 pub mod ataxx;
 
 pub trait Position:
-    FromStr + Display + Index<Self::Piece> + Index<Self::Color> + Index<Self::ColoredPiece>
+    FromStr
+    + Display
+    + Index<<Self::ColoredPiece as ColoredPiece>::Piece>
+    + Index<<Self::ColoredPiece as ColoredPiece>::Color>
+    + Index<Self::ColoredPiece>
 where
     Self::Square: Square,
     Self::BitBoard: BitBoard,
-    Self::Piece: TypeEnum,
-    Self::Color: Color,
-    Self::ColoredPiece: TypeEnum,
+    Self::ColoredPiece: ColoredPiece,
     Self::Move: Move,
 {
     type Square;
     type BitBoard;
 
-    type Piece;
-    type Color;
     type ColoredPiece;
 
     type Move;
 
-    fn put(&mut self, sq: Self::Square, piece: Self::Piece);
-    fn at(&self, sq: Self::Square) -> Option<Self::Piece>;
+    fn put(&mut self, sq: Self::Square, piece: <Self::ColoredPiece as ColoredPiece>::Piece);
+    fn at(&self, sq: Self::Square) -> Option<<Self::ColoredPiece as ColoredPiece>::Piece>;
 
     fn is_game_over(&self) -> bool {
         self.winner().is_some()
     }
-    fn winner(&self) -> Option<Self::Color>;
+    fn winner(&self) -> Option<<Self::ColoredPiece as ColoredPiece>::Color>;
     fn after_move<const UPDATE_HASH: bool>(mov: Self::Move) -> Self;
 
     fn generate_moves_into<T: MoveStore<Self::Move>>(&self, movelist: &mut T);
@@ -46,50 +45,62 @@ where
     }
 }
 
-pub trait TypeEnum: Copy + Eq + ToPrimitive + FromStr + Display {
+pub trait TypeEnum<B>: Copy + Eq + FromStr + Display + From<B> + Into<B> {
     const N: usize;
-    fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self;
+    fn unsafe_from<T: Into<B>>(number: T) -> Self;
 }
 
 pub trait Move: Default + FromStr + Display {}
-pub trait Color: TypeEnum + Not {}
-pub trait Square: TypeEnum
+pub trait Color: TypeEnum<u8> + Not {}
+pub trait ColoredPiece: TypeEnum<u8>
 where
-    Self::File: TypeEnum,
-    Self::Rank: TypeEnum,
+    Self::Piece: TypeEnum<u8>,
+    Self::Color: Color,
+{
+    type Piece;
+    type Color;
+
+    fn new(piece: Self::Piece, color: Self::Color) -> Self {
+        Self::unsafe_from(color.into() * Self::Piece::N as u8 + piece.into())
+    }
+
+    fn piece(&self) -> Self::Piece;
+    fn color(&self) -> Self::Color;
+}
+pub trait Square: TypeEnum<u8>
+where
+    Self::File: TypeEnum<u8>,
+    Self::Rank: TypeEnum<u8>,
 {
     type File;
     type Rank;
 
     fn new(file: Self::File, rank: Self::Rank) -> Self {
-        Self::unsafe_from(
-            unsafe { rank.to_usize().unwrap_unchecked() } * Self::File::N
-                + unsafe { file.to_usize().unwrap_unchecked() },
-        )
+        Self::unsafe_from(rank.into() * Self::File::N as u8 + file.into())
     }
 
     fn file(self) -> Self::File {
-        Self::File::unsafe_from(unsafe { self.to_usize().unwrap_unchecked() } % Self::File::N)
+        Self::File::unsafe_from(self.into() % Self::File::N as u8)
     }
 
     fn rank(self) -> Self::Rank {
-        Self::Rank::unsafe_from(unsafe { self.to_usize().unwrap_unchecked() } / Self::File::N)
+        Self::Rank::unsafe_from(self.into() / Self::File::N as u8)
     }
 
     fn north(self) -> Self {
-        Self::unsafe_from(unsafe { self.to_usize().unwrap_unchecked() } + Self::File::N)
+        Self::unsafe_from(self.into() + Self::File::N as u8)
     }
 
     fn south(self) -> Self {
-        Self::unsafe_from(unsafe { self.to_usize().unwrap_unchecked() } - Self::File::N)
+        Self::unsafe_from(self.into() - Self::File::N as u8)
     }
 
     fn east(self) -> Self {
-        Self::unsafe_from(unsafe { self.to_usize().unwrap_unchecked() } + 1)
+        Self::unsafe_from(self.into() + 1)
     }
 
     fn west(self) -> Self {
-        Self::unsafe_from(unsafe { self.to_usize().unwrap_unchecked() } - 1)
+        Self::unsafe_from(self.into() - 1)
     }
 }
 pub trait BitBoard {}
