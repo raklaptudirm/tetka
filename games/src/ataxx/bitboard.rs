@@ -21,7 +21,7 @@ use derive_more::{
 use num_derive::FromPrimitive;
 use strum::IntoEnumIterator;
 
-use crate::{File, Rank, Square};
+use crate::ataxx::{File, Rank, Square};
 
 /// BitBoard represents a set of squares as a 64 bit bitset.
 /// A BitBoard contains a Square if the 1 << square as usize

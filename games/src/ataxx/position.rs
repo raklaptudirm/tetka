@@ -22,7 +22,7 @@ use strum::IntoEnumIterator;
 use thiserror::Error;
 
 #[rustfmt::skip]
-use crate::{
+use crate::ataxx::{
     BitBoard, Piece, File, Hash, Move,
     MoveList, MoveStore, Rank, Square,
     ColorParseError, Color

@@ -1,13 +1,13 @@
 [package]
-name = "ataxx"
-version = "0.2.0"
+name = "tetka-games"
+version = "0.1.0"
 edition = "2021"
 
 authors = ["Rak Laptudirm <rak@laptudirm.com>"]
 
 license = "Apache-2.0"
-description = "A Rust library for the game Ataxx"
-repository = "https://github.com/raklaptudirm/mexx"
+description = "Rust implementations of various games"
+repository = "https://github.com/raklaptudirm/tetka"
 keywords = ["ataxx"]
 categories = ["games"]
 

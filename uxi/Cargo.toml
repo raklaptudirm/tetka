@@ -7,6 +7,4 @@ authors = ["Rak Laptudirm <rak@laptudirm.com>"]
 
 license = "Apache-2.0"
 description = "A Rust library for creating UXI compliant engines"
-repository = "https://github.com/raklaptudirm/mexx"
-keywords = []
-categories = ["games"]
+repository = "https://github.com/raklaptudirm/tetka"

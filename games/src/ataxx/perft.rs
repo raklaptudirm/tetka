@@ -1,4 +1,4 @@
-use crate::Position;
+use crate::ataxx::Position;
 
 /// perft is a function to walk the move generation tree of strictly legal moves
 /// to count all the leaf nodes of a certain depth.

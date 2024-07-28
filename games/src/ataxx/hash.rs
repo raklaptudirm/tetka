@@ -13,7 +13,7 @@
 
 use std::{fmt, ops};
 
-use crate::{BitBoard, Color};
+use crate::ataxx::{BitBoard, Color};
 
 /// Hash represents the semi-unique checksum of a Position used to efficiently
 /// check for Position equality. Some properties of a Hash include determinism,

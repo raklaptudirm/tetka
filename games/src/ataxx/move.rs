@@ -17,7 +17,7 @@ use std::str::FromStr;
 use arrayvec::ArrayVec;
 use thiserror::Error;
 
-use crate::{Square, SquareParseError};
+use crate::ataxx::{Square, SquareParseError};
 
 /// Move represents an Ataxx move which can be played on the Board.
 #[derive(Copy, Clone, PartialEq, Eq, Default)]

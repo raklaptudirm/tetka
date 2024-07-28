@@ -1,5 +1,18 @@
+[package]
+name = "tetka"
+version = "0.1.0"
+edition = "2021"
+
+authors = ["Rak Laptudirm <rak@laptudirm.com>"]
+
+license = "Apache-2.0"
+description = "A game engine Swiss-army knife"
+repository = "https://github.com/raklaptudirm/tetka"
+
+[dependencies]
+tetka-uxi = { package = "uxi", path = "./uxi" }
+tetka-games = { path = "./games" }
+
 [workspace]
-members = [
-    "uxi",
-    "games/ataxx"
-]
+resolver = "2"
+members = [ "uxi", "games" ]
