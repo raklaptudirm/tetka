@@ -17,3 +17,5 @@ mod perft;
 mod piece;
 mod position;
 mod square;
+
+pub mod moves;
