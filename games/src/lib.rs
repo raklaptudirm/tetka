@@ -45,12 +45,19 @@ where
     }
 }
 
-pub trait TypeEnum<B>: Copy + Eq + FromStr + Display + From<B> + Into<B> {
+pub trait TypeEnum<B: Into<usize>>: Copy + Eq + FromStr + Display + From<B> + Into<B> {
     const N: usize;
-    fn unsafe_from<T: Into<B>>(number: T) -> Self;
+    fn unsafe_from<T: Copy + Into<B>>(number: T) -> Self {
+        debug_assert!(number.into().into() < Self::N);
+        unsafe { std::mem::transmute_copy(&number) }
+    }
 }
 
-pub trait Move: Default + FromStr + Display {}
+pub trait Move: FromStr + Display + From<u16> + Into<u16> {
+    const NULL: Self;
+    const MAX_IN_GAME: usize;
+    const MAX_IN_POSITION: usize;
+}
 pub trait Color: TypeEnum<u8> + Not {}
 pub trait ColoredPiece: TypeEnum<u8>
 where
@@ -124,7 +131,7 @@ pub trait MoveStore<M>: Default {
 /// themselves. It also has utility methods other than the [`MoveStore`] trait.
 pub type MoveList<M> = ArrayVec<M, 256>;
 
-impl<M: Default> MoveStore<M> for MoveList<M> {
+impl<M> MoveStore<M> for MoveList<M> {
     fn push(&mut self, m: M) {
         self.push(m);
     }
