@@ -12,9 +12,9 @@
 // limitations under the License.
 
 use std::fmt;
-use std::mem::MaybeUninit;
 use std::str::FromStr;
 
+use arrayvec::ArrayVec;
 use thiserror::Error;
 
 use crate::{Square, SquareParseError};
@@ -248,113 +248,18 @@ pub trait MoveStore {
 /// MoveList is a basic implementation of [`MoveStore`] that is used to allow users
 /// to utilize move-generation methods without having to implement a [MoveStore] by
 /// themselves. It also has utility methods other than the [`MoveStore`] trait.
-pub struct MoveList {
-    // A possibly uninitialized array of Moves. A fixed size array is used to allow
-    // storage in the stack and thus provides more speed than a dynamic array.
-    list: [MaybeUninit<Move>; 256],
-    length: usize,
-}
+pub type MoveList = ArrayVec<Move, 256>;
 
-impl MoveList {
-    /// new creates an empty MoveList ready for use.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// let movelist = MoveList::new();
-    ///
-    /// assert!(movelist.is_empty());
-    /// ```
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> MoveList {
-        MoveList {
-            // Initialize an un-initialized array :3
-            list: [MaybeUninit::uninit(); 256],
-            length: 0,
-        }
-    }
-
-    /// at returns the Move stored at the given index. This operation is defined and
-    /// valid if and only if the 0 <= index <= MoveList length.
-    pub fn at(&self, n: usize) -> Move {
-        debug_assert!(n < self.len());
-
-        // It is same to assume that the memory is initialized since the length of
-        // the MoveList can only be increased by pushing Moves into it.
-        unsafe { self.list[n].assume_init() }
-    }
-}
-
-// Implement the MoveStore trait to allow usage in move-generation functions.
 impl MoveStore for MoveList {
-    /// push adds the given move to the MoveList.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// let mov = Move::new(Square::A1, Square::A3);
-    ///
-    /// let mut movelist = MoveList::new();
-    /// movelist.push(mov);
-    ///
-    /// assert_eq!(movelist.at(0), mov);
-    /// assert_eq!(movelist.len(), 1);
-    /// ```
     fn push(&mut self, m: Move) {
-        self.list[self.length] = MaybeUninit::new(m);
-        self.length += 1;
+        self.push(m);
     }
 
-    /// len returns the length of the MoveList.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// let mut movelist = MoveList::new();
-    ///
-    /// movelist.push(Move::new_single(Square::A1));
-    /// movelist.push(Move::new_single(Square::A2));
-    /// movelist.push(Move::new_single(Square::A3));
-    ///
-    /// assert_eq!(movelist.len(), 3);
-    /// ```
     fn len(&self) -> usize {
-        self.length
+        self.len()
     }
 
-    /// is_empty checks if the MoveList is empty, i.e its length is 0.
-    ///
     fn is_empty(&self) -> bool {
-        self.length == 0
-    }
-}
-
-impl IntoIterator for MoveList {
-    type Item = Move;
-    type IntoIter = MoveListIterator;
-
-    /// into_iter automatically converts a [MoveList] into an iterator when
-    /// necessary, like inside a for loop.
-    fn into_iter(self) -> Self::IntoIter {
-        MoveListIterator {
-            list: self,
-            current: 0,
-        }
-    }
-}
-
-/// MoveListIterator implements an [Iterator] for a [MoveList].
-pub struct MoveListIterator {
-    list: MoveList,
-    current: usize,
-}
-
-impl Iterator for MoveListIterator {
-    type Item = Move;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.current += 1;
-        if self.current <= self.list.len() {
-            Some(self.list.at(self.current - 1))
-        } else {
-            None
-        }
+        self.is_empty()
     }
 }
