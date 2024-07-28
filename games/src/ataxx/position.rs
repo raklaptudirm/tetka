@@ -27,8 +27,8 @@ use crate::ataxx::{
     Rank, Square,
     ColorParseError, Color
 };
-use crate::MoveList;
-use crate::MoveStore;
+use crate::interface::MoveList;
+use crate::interface::MoveStore;
 
 use super::moves;
 

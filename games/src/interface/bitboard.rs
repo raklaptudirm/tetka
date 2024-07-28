@@ -1,6 +1,6 @@
-use std::fmt::Display;
 use std::ops::BitOr;
-use std::str::FromStr;
+
+use super::{RepresentableType, Square};
 
 pub trait BitBoard:
     Sized
@@ -145,57 +145,5 @@ where
         Self::from(
             Self::FIRST_RANK.into() << (<Self::Square as Square>::File::N * rank.into() as usize),
         )
-    }
-}
-
-pub trait Square: RepresentableType<u8>
-where
-    Self::File: RepresentableType<u8>,
-    Self::Rank: RepresentableType<u8>,
-{
-    type File;
-    type Rank;
-
-    fn new(file: Self::File, rank: Self::Rank) -> Self {
-        Self::unsafe_from(rank.into() * Self::File::N as u8 + file.into())
-    }
-
-    fn file(self) -> Self::File {
-        Self::File::unsafe_from(self.into() % Self::File::N as u8)
-    }
-
-    fn rank(self) -> Self::Rank {
-        Self::Rank::unsafe_from(self.into() / Self::File::N as u8)
-    }
-
-    fn north(self) -> Self {
-        Self::unsafe_from(self.into() + Self::File::N as u8)
-    }
-
-    fn south(self) -> Self {
-        Self::unsafe_from(self.into() - Self::File::N as u8)
-    }
-
-    fn east(self) -> Self {
-        Self::unsafe_from(self.into() + 1)
-    }
-
-    fn west(self) -> Self {
-        Self::unsafe_from(self.into() - 1)
-    }
-}
-
-/// RepresentableType is a basic trait which is implemented by enums with both a
-/// binary and string representation and backed by an integer.
-pub trait RepresentableType<B: Into<usize>>:
-    Copy + Eq + FromStr + Display + From<B> + Into<B>
-{
-    /// N is the number of specializations of the enum.
-    const N: usize;
-
-    /// unsafe_from unsafely converts the given number into Self.
-    fn unsafe_from<T: Copy + Into<usize>>(number: T) -> Self {
-        debug_assert!(number.into() < Self::N);
-        unsafe { std::mem::transmute_copy(&number) }
     }
 }
