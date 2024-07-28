@@ -565,26 +565,58 @@ impl From<BitBoard> for u64 {
 
 // Private constants wrapped in methods for indexing.
 impl BitBoard {
-    const FILE: [BitBoard; File::N] = [
-        BitBoard(0x0040810204081),
-        BitBoard(0x0081020408102),
-        BitBoard(0x0102040810204),
-        BitBoard(0x0204081020408),
-        BitBoard(0x0408102040810),
-        BitBoard(0x0810204081020),
-        BitBoard(0x1020408102040),
-    ];
+    const fn file_bbs() -> [BitBoard; File::N] {
+        let mut bb = 0u64;
+        let mut sq = 0;
+        while sq < Square::N {
+            if sq % File::N == 0 {
+                bb |= 1 << sq;
+            }
 
-    const RANK: [BitBoard; Rank::N] = [
-        BitBoard(0x000000000007f),
-        BitBoard(0x0000000003f80),
-        BitBoard(0x00000001fc000),
-        BitBoard(0x000000fe00000),
-        BitBoard(0x00007f0000000),
-        BitBoard(0x003f800000000),
-        BitBoard(0x1fc0000000000),
-    ];
+            sq += 1;
+        }
 
+        let mut file_bbs = [BitBoard(0); File::N];
+
+        let mut file = 0;
+        while file < File::N {
+            file_bbs[file] = BitBoard(bb);
+            bb <<= 1;
+            file += 1;
+        }
+
+        file_bbs
+    }
+
+    const fn rank_bbs() -> [BitBoard; Rank::N] {
+        let mut bb = 0u64;
+        let mut sq = 0;
+        while sq < Square::N {
+            if sq / File::N == 0 {
+                bb |= 1 << sq;
+            }
+
+            sq += 1;
+        }
+
+        let mut rank_bbs = [BitBoard(0); Rank::N];
+
+        let mut rank = 0;
+        while rank < Rank::N {
+            rank_bbs[rank] = BitBoard(bb);
+            bb <<= File::N;
+            rank += 1;
+        }
+
+        rank_bbs
+    }
+
+    const FILE: [BitBoard; File::N] = BitBoard::file_bbs();
+
+    const RANK: [BitBoard; Rank::N] = BitBoard::rank_bbs();
+}
+
+impl BitBoard {
     const SINGLES: [BitBoard; Square::N] = [
         BitBoard(0x0000000000182),
         BitBoard(0x0000000000385),
