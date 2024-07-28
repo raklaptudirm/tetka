@@ -39,12 +39,6 @@ where
 
     /// is_superset checks if the given Self is a superset of the target, i.e.
     /// all the squares in the given Self are also present in the target.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert!(!Self::UNIVERSE.is_superset(Self::EMPTY));
-    /// assert!( Self::EMPTY.is_superset(Self::UNIVERSE));
-    /// ```
     fn is_superset(self, other: Self) -> bool {
         other.is_subset(self)
     }
