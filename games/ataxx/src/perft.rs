@@ -1,4 +1,4 @@
-use crate::{MoveStore, Position};
+use crate::Position;
 
 /// perft is a function to walk the move generation tree of strictly legal moves
 /// to count all the leaf nodes of a certain depth.
@@ -29,7 +29,7 @@ pub fn perft<const SPLIT: bool, const BULK: bool>(position: Position, depth: u8)
     // MoveList implements IntoIterator, so it should be possible to use it
     // directly in the for loop, but manual iterations seems to be faster.
     for i in 0..movelist.len() {
-        let m = movelist.at(i);
+        let m = movelist[i];
 
         // Find the next position without updating the Hash, which is unnecessary
         // inside perft given uniquely identifying positions here is unnecessary.
