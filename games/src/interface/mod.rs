@@ -22,8 +22,13 @@ pub trait RepresentableType<B: Into<usize>>:
     const N: usize;
 
     /// unsafe_from unsafely converts the given number into Self.
-    fn unsafe_from<T: Copy + Into<usize>>(number: T) -> Self {
+    /// # Safety
+    /// `unsafe_from` assumes that the target type can represent the provided
+    /// number, i.e. the number has a valid representation in the target type.
+    /// The function comes with a debug check for the same, and failure to
+    /// uphold this invariant will result in undefined behavior.
+    unsafe fn unsafe_from<T: Copy + Into<usize>>(number: T) -> Self {
         debug_assert!(number.into() < Self::N);
-        unsafe { std::mem::transmute_copy(&number) }
+        std::mem::transmute_copy(&number)
     }
 }

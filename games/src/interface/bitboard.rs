@@ -103,7 +103,7 @@ where
 
     /// pop_lsb pops the least significant Self::Square from the Self, i.e. it
     /// removes the lsb from the Self and returns its value.
-    fn pop_lsb(&mut self) -> Self::Square {
+    fn pop_lsb(&mut self) -> Option<Self::Square> {
         let lsb = self.lsb();
         let copy = <Self as Into<u64>>::into(*self);
         *self = <Self as From<u64>>::from(copy & (copy - 1));
@@ -113,21 +113,33 @@ where
 
     /// pop_msb pops the most significant Self::Square from the Self i.e. it
     /// removes the msb from the Self and returns its value.
-    fn pop_msb(&mut self) -> Self::Square {
+    fn pop_msb(&mut self) -> Option<Self::Square> {
         let msb = self.msb();
-        *self = Self::from(<Self as Into<u64>>::into(*self) ^ Self::from(msb).into());
+        if let Some(msb) = msb {
+            *self = Self::from(<Self as Into<u64>>::into(*self) ^ Self::from(msb).into());
+        }
 
         msb
     }
 
     /// get_lsb returns the least significant Self::Square from the Self.
-    fn lsb(self) -> Self::Square {
-        Self::Square::unsafe_from(self.into().trailing_zeros() as usize)
+    fn lsb(self) -> Option<Self::Square> {
+        let sq = self.into().trailing_zeros() as usize;
+        if sq < Self::Square::N {
+            Some(unsafe { Self::Square::unsafe_from(sq) })
+        } else {
+            None
+        }
     }
 
     /// get_msb returns the most significant Self::Square from the Self.
-    fn msb(self) -> Self::Square {
-        Self::Square::unsafe_from(63 - self.into().leading_zeros() as usize)
+    fn msb(self) -> Option<Self::Square> {
+        let sq = 63 - self.into().leading_zeros() as usize;
+        if sq < Self::Square::N {
+            Some(unsafe { Self::Square::unsafe_from(sq) })
+        } else {
+            None
+        }
     }
 
     fn singles(self) -> Self {

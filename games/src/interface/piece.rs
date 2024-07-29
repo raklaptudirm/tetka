@@ -16,7 +16,7 @@ where
 
     /// new creates a new ColoredPiece from the given Piece and Color.
     fn new(piece: Self::Piece, color: Self::Color) -> Self {
-        Self::unsafe_from(color.into() * Self::Piece::N as u8 + piece.into())
+        unsafe { Self::unsafe_from(color.into() * Self::Piece::N as u8 + piece.into()) }
     }
 
     /// piece returns the Piece part of the given ColoredPiece.
