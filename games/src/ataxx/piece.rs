@@ -12,6 +12,7 @@
 // limitations under the License.
 
 use std::fmt;
+use std::mem;
 use std::ops;
 use std::str::FromStr;
 
@@ -19,6 +20,9 @@ use num_derive::FromPrimitive;
 
 use num_derive::ToPrimitive;
 use thiserror::Error;
+
+use crate::interface::ColoredPieceType;
+use crate::interface::RepresentableType;
 
 /// Color represents all the possible colors that an ataxx piece can have,
 /// specifically, Black and White.
@@ -28,14 +32,19 @@ pub enum Color {
     White,
 }
 
-impl Color {
-    /// N is the number of possible Colors.
-    pub const N: usize = 2;
+impl RepresentableType<u8> for Color {
+    const N: usize = 2;
+}
 
-    #[inline(always)]
-    pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
-        debug_assert!(number.to_u64().unwrap() < Self::N as u64);
-        unsafe { std::mem::transmute_copy(&number) }
+impl From<u8> for Color {
+    fn from(value: u8) -> Self {
+        unsafe { mem::transmute_copy(&value) }
+    }
+}
+
+impl From<Color> for u8 {
+    fn from(value: Color) -> Self {
+        value as u8
     }
 }
 
@@ -45,7 +54,7 @@ impl ops::Not for Color {
     /// not implements the not unary operator (!) which switches the current Color
     /// to its opposite, i.e. [`Color::Black`] to [`Color::White`] and vice versa.
     fn not(self) -> Self::Output {
-        Color::unsafe_from(self as usize ^ 1)
+        unsafe { Color::unsafe_from(self as usize ^ 1) }
     }
 }
 
@@ -102,35 +111,46 @@ impl FromStr for Color {
 
 /// Piece represents all the possible ataxx pieces.
 #[derive(Copy, Clone, PartialEq, Eq, FromPrimitive, ToPrimitive)]
-pub enum Piece {
+pub enum ColoredPiece {
     Black,
     White,
     Block,
 }
 
-impl Piece {
-    /// N is the number of possible Pieces.
-    pub const N: usize = 3;
+impl ColoredPieceType for ColoredPiece {
+    type Piece = Color;
+    type Color = Color;
 
-    pub fn new(color: Color) -> Self {
-        match color {
-            Color::Black => Piece::Black,
-            Color::White => Piece::White,
-        }
-    }
-
-    pub fn color(self) -> Color {
+    fn piece(self) -> Color {
         match self {
-            Piece::Black => Color::Black,
-            Piece::White => Color::White,
+            ColoredPiece::Black => Color::Black,
+            ColoredPiece::White => Color::White,
             _ => panic!("Piece::color() called on Piece::Block"),
         }
     }
 
-    #[inline(always)]
-    pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
-        debug_assert!(number.to_u64().unwrap() < Self::N as u64);
-        unsafe { std::mem::transmute_copy(&number) }
+    fn color(self) -> Color {
+        match self {
+            ColoredPiece::Black => Color::Black,
+            ColoredPiece::White => Color::White,
+            _ => panic!("Piece::color() called on Piece::Block"),
+        }
+    }
+}
+
+impl RepresentableType<u8> for ColoredPiece {
+    const N: usize = 3;
+}
+
+impl From<u8> for ColoredPiece {
+    fn from(value: u8) -> Self {
+        unsafe { mem::transmute_copy(&value) }
+    }
+}
+
+impl From<ColoredPiece> for u8 {
+    fn from(value: ColoredPiece) -> Self {
+        value as u8
     }
 }
 
@@ -142,7 +162,27 @@ pub enum PieceParseError {
     StringFormatInvalid(String),
 }
 
-impl fmt::Display for Piece {
+impl FromStr for ColoredPiece {
+    type Err = ColorParseError;
+
+    /// from_str converts the given human-readable string into its corresponding
+    /// [`Color`]. `x`, `X`, `b`, `B` are parsed as [`Color::Black`] and `o`, `O`,
+    /// `w`, `W` are parsed as [`Color::White`]. Best practice is to use `x` and `o`
+    /// respectively for Black and White.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 1 {
+            return Err(ColorParseError::StringTooLong);
+        }
+
+        match s {
+            "x" | "X" | "b" | "B" => Ok(ColoredPiece::Black),
+            "o" | "O" | "w" | "W" => Ok(ColoredPiece::White),
+            _ => Err(ColorParseError::StringFormatInvalid(s.to_string())),
+        }
+    }
+}
+
+impl fmt::Display for ColoredPiece {
     /// Implements displaying the Piece in a human-readable form. [`Piece::Black`]
     /// is formatted as `x` and [`Piece::White`] is formatted as `o`.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -158,7 +198,7 @@ impl fmt::Display for Piece {
     }
 }
 
-impl fmt::Debug for Piece {
+impl fmt::Debug for ColoredPiece {
     /// Debug implements debug printing of a Piece in a human-readable form. It uses
     /// `Piece::Display` under the hood to format and print the Piece.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

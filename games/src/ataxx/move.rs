@@ -17,10 +17,29 @@ use std::str::FromStr;
 use thiserror::Error;
 
 use crate::ataxx::{Square, SquareParseError};
+use crate::interface::{MoveType, RepresentableType};
 
 /// Move represents an Ataxx move which can be played on the Board.
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
 pub struct Move(u16);
+
+impl MoveType for Move {
+    const NULL: Self = Move(1 << 15);
+    const MAX_IN_GAME: usize = 256;
+    const MAX_IN_POSITION: usize = 256;
+}
+
+impl From<u16> for Move {
+    fn from(value: u16) -> Self {
+        Move(value)
+    }
+}
+
+impl From<Move> for u16 {
+    fn from(value: Move) -> Self {
+        value.0
+    }
+}
 
 impl Move {
     // Bit-widths of fields.
@@ -96,12 +115,8 @@ impl Move {
     ///
     /// assert_eq!(mov.source(), Square::A1);
     /// ```
-    #[inline(always)]
-    #[rustfmt::skip]
     pub fn source(self) -> Square {
-        Square::unsafe_from(
-            (self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK
-        )
+        unsafe { Square::unsafe_from((self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK) }
     }
 
     /// Target returns the target Square of the moving piece.
@@ -112,12 +127,8 @@ impl Move {
     ///
     /// assert_eq!(mov.target(), Square::A3);
     /// ```
-    #[inline(always)]
-    #[rustfmt::skip]
     pub fn target(self) -> Square {
-        Square::unsafe_from(
-            (self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK
-        )
+        unsafe { Square::unsafe_from((self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK) }
     }
 
     /// is_single checks if the given Move is singular in nature. The result of this

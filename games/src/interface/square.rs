@@ -1,6 +1,6 @@
 use super::RepresentableType;
 
-pub trait Square: RepresentableType<u8>
+pub trait SquareType: RepresentableType<u8>
 where
     Self::File: RepresentableType<u8>,
     Self::Rank: RepresentableType<u8>,

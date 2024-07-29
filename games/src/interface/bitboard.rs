@@ -1,8 +1,8 @@
 use std::ops::BitOr;
 
-use super::{RepresentableType, Square};
+use super::{RepresentableType, SquareType};
 
-pub trait BitBoard:
+pub trait BitBoardType:
     Sized
     + Copy
     + From<Self::Square>
@@ -12,7 +12,7 @@ pub trait BitBoard:
     + From<<Self as BitOr<Self>>::Output>
 where
     <Self as BitOr<Self>>::Output: Into<Self>,
-    Self::Square: Square,
+    Self::Square: SquareType,
 {
     type Square;
 
@@ -60,12 +60,12 @@ where
 
     /// north returns a new Self with all the squares shifted to the north.
     fn north(self) -> Self {
-        Self::from((self.into() << <Self::Square as Square>::File::N) & Self::UNIVERSE.into())
+        Self::from((self.into() << <Self::Square as SquareType>::File::N) & Self::UNIVERSE.into())
     }
 
     /// south returns a new Self with all the squares shifted to the south.
     fn south(self) -> Self {
-        Self::from(self.into() >> <Self::Square as Square>::File::N)
+        Self::from(self.into() >> <Self::Square as SquareType>::File::N)
     }
 
     /// east returns a new Self with all the squares shifted to the east.
@@ -73,7 +73,7 @@ where
         Self::from(
             (self.into() << 1)
                 & (Self::UNIVERSE.into()
-                    ^ Self::file(<Self::Square as Square>::File::from(0)).into()),
+                    ^ Self::file(<Self::Square as SquareType>::File::from(0)).into()),
         )
     }
 
@@ -82,8 +82,8 @@ where
         Self::from(
             (self.into() >> 1)
                 & (Self::UNIVERSE.into()
-                    ^ Self::file(<Self::Square as Square>::File::from(
-                        <Self::Square as Square>::File::N as u8 - 1,
+                    ^ Self::file(<Self::Square as SquareType>::File::from(
+                        <Self::Square as SquareType>::File::N as u8 - 1,
                     ))
                     .into()),
         )
@@ -148,14 +148,15 @@ where
     }
 
     /// file returns a Self containing all the squares from the given <Self::Square as Square>::File.
-    fn file(file: <Self::Square as Square>::File) -> Self {
+    fn file(file: <Self::Square as SquareType>::File) -> Self {
         Self::from(Self::FIRST_FILE.into() << file.into())
     }
 
     /// rank returns a Self containing all the squares from the given Self::Square::Rank.
-    fn rank(rank: <Self::Square as Square>::Rank) -> Self {
+    fn rank(rank: <Self::Square as SquareType>::Rank) -> Self {
         Self::from(
-            Self::FIRST_RANK.into() << (<Self::Square as Square>::File::N * rank.into() as usize),
+            Self::FIRST_RANK.into()
+                << (<Self::Square as SquareType>::File::N * rank.into() as usize),
         )
     }
 }

@@ -1,4 +1,5 @@
 use crate::ataxx::Position;
+use crate::interface::PositionType;
 
 /// perft is a function to walk the move generation tree of strictly legal moves
 /// to count all the leaf nodes of a certain depth.
@@ -15,7 +16,7 @@ pub fn perft<const SPLIT: bool, const BULK: bool>(position: Position, depth: u8)
     // Bulk counting if enabled. Instead of calling make move and perft for each
     // move at depth 1, just return the number of legal moves, which is equivalent.
     if BULK && depth == 1 {
-        return position.count_moves() as u64;
+        return position.count_moves::<true, true>() as u64;
     }
 
     // At depth 0, perft is defined to be 1.
@@ -24,7 +25,7 @@ pub fn perft<const SPLIT: bool, const BULK: bool>(position: Position, depth: u8)
     }
 
     let mut nodes: u64 = 0;
-    let movelist = position.generate_moves();
+    let movelist = position.generate_moves::<true, true>();
 
     // MoveList implements IntoIterator, so it should be possible to use it
     // directly in the for loop, but manual iterations seems to be faster.

@@ -4,7 +4,7 @@ use super::RepresentableType;
 
 /// The ColoredPiece trait should be implemented by the piece representation
 /// (with color) for a game.
-pub trait ColoredPiece: RepresentableType<u8>
+pub trait ColoredPieceType: RepresentableType<u8>
 where
     Self::Piece: RepresentableType<u8>,
     Self::Color: RepresentableType<u8> + Not,
@@ -20,7 +20,7 @@ where
     }
 
     /// piece returns the Piece part of the given ColoredPiece.
-    fn piece(&self) -> Self::Piece;
+    fn piece(self) -> Self::Piece;
     /// color returns the Color part of the given ColoredPiece.
-    fn color(&self) -> Self::Color;
+    fn color(self) -> Self::Color;
 }

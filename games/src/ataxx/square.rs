@@ -11,16 +11,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
 use std::str::FromStr;
+use std::{fmt, mem};
 
 use num_derive::FromPrimitive;
 use strum_macros::EnumIter;
 use thiserror::Error;
 
+use crate::interface::{RepresentableType, SquareType};
+
 /// Square represents all the squares present on an Ataxx Board.
 /// The index of each Square is equal to `rank-index * 8 + file-index`.
-#[derive(Copy, Clone, PartialEq, PartialOrd, FromPrimitive, EnumIter)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, FromPrimitive, EnumIter)]
 #[rustfmt::skip]
 pub enum Square {
     A1, B1, C1, D1, E1, F1, G1,
@@ -32,86 +34,24 @@ pub enum Square {
     A7, B7, C7, D7, E7, F7, G7,
 }
 
-impl Square {
-    /// N represents the total number of Squares in an Ataxx Board.
-    pub const N: usize = File::N * Rank::N;
+impl SquareType for Square {
+    type File = File;
+    type Rank = Rank;
+}
 
-    /// new creates a new Square from the given File and Rank.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(Square::new(File::A, Rank::First), Square::A1);
-    /// ```
-    pub fn new(file: File, rank: Rank) -> Square {
-        Square::unsafe_from(rank as usize * File::N + file as usize)
+impl RepresentableType<u8> for Square {
+    const N: usize = 7 * 7;
+}
+
+impl From<u8> for Square {
+    fn from(value: u8) -> Self {
+        unsafe { mem::transmute_copy(&value) }
     }
+}
 
-    /// file returns the File of the current Square.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(Square::A1.file(), File::A);
-    /// ```
-    #[inline(always)]
-    pub fn file(self) -> File {
-        File::unsafe_from(self as usize % File::N)
-    }
-
-    /// rank returns the Rank of the current Square.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(Square::A1.rank(), Rank::First);
-    /// ```
-    #[inline(always)]
-    pub fn rank(self) -> Rank {
-        Rank::unsafe_from(self as usize / File::N)
-    }
-
-    /// north returns the Square to the North of this one.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(Square::D4.north(), Square::D5);
-    /// ```
-    pub fn north(self) -> Self {
-        Square::unsafe_from(self as usize + File::N)
-    }
-
-    /// south returns the Square to the South of this one.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(Square::D4.south(), Square::D3);
-    /// ```
-    pub fn south(self) -> Self {
-        Square::unsafe_from(self as usize - File::N)
-    }
-
-    /// east returns the Square to the East of this one.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(Square::D4.east(), Square::E4);
-    /// ```
-    pub fn east(self) -> Self {
-        Square::unsafe_from(self as usize + 1)
-    }
-
-    /// west returns the Square to the West of this one.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(Square::D4.west(), Square::C4);
-    /// ```
-    pub fn west(self) -> Self {
-        Square::unsafe_from(self as usize - 1)
-    }
-
-    #[inline(always)]
-    pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
-        debug_assert!(number.to_u64().unwrap() < Self::N as u64);
-        unsafe { std::mem::transmute_copy(&number) }
+impl From<Square> for u8 {
+    fn from(value: Square) -> Self {
+        value as u8
     }
 }
 
@@ -148,7 +88,7 @@ impl FromStr for Square {
         let file = File::from_str(&s[..1])?; // Parse the File specification.
         let rank = Rank::from_str(&s[1..])?; // Parse the Rank specification.
 
-        Ok(Square::new(file, rank))
+        Ok(SquareType::new(file, rank))
     }
 }
 
@@ -176,7 +116,7 @@ impl fmt::Debug for Square {
 
 /// File represents a file on the Ataxx Board. Each vertical column of Squares
 /// on an Ataxx Board is known as a File. There are 7 of them in total.
-#[derive(Copy, Clone, PartialEq, PartialOrd, FromPrimitive, EnumIter)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, FromPrimitive, EnumIter)]
 // @formatter:off
 pub enum File {
     A,
@@ -189,14 +129,19 @@ pub enum File {
 }
 // @formatter:on
 
-impl File {
-    /// N represents the total number of Files in an Ataxx Board.
-    pub const N: usize = 7;
+impl RepresentableType<u8> for File {
+    const N: usize = 7;
+}
 
-    #[inline(always)]
-    pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
-        debug_assert!(number.to_u64().unwrap() < Self::N as u64);
-        unsafe { std::mem::transmute_copy(&number) }
+impl From<u8> for File {
+    fn from(value: u8) -> Self {
+        unsafe { mem::transmute_copy(&value) }
+    }
+}
+
+impl From<File> for u8 {
+    fn from(value: File) -> Self {
+        value as u8
     }
 }
 
@@ -234,7 +179,7 @@ impl FromStr for File {
             return Err(FileParseError::InvalidFileString);
         }
 
-        Ok(File::unsafe_from(ident - b'a'))
+        Ok(unsafe { File::unsafe_from(ident - b'a') })
     }
 }
 
@@ -261,7 +206,7 @@ impl fmt::Debug for File {
 
 /// Rank represents a rank on the Ataxx Board. Each horizontal row of Squares
 /// on an Ataxx Board is known as a Rank. There are 7 of them in total.
-#[derive(Copy, Clone, PartialEq, PartialOrd, FromPrimitive, EnumIter)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, FromPrimitive, EnumIter)]
 // @formatter:off
 pub enum Rank {
     First,
@@ -274,14 +219,19 @@ pub enum Rank {
 }
 // @formatter:on
 
-impl Rank {
-    /// N represents the total number of Ranks in an Ataxx Board.
-    pub const N: usize = 7;
+impl RepresentableType<u8> for Rank {
+    const N: usize = 7;
+}
 
-    #[inline(always)]
-    pub fn unsafe_from<T: num_traits::ToPrimitive>(number: T) -> Self {
-        debug_assert!(number.to_u64().unwrap() < Self::N as u64);
-        unsafe { std::mem::transmute_copy(&number) }
+impl From<u8> for Rank {
+    fn from(value: u8) -> Self {
+        unsafe { mem::transmute_copy(&value) }
+    }
+}
+
+impl From<Rank> for u8 {
+    fn from(value: Rank) -> Self {
+        value as u8
     }
 }
 
@@ -320,7 +270,7 @@ impl FromStr for Rank {
             return Err(RankParseError::InvalidRankString);
         }
 
-        Ok(Rank::unsafe_from(ident - b'1'))
+        Ok(unsafe { Rank::unsafe_from(ident - b'1') })
     }
 }
 

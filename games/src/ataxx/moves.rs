@@ -1,4 +1,5 @@
 use super::{BitBoard, Square};
+use crate::interface::RepresentableType;
 
 /// single returns the targets of a singular Move from the given Square.
 /// ```

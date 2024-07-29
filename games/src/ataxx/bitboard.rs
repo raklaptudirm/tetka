@@ -22,6 +22,7 @@ use num_derive::FromPrimitive;
 use strum::IntoEnumIterator;
 
 use crate::ataxx::{File, Rank, Square};
+use crate::interface::{BitBoardType, SquareType};
 
 /// BitBoard represents a set of squares as a 64 bit bitset.
 /// A BitBoard contains a Square if the 1 << square as usize
@@ -137,268 +138,13 @@ macro_rules! bitboard {
 #[allow(unused_imports)]
 pub use bitboard;
 
-impl BitBoard {
-    /// EMPTY is an empty BitBoard containing no Squares.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(BitBoard::EMPTY, bitboard! {
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    /// });
-    /// ```
-    pub const EMPTY: BitBoard = BitBoard(0);
+impl BitBoardType for BitBoard {
+    type Square = Square;
 
-    /// UNIVERSE is a filled BitBoard containing all Squares.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(BitBoard::UNIVERSE, bitboard! {
-    ///     X X X X X X X
-    ///     X X X X X X X
-    ///     X X X X X X X
-    ///     X X X X X X X
-    ///     X X X X X X X
-    ///     X X X X X X X
-    ///     X X X X X X X
-    /// });
-    /// ```
-    pub const UNIVERSE: BitBoard = BitBoard(0x1ffffffffffff);
-
-    /// is_disjoint checks if the two BitBoards are disjoint, i.e. don't have
-    /// any squares in common among themselves.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert!( BitBoard::UNIVERSE.is_disjoint(BitBoard::EMPTY));
-    /// assert!(!BitBoard::UNIVERSE.is_disjoint(BitBoard::UNIVERSE));
-    /// ```
-    #[inline(always)]
-    pub const fn is_disjoint(self, other: BitBoard) -> bool {
-        self.0 & other.0 == BitBoard::EMPTY.0
-    }
-
-    /// is_subset checks if the given BitBoard is a subset of the target, i.e.
-    /// all the squares in the target are also present in the given BitBoard.
-    /// ```
-    /// use std::sync::atomic::fence;
-    /// use ataxx::*;
-    ///
-    /// assert!( BitBoard::UNIVERSE.is_subset(BitBoard::EMPTY));
-    /// assert!(!BitBoard::EMPTY.is_subset(BitBoard::UNIVERSE));
-    /// ```
-    #[inline(always)]
-    pub const fn is_subset(self, other: BitBoard) -> bool {
-        other.0 & !self.0 == BitBoard::EMPTY.0
-    }
-
-    /// is_superset checks if the given BitBoard is a superset of the target, i.e.
-    /// all the squares in the given BitBoard are also present in the target.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert!(!BitBoard::UNIVERSE.is_superset(BitBoard::EMPTY));
-    /// assert!( BitBoard::EMPTY.is_superset(BitBoard::UNIVERSE));
-    /// ```
-    #[inline(always)]
-    pub const fn is_superset(self, other: BitBoard) -> bool {
-        other.is_subset(self)
-    }
-
-    /// is_empty checks if the target BitBoard is empty.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert!( BitBoard::EMPTY.is_empty());
-    /// assert!(!BitBoard::UNIVERSE.is_empty());
-    /// ```
-    #[inline(always)]
-    pub const fn is_empty(self) -> bool {
-        self.0 == BitBoard::EMPTY.0
-    }
-
-    /// cardinality returns the number of Squares present in the BitBoard.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(BitBoard::EMPTY.cardinality(), 0);
-    /// assert_eq!(BitBoard::UNIVERSE.cardinality(), Square::N);
-    /// ```
-    pub const fn cardinality(self) -> usize {
-        self.0.count_ones() as usize
-    }
-
-    /// contains checks if the BitBoard contains the given Square.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert!(!BitBoard::EMPTY.contains(Square::A1));
-    /// assert!( BitBoard::UNIVERSE.contains(Square::A1));
-    /// ```
-    #[inline(always)]
-    pub const fn contains(self, square: Square) -> bool {
-        self.0 & (1 << square as u64) != BitBoard::EMPTY.0
-    }
-
-    /// north returns a new BitBoard with all the squares shifted to the north.
-    /// ```
-    /// use ataxx::*;
-    /// assert_eq!(BitBoard::rank(Rank::First).north(), bitboard! {
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     X X X X X X X
-    ///     . . . . . . .
-    /// });
-    /// ```
-    pub const fn north(self) -> BitBoard {
-        BitBoard((self.0 << File::N) & BitBoard::UNIVERSE.0)
-    }
-
-    /// south returns a new BitBoard with all the squares shifted to the south.
-    /// ```
-    /// use ataxx::*;
-    /// assert_eq!(BitBoard::rank(Rank::Seventh).south(), bitboard! {
-    ///     . . . . . . .
-    ///     X X X X X X X
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    /// });
-    /// ```
-    pub const fn south(self) -> BitBoard {
-        BitBoard(self.0 >> File::N)
-    }
-
-    /// east returns a new BitBoard with all the squares shifted to the east.
-    /// ```
-    /// use ataxx::*;
-    /// assert_eq!(BitBoard::file(File::A).east(), bitboard! {
-    ///     . X . . . . .
-    ///     . X . . . . .
-    ///     . X . . . . .
-    ///     . X . . . . .
-    ///     . X . . . . .
-    ///     . X . . . . .
-    ///     . X . . . . .
-    /// });
-    /// ```
-    pub const fn east(self) -> BitBoard {
-        BitBoard((self.0 << 1) & (BitBoard::UNIVERSE.0 ^ BitBoard::file(File::A).0))
-    }
-
-    /// west returns a new BitBoard with all the squares shifted to the west.
-    /// ```
-    /// use ataxx::*;
-    /// assert_eq!(BitBoard::file(File::G).west(), bitboard! {
-    ///     . . . . . X .
-    ///     . . . . . X .
-    ///     . . . . . X .
-    ///     . . . . . X .
-    ///     . . . . . X .
-    ///     . . . . . X .
-    ///     . . . . . X .
-    /// });
-    /// ```
-    pub const fn west(self) -> BitBoard {
-        BitBoard((self.0 >> 1) & (BitBoard::UNIVERSE.0 ^ BitBoard::file(File::G).0))
-    }
-
-    /// insert puts the given Square into the BitBoard.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// let mut bb = BitBoard::EMPTY;
-    /// bb.insert(Square::A1);
-    /// assert!(bb.contains(Square::A1));
-    /// ```
-    #[inline(always)]
-    pub fn insert(&mut self, square: Square) {
-        self.0 |= BitBoard::from(square).0
-    }
-
-    /// remove removes the given Square from the BitBoard.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// let mut bb = BitBoard::UNIVERSE;
-    /// bb.remove(Square::A1);
-    /// assert!(!bb.contains(Square::A1));
-    /// ```
-    #[inline(always)]
-    pub fn remove(&mut self, square: Square) {
-        self.0 &= !BitBoard::from(square).0
-    }
-
-    /// pop_lsb pops the least significant Square from the BitBoard, i.e. it
-    /// removes the lsb from the BitBoard and returns its value.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// let mut bb = BitBoard::UNIVERSE;
-    /// assert_eq!(bb.pop_lsb(), Square::A1);
-    /// assert!(!bb.contains(Square::A1));
-    /// ```
-    #[inline(always)]
-    pub fn pop_lsb(&mut self) -> Square {
-        let lsb = self.lsb();
-        self.0 &= self.0 - 1;
-
-        lsb
-    }
-
-    /// pop_msb pops the most significant Square from the BitBoard i.e. it
-    /// removes the msb from the BitBoard and returns its value.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// let mut bb = BitBoard::UNIVERSE;
-    /// assert_eq!(bb.pop_msb(), Square::G7);
-    /// assert!(!bb.contains(Square::G7));
-    /// ```
-    #[inline(always)]
-    pub fn pop_msb(&mut self) -> Square {
-        let msb = self.msb();
-        self.0 ^= BitBoard::from(msb).0;
-
-        msb
-    }
-
-    /// get_lsb returns the least significant Square from the BitBoard.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(BitBoard::UNIVERSE.lsb(), Square::A1);
-    /// ```
-    #[inline(always)]
-    pub fn lsb(self) -> Square {
-        Square::unsafe_from(self.0.trailing_zeros())
-    }
-
-    /// get_msb returns the most significant Square from the BitBoard.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(BitBoard::UNIVERSE.msb(), Square::G7);
-    /// ```
-    #[inline(always)]
-    pub fn msb(self) -> Square {
-        Square::unsafe_from(63 - self.0.leading_zeros())
-    }
-
-    pub fn singles(self) -> BitBoard {
-        let bar = self | self.east() | self.west();
-        bar | bar.north() | bar.south()
-    }
+    const EMPTY: Self = BitBoard(0);
+    const UNIVERSE: Self = BitBoard(0x1ffffffffffff);
+    const FIRST_FILE: Self = BitBoard(0x0040810204081);
+    const FIRST_RANK: Self = BitBoard(0x000000000007f);
 }
 
 // Iterator trait allows BitBoard to be used in a for loop.
@@ -406,11 +152,19 @@ impl Iterator for BitBoard {
     type Item = Square;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.is_empty() {
-            None
-        } else {
-            Some(self.pop_lsb())
-        }
+        self.pop_lsb()
+    }
+}
+
+impl From<u64> for BitBoard {
+    fn from(num: u64) -> Self {
+        BitBoard(num)
+    }
+}
+
+impl From<BitBoard> for u64 {
+    fn from(value: BitBoard) -> Self {
+        value.0
     }
 }
 
@@ -481,101 +235,4 @@ impl fmt::Debug for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
-}
-
-impl BitBoard {
-    /// file returns a BitBoard containing all the squares from the given File.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(BitBoard::file(File::A), bitboard! {
-    ///     X . . . . . .
-    ///     X . . . . . .
-    ///     X . . . . . .
-    ///     X . . . . . .
-    ///     X . . . . . .
-    ///     X . . . . . .
-    ///     X . . . . . .
-    /// });
-    /// ```
-    pub const fn file(file: File) -> BitBoard {
-        BitBoard::FILE[file as usize]
-    }
-
-    /// rank returns a BitBoard containing all the squares from the given Rank.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(BitBoard::rank(Rank::First), bitboard! {
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     . . . . . . .
-    ///     X X X X X X X
-    /// });
-    /// ```
-    pub const fn rank(rank: Rank) -> BitBoard {
-        BitBoard::RANK[rank as usize]
-    }
-}
-
-impl From<BitBoard> for u64 {
-    fn from(value: BitBoard) -> Self {
-        value.0
-    }
-}
-
-// Private constants wrapped in methods for indexing.
-impl BitBoard {
-    const fn file_bbs() -> [BitBoard; File::N] {
-        let mut bb = 0u64;
-        let mut sq = 0;
-        while sq < Square::N {
-            if sq % File::N == 0 {
-                bb |= 1 << sq;
-            }
-
-            sq += 1;
-        }
-
-        let mut file_bbs = [BitBoard(0); File::N];
-
-        let mut file = 0;
-        while file < File::N {
-            file_bbs[file] = BitBoard(bb);
-            bb <<= 1;
-            file += 1;
-        }
-
-        file_bbs
-    }
-
-    const fn rank_bbs() -> [BitBoard; Rank::N] {
-        let mut bb = 0u64;
-        let mut sq = 0;
-        while sq < Square::N {
-            if sq / File::N == 0 {
-                bb |= 1 << sq;
-            }
-
-            sq += 1;
-        }
-
-        let mut rank_bbs = [BitBoard(0); Rank::N];
-
-        let mut rank = 0;
-        while rank < Rank::N {
-            rank_bbs[rank] = BitBoard(bb);
-            bb <<= File::N;
-            rank += 1;
-        }
-
-        rank_bbs
-    }
-
-    const FILE: [BitBoard; File::N] = BitBoard::file_bbs();
-
-    const RANK: [BitBoard; Rank::N] = BitBoard::rank_bbs();
 }

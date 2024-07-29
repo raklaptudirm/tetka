@@ -2,25 +2,25 @@ use std::fmt::Display;
 use std::ops::Index;
 use std::str::FromStr;
 
-use super::{BitBoard, ColoredPiece, Move, MoveList, MoveStore};
+use super::{BitBoardType, ColoredPieceType, MoveList, MoveStore, MoveType};
 
 /// Position is a generalized interface for board representations of a wide
 /// range of games. It can be used to create game-agnostic software. Tetka
 /// provides some of the popular board representations out of the box, but
 /// custom ones can also be implemented by the library user.
-pub trait Position:
+pub trait PositionType:
     FromStr // FEN parsing support.
     + Display // Basic ascii display support.
     + Index<Self::ColoredPiece> // Support for fetching various BitBoards.
-    + Index<<Self::ColoredPiece as ColoredPiece>::Piece>
-    + Index<<Self::ColoredPiece as ColoredPiece>::Color>
+    + Index<<Self::ColoredPiece as ColoredPieceType>::Piece>
+    + Index<<Self::ColoredPiece as ColoredPieceType>::Color>
 where
     <Self as Index<Self::ColoredPiece>>::Output: Into<Self::BitBoard>,
-    <Self as Index<<Self::ColoredPiece as ColoredPiece>::Piece>>::Output: Into<Self::BitBoard>,
-    <Self as Index<<Self::ColoredPiece as ColoredPiece>::Color>>::Output: Into<Self::BitBoard>,
-    Self::BitBoard: BitBoard,
-    Self::ColoredPiece: ColoredPiece,
-    Self::Move: Move,
+    <Self as Index<<Self::ColoredPiece as ColoredPieceType>::Piece>>::Output: Into<Self::BitBoard>,
+    <Self as Index<<Self::ColoredPiece as ColoredPieceType>::Color>>::Output: Into<Self::BitBoard>,
+    Self::BitBoard: BitBoardType,
+    Self::ColoredPiece: ColoredPieceType,
+    Self::Move: MoveType,
 {
     /// The type for the bitboards used by this board representation.
     type BitBoard;
@@ -35,16 +35,16 @@ where
 
     /// insert puts the given piece at the given square. The implementation is
     /// free to assume that the square is currently empty.
-    fn insert(&mut self, sq: <Self::BitBoard as BitBoard>::Square, piece: <Self::ColoredPiece as ColoredPiece>::Piece);
+    fn insert(&mut self, sq: <Self::BitBoard as BitBoardType>::Square, piece: Self::ColoredPiece);
     /// remove clears the given square, and returns the piece that was there.
-    fn remove(&mut self, sq: <Self::BitBoard as BitBoard>::Square) -> Option<<Self::ColoredPiece as ColoredPiece>::Piece>;
+    fn remove(&mut self, sq: <Self::BitBoard as BitBoardType>::Square) -> Option<Self::ColoredPiece>;
     /// at returns the piece that is in the given square.
-    fn at(&self, sq: <Self::BitBoard as BitBoard>::Square) -> Option<<Self::ColoredPiece as ColoredPiece>::Piece>;
+    fn at(&self, sq: <Self::BitBoard as BitBoardType>::Square) -> Option<Self::ColoredPiece>;
 
     // Game Result functions.
 
     /// winner returns the winning side in the current position.
-    fn winner(&self) -> Option<<Self::ColoredPiece as ColoredPiece>::Color>;
+    fn winner(&self) -> Option<<Self::ColoredPiece as ColoredPieceType>::Color>;
     /// is_game_over returns a boolean representing if the game is over.
     fn is_game_over(&self) -> bool { self.winner().is_some() }
 
@@ -52,7 +52,7 @@ where
     /// current position. The UPDATE_PERIPHERALS flag can be interpreted as
     /// toggling the non-essential updated which are done by this function, like
     /// the hash function for the position.
-    fn after_move<const UPDATE_PERIPHERALS: bool>(mov: Self::Move) -> Self;
+    fn after_move<const UPDATE_PERIPHERALS: bool>(&self, mov: Self::Move) -> Self;
 
     // Move Generation functions for the board representation.
 
