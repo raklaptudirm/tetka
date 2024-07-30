@@ -16,7 +16,6 @@ use std::fmt;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
-use num_traits::FromPrimitive;
 use strum::IntoEnumIterator;
 
 use crate::interface::PositionType;
@@ -330,20 +329,20 @@ impl FromStr for Position {
         // Spilt the position spec by the Ranks which are separated by '/'.
         let ranks: Vec<&str> = pos.split('/').collect();
 
-        let mut rank = Some(Rank::Seventh);
-        let mut file = Some(File::A);
+        let mut rank = Ok(Rank::Seventh);
+        let mut file = Ok(File::A);
 
         // Iterate over the Ranks in the string spec.
         for rank_data in ranks {
             // Rank pointer ran out, but data carried on.
-            if rank.is_none() {
+            if rank.is_err() {
                 return Err(PositionParseError::TooManyRanks);
             }
 
             // Iterate over the Square specs in the Rank spec.
             for data in rank_data.chars() {
                 // Check if a jump spec was too big and we landed on an invalid File.
-                if file.is_none() {
+                if file.is_err() {
                     return Err(PositionParseError::JumpTooLong);
                 }
                 let square = Square::new(file.unwrap(), rank.unwrap());
@@ -354,9 +353,8 @@ impl FromStr for Position {
 
                     // Numbers represent jump specs to jump over empty squares.
                     '1'..='8' => {
-                        file =
-                            File::from_usize(file.unwrap() as usize + data as usize - '1' as usize);
-                        if file.is_none() {
+                        file = File::try_from(file.unwrap() as u8 + data as u8 - b'1');
+                        if file.is_err() {
                             return Err(PositionParseError::JumpTooLong);
                         }
                     }
@@ -365,18 +363,18 @@ impl FromStr for Position {
                 }
 
                 // On to the next Square spec in the Rank spec.
-                file = File::from_usize(file.unwrap() as usize + 1);
+                file = File::try_from(file.unwrap() as u8 + 1);
             }
 
             // After rank data runs out, file pointer should be
             // at the last file, i.e, rank is completely filled.
-            if let Some(file) = file {
+            if let Ok(file) = file {
                 return Err(PositionParseError::FileDataIncomplete(file));
             }
 
             // Switch rank pointer and reset file pointer.
-            rank = Rank::from_usize((rank.unwrap() as usize).wrapping_sub(1));
-            file = Some(File::A);
+            rank = Rank::try_from((rank.unwrap() as u8).wrapping_sub(1));
+            file = Ok(File::A);
         }
 
         position.side_to_move = Color::from_str(stm)?;

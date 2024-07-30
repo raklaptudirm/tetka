@@ -14,45 +14,27 @@
 use std::str::FromStr;
 use std::{fmt, mem};
 
-use num_derive::FromPrimitive;
-use strum_macros::EnumIter;
 use thiserror::Error;
 
-use crate::interface::{RepresentableType, SquareType};
+use crate::interface::{representable_type, RepresentableType, SquareType};
 
-/// Square represents all the squares present on an Ataxx Board.
-/// The index of each Square is equal to `rank-index * 8 + file-index`.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, FromPrimitive, EnumIter)]
-#[rustfmt::skip]
-pub enum Square {
-    A1, B1, C1, D1, E1, F1, G1,
-    A2, B2, C2, D2, E2, F2, G2,
-    A3, B3, C3, D3, E3, F3, G3,
-    A4, B4, C4, D4, E4, F4, G4,
-    A5, B5, C5, D5, E5, F5, G5,
-    A6, B6, C6, D6, E6, F6, G6,
-    A7, B7, C7, D7, E7, F7, G7,
-}
+representable_type!(
+    /// Square represents all the squares present on an Ataxx Board.
+    /// The index of each Square is equal to `rank-index * 8 + file-index`.
+    enum Square: u8 {
+        A1 B1 C1 D1 E1 F1 G1
+        A2 B2 C2 D2 E2 F2 G2
+        A3 B3 C3 D3 E3 F3 G3
+        A4 B4 C4 D4 E4 F4 G4
+        A5 B5 C5 D5 E5 F5 G5
+        A6 B6 C6 D6 E6 F6 G6
+        A7 B7 C7 D7 E7 F7 G7
+    }
+);
 
 impl SquareType for Square {
     type File = File;
     type Rank = Rank;
-}
-
-impl RepresentableType<u8> for Square {
-    const N: usize = 7 * 7;
-}
-
-impl From<u8> for Square {
-    fn from(value: u8) -> Self {
-        unsafe { mem::transmute_copy(&value) }
-    }
-}
-
-impl From<Square> for u8 {
-    fn from(value: Square) -> Self {
-        value as u8
-    }
 }
 
 /// SquareParseError represents the various errors that can
@@ -106,44 +88,11 @@ impl fmt::Display for Square {
     }
 }
 
-impl fmt::Debug for Square {
-    /// Debug implements Debug formatting for a Square.
-    /// It uses `Square::Display` behind the hood.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
-/// File represents a file on the Ataxx Board. Each vertical column of Squares
-/// on an Ataxx Board is known as a File. There are 7 of them in total.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, FromPrimitive, EnumIter)]
-// @formatter:off
-pub enum File {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-}
-// @formatter:on
-
-impl RepresentableType<u8> for File {
-    const N: usize = 7;
-}
-
-impl From<u8> for File {
-    fn from(value: u8) -> Self {
-        unsafe { mem::transmute_copy(&value) }
-    }
-}
-
-impl From<File> for u8 {
-    fn from(value: File) -> Self {
-        value as u8
-    }
-}
+representable_type!(
+    /// File represents a file on the Ataxx Board. Each vertical column of Squares
+    /// on an Ataxx Board is known as a File. There are 7 of them in total.
+    enum File: u8 { A B C D E F G }
+);
 
 /// FileParseError represents the various errors that can
 /// be encountered while parsing a given string into a File.
@@ -196,44 +145,11 @@ impl fmt::Display for File {
     }
 }
 
-impl fmt::Debug for File {
-    /// Debug implements Debug formatting for a File.
-    /// It uses `File::Display` behind the hood.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
-/// Rank represents a rank on the Ataxx Board. Each horizontal row of Squares
-/// on an Ataxx Board is known as a Rank. There are 7 of them in total.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, FromPrimitive, EnumIter)]
-// @formatter:off
-pub enum Rank {
-    First,
-    Second,
-    Third,
-    Fourth,
-    Fifth,
-    Sixth,
-    Seventh,
-}
-// @formatter:on
-
-impl RepresentableType<u8> for Rank {
-    const N: usize = 7;
-}
-
-impl From<u8> for Rank {
-    fn from(value: u8) -> Self {
-        unsafe { mem::transmute_copy(&value) }
-    }
-}
-
-impl From<Rank> for u8 {
-    fn from(value: Rank) -> Self {
-        value as u8
-    }
-}
+representable_type!(
+    /// Rank represents a rank on the Ataxx Board. Each horizontal row of Squares
+    /// on an Ataxx Board is known as a Rank. There are 7 of them in total.
+    enum Rank: u8 { First Second Third Fourth Fifth Sixth Seventh }
+);
 
 /// RankParseError represents the various errors that can
 /// be encountered while parsing a given string into a Rank.
@@ -284,13 +200,5 @@ impl fmt::Display for Rank {
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", *self as usize + 1)
-    }
-}
-
-impl fmt::Debug for Rank {
-    /// Debug implements Debug formatting for a Rank.
-    /// It uses `Rank::Display` behind the hood.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
     }
 }

@@ -73,7 +73,8 @@ where
         Self::from(
             (self.into() << 1)
                 & (Self::UNIVERSE.into()
-                    ^ Self::file(<Self::Square as SquareType>::File::from(0)).into()),
+                    ^ unsafe { Self::file(<Self::Square as SquareType>::File::unsafe_from(0u8)) }
+                        .into()),
         )
     }
 
@@ -82,9 +83,11 @@ where
         Self::from(
             (self.into() >> 1)
                 & (Self::UNIVERSE.into()
-                    ^ Self::file(<Self::Square as SquareType>::File::from(
-                        <Self::Square as SquareType>::File::N as u8 - 1,
-                    ))
+                    ^ unsafe {
+                        Self::file(<Self::Square as SquareType>::File::unsafe_from(
+                            <Self::Square as SquareType>::File::N as u8 - 1,
+                        ))
+                    }
                     .into()),
         )
     }

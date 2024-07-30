@@ -12,41 +12,20 @@
 // limitations under the License.
 
 use std::fmt;
-use std::mem;
 use std::ops;
 use std::str::FromStr;
 
-use num_derive::FromPrimitive;
-
-use num_derive::ToPrimitive;
 use thiserror::Error;
 
 use crate::interface::ColoredPieceType;
 use crate::interface::RepresentableType;
+use crate::representable_type;
 
-/// Color represents all the possible colors that an ataxx piece can have,
-/// specifically, Black and White.
-#[derive(Copy, Clone, PartialEq, Eq, FromPrimitive, ToPrimitive)]
-pub enum Color {
-    Black,
-    White,
-}
-
-impl RepresentableType<u8> for Color {
-    const N: usize = 2;
-}
-
-impl From<u8> for Color {
-    fn from(value: u8) -> Self {
-        unsafe { mem::transmute_copy(&value) }
-    }
-}
-
-impl From<Color> for u8 {
-    fn from(value: Color) -> Self {
-        value as u8
-    }
-}
+representable_type!(
+    /// Color represents all the possible colors that an ataxx piece can have,
+    /// specifically, Black and White.
+    enum Color: u8 { Black White }
+);
 
 impl ops::Not for Color {
     type Output = Color;
@@ -81,14 +60,6 @@ impl fmt::Display for Color {
     }
 }
 
-impl fmt::Debug for Color {
-    /// Debug implements debug printing of a Color in a human-readable form. It uses
-    /// `Color::Display` under the hood to format and print the Color.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
 impl FromStr for Color {
     type Err = ColorParseError;
 
@@ -109,13 +80,10 @@ impl FromStr for Color {
     }
 }
 
-/// Piece represents all the possible ataxx pieces.
-#[derive(Copy, Clone, PartialEq, Eq, FromPrimitive, ToPrimitive)]
-pub enum ColoredPiece {
-    Black,
-    White,
-    Block,
-}
+representable_type!(
+    /// Piece represents all the possible ataxx pieces.
+    enum ColoredPiece: u8 { Black White Block }
+);
 
 impl ColoredPieceType for ColoredPiece {
     type Piece = Color;
@@ -135,22 +103,6 @@ impl ColoredPieceType for ColoredPiece {
             ColoredPiece::White => Color::White,
             _ => panic!("Piece::color() called on Piece::Block"),
         }
-    }
-}
-
-impl RepresentableType<u8> for ColoredPiece {
-    const N: usize = 3;
-}
-
-impl From<u8> for ColoredPiece {
-    fn from(value: u8) -> Self {
-        unsafe { mem::transmute_copy(&value) }
-    }
-}
-
-impl From<ColoredPiece> for u8 {
-    fn from(value: ColoredPiece) -> Self {
-        value as u8
     }
 }
 
@@ -196,13 +148,5 @@ impl fmt::Display for ColoredPiece {
                 Self::Block => "■",
             }
         )
-    }
-}
-
-impl fmt::Debug for ColoredPiece {
-    /// Debug implements debug printing of a Piece in a human-readable form. It uses
-    /// `Piece::Display` under the hood to format and print the Piece.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
     }
 }
