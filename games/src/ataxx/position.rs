@@ -14,7 +14,6 @@
 use std::cmp;
 use std::fmt;
 use std::num::ParseIntError;
-use std::ops::Index;
 use std::str::FromStr;
 
 use num_traits::FromPrimitive;
@@ -74,22 +73,34 @@ impl PositionType for Position {
 
     /// at returns the Piece of the piece present on the given Square.
     fn at(&self, sq: Square) -> Option<ColoredPiece> {
-        if self.piece_bb(ColoredPiece::Block).contains(sq) {
+        if self.colored_piece_bb(ColoredPiece::Block).contains(sq) {
             Some(ColoredPiece::Block)
-        } else if self.piece_bb(ColoredPiece::Black).contains(sq) {
+        } else if self.colored_piece_bb(ColoredPiece::Black).contains(sq) {
             Some(ColoredPiece::Black)
-        } else if self.piece_bb(ColoredPiece::White).contains(sq) {
+        } else if self.colored_piece_bb(ColoredPiece::White).contains(sq) {
             Some(ColoredPiece::White)
         } else {
             None
         }
     }
 
+    fn piece_bb(&self, piece: Color) -> BitBoard {
+        self.bitboards[piece as usize]
+    }
+
+    fn color_bb(&self, color: Color) -> BitBoard {
+        self.bitboards[color as usize]
+    }
+
+    fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
+        self.bitboards[piece as usize]
+    }
+
     /// is_game_over checks if the game is over, i.e. is a win or a draw.
     fn is_game_over(&self) -> bool {
-        let black = self.piece_bb(ColoredPiece::Black);
-        let white = self.piece_bb(ColoredPiece::White);
-        let block = self.piece_bb(ColoredPiece::Block);
+        let black = self.colored_piece_bb(ColoredPiece::Black);
+        let white = self.colored_piece_bb(ColoredPiece::White);
+        let block = self.colored_piece_bb(ColoredPiece::Block);
 
         self.half_move_clock >= 100 ||                           // Fifty-move rule
 			white | black | block == BitBoard::UNIVERSE ||       // All squares occupied
@@ -105,9 +116,9 @@ impl PositionType for Position {
             return None;
         }
 
-        let black = self.piece_bb(ColoredPiece::Black);
-        let white = self.piece_bb(ColoredPiece::White);
-        let block = self.piece_bb(ColoredPiece::Block);
+        let black = self.colored_piece_bb(ColoredPiece::Black);
+        let white = self.colored_piece_bb(ColoredPiece::White);
+        let block = self.colored_piece_bb(ColoredPiece::Block);
 
         if black == BitBoard::EMPTY {
             // Black lost all its pieces, White won.
@@ -186,7 +197,7 @@ impl PositionType for Position {
         };
 
         Position {
-            bitboards: [black, white, self.piece_bb(ColoredPiece::Block)],
+            bitboards: [black, white, self.colored_piece_bb(ColoredPiece::Block)],
             checksum: update_hash!(Hash::new(black, white, !stm)),
             side_to_move: !stm,
             ply_count: self.ply_count + 1,
@@ -208,7 +219,7 @@ impl PositionType for Position {
 
         let stm = self.color_bb(self.side_to_move);
         let xtm = self.color_bb(!self.side_to_move);
-        let gap = self.piece_bb(ColoredPiece::Block);
+        let gap = self.colored_piece_bb(ColoredPiece::Block);
 
         // Pieces can only move to unoccupied Squares.
         let allowed = !(stm | xtm | gap);
@@ -244,7 +255,7 @@ impl PositionType for Position {
 
         let stm = self.color_bb(self.side_to_move);
         let xtm = self.color_bb(!self.side_to_move);
-        let gap = self.piece_bb(ColoredPiece::Block);
+        let gap = self.colored_piece_bb(ColoredPiece::Block);
 
         // Pieces can only move to unoccupied Squares.
         let allowed = !(stm | xtm | gap);
@@ -266,35 +277,6 @@ impl PositionType for Position {
         }
 
         moves
-    }
-}
-
-impl Position {
-    /// bitboard returns the BitBoard associated to the piece configuration of the
-    /// given Piece. Only the Squares with a piece of the given Piece on them are
-    /// contained inside the returned BitBoard.
-    pub fn piece_bb(&self, piece: ColoredPiece) -> BitBoard {
-        self.bitboards[piece as usize]
-    }
-
-    pub fn color_bb(&self, color: Color) -> BitBoard {
-        self.bitboards[color as usize]
-    }
-}
-
-impl Index<Color> for Position {
-    type Output = BitBoard;
-
-    fn index(&self, index: Color) -> &Self::Output {
-        &self.bitboards[index as usize]
-    }
-}
-
-impl Index<ColoredPiece> for Position {
-    type Output = BitBoard;
-
-    fn index(&self, index: ColoredPiece) -> &Self::Output {
-        &self.bitboards[index as usize]
     }
 }
 
@@ -406,8 +388,8 @@ impl FromStr for Position {
 
         // Calculate the Hash value for the Position.
         position.checksum = Hash::new(
-            position.piece_bb(ColoredPiece::Black),
-            position.piece_bb(ColoredPiece::White),
+            position.colored_piece_bb(ColoredPiece::Black),
+            position.colored_piece_bb(ColoredPiece::White),
             position.side_to_move,
         );
 

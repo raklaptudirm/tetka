@@ -1,5 +1,4 @@
 use std::fmt::Display;
-use std::ops::Index;
 use std::str::FromStr;
 
 use super::{BitBoardType, ColoredPieceType, MoveList, MoveStore, MoveType};
@@ -8,16 +7,8 @@ use super::{BitBoardType, ColoredPieceType, MoveList, MoveStore, MoveType};
 /// range of games. It can be used to create game-agnostic software. Tetka
 /// provides some of the popular board representations out of the box, but
 /// custom ones can also be implemented by the library user.
-pub trait PositionType:
-    FromStr // FEN parsing support.
-    + Display // Basic ascii display support.
-    + Index<Self::ColoredPiece> // Support for fetching various BitBoards.
-    + Index<<Self::ColoredPiece as ColoredPieceType>::Piece>
-    + Index<<Self::ColoredPiece as ColoredPieceType>::Color>
+pub trait PositionType: FromStr + Display
 where
-    <Self as Index<Self::ColoredPiece>>::Output: Into<Self::BitBoard>,
-    <Self as Index<<Self::ColoredPiece as ColoredPieceType>::Piece>>::Output: Into<Self::BitBoard>,
-    <Self as Index<<Self::ColoredPiece as ColoredPieceType>::Color>>::Output: Into<Self::BitBoard>,
     Self::BitBoard: BitBoardType,
     Self::ColoredPiece: ColoredPieceType,
     Self::Move: MoveType,
@@ -37,16 +28,25 @@ where
     /// free to assume that the square is currently empty.
     fn insert(&mut self, sq: <Self::BitBoard as BitBoardType>::Square, piece: Self::ColoredPiece);
     /// remove clears the given square, and returns the piece that was there.
-    fn remove(&mut self, sq: <Self::BitBoard as BitBoardType>::Square) -> Option<Self::ColoredPiece>;
+    fn remove(
+        &mut self,
+        sq: <Self::BitBoard as BitBoardType>::Square,
+    ) -> Option<Self::ColoredPiece>;
     /// at returns the piece that is in the given square.
     fn at(&self, sq: <Self::BitBoard as BitBoardType>::Square) -> Option<Self::ColoredPiece>;
+
+    fn piece_bb(&self, piece: <Self::ColoredPiece as ColoredPieceType>::Piece) -> Self::BitBoard;
+    fn color_bb(&self, color: <Self::ColoredPiece as ColoredPieceType>::Color) -> Self::BitBoard;
+    fn colored_piece_bb(&self, piece: Self::ColoredPiece) -> Self::BitBoard;
 
     // Game Result functions.
 
     /// winner returns the winning side in the current position.
     fn winner(&self) -> Option<<Self::ColoredPiece as ColoredPieceType>::Color>;
     /// is_game_over returns a boolean representing if the game is over.
-    fn is_game_over(&self) -> bool { self.winner().is_some() }
+    fn is_game_over(&self) -> bool {
+        self.winner().is_some()
+    }
 
     /// after_move returns the position after playing the given move on the
     /// current position. The UPDATE_PERIPHERALS flag can be interpreted as
@@ -59,10 +59,10 @@ where
     /// generate_moves_into generates all the moves in the current position into
     /// the given move storage. The QUIET and NOISY flags toggles the generation
     /// of reversible and irreversible moves respectively.
-    fn generate_moves_into<
-        const QUIET: bool, const NOISY: bool,
-        T: MoveStore<Self::Move>
-    >(&self, movelist: &mut T);
+    fn generate_moves_into<const QUIET: bool, const NOISY: bool, T: MoveStore<Self::Move>>(
+        &self,
+        movelist: &mut T,
+    );
     /// generate_moves is similar to generate_moves_into, except that instead of
     /// taking some storage as input it stores into a custom stack-based type.
     fn generate_moves<const QUIET: bool, const NOISY: bool>(&self) -> MoveList<Self::Move> {

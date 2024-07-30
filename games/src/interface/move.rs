@@ -4,7 +4,7 @@ use std::str::FromStr;
 use arrayvec::ArrayVec;
 
 /// The Move trait should be implemented the move representation of a game.
-pub trait MoveType: FromStr + Display + From<u16> + Into<u16> {
+pub trait MoveType: FromStr + Display + From<u16> + Into<u16> + Copy {
     /// NULL represents the null or the 'do nothing' move.
     const NULL: Self;
     /// MAX_IN_GAME is a suitably high maximum for the number of move in a game.
