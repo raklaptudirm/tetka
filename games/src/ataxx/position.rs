@@ -224,7 +224,7 @@ impl PositionType for Position {
         // Pieces can only move to unoccupied Squares.
         let allowed = !(stm | xtm | gap);
 
-        for target in stm.singles() & allowed {
+        for target in moves::singles(stm) & allowed {
             movelist.push(Move::new_single(target));
         }
 
@@ -261,7 +261,7 @@ impl PositionType for Position {
         let allowed = !(stm | xtm | gap);
 
         // Count the number single moves in the Position.
-        let mut moves: usize = (stm.singles() & allowed).cardinality();
+        let mut moves: usize = (moves::singles(stm) & allowed).cardinality();
 
         for piece in stm {
             // There may be multiple jump moves to a single Square, so they need to be

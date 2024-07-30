@@ -142,11 +142,6 @@ where
         }
     }
 
-    fn singles(self) -> Self {
-        let bar: Self = ((self | self.east()).into() | self.west()).into();
-        ((bar | bar.north()).into() | bar.south()).into()
-    }
-
     /// file returns a Self containing all the squares from the given <Self::Square as Square>::File.
     fn file(file: <Self::Square as SquareType>::File) -> Self {
         Self::from(Self::FIRST_FILE.into() << file.into())

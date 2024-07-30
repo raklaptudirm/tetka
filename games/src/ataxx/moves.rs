@@ -1,5 +1,10 @@
 use super::{BitBoard, Square};
-use crate::interface::RepresentableType;
+use crate::interface::{BitBoardType, RepresentableType};
+
+pub fn singles(bb: BitBoard) -> BitBoard {
+    let bar = bb | bb.east() | bb.west();
+    bar | bar.north() | bar.south()
+}
 
 /// single returns the targets of a singular Move from the given Square.
 /// ```
