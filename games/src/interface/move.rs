@@ -25,7 +25,7 @@ pub trait MoveStore<M>: Default {
     /// len returns the number of [Moves](MoveType) stored in the MoveStore.
     fn len(&self) -> usize;
 
-    /// is_empty checks if no [Move]s are stored in the MoveStore.
+    /// is_empty checks if no [Moves](MoveType) are stored in the MoveStore.
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
