@@ -183,8 +183,9 @@ impl FromStr for ColoredPiece {
 }
 
 impl fmt::Display for ColoredPiece {
-    /// Implements displaying the Piece in a human-readable form. [`Piece::Black`]
-    /// is formatted as `x` and [`Piece::White`] is formatted as `o`.
+    /// Implements displaying the Piece in a human-readable form.
+    /// [`ColoredPiece::Black`] is formatted as `x` and [`ColoredPiece::White`]
+    /// is formatted as `o`.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

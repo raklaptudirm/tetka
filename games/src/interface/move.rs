@@ -16,12 +16,13 @@ pub trait MoveType: FromStr + Display + From<u16> + Into<u16> + Copy {
 
 /// MoveStore is a trait implemented by types which are able to store moves
 /// inside themselves and are thus usable in move-generation methods in
-/// [Position] like [`Position::generate_moves_into<T>`].
+/// [Position](super::PositionType) like
+/// [`generate_moves_into<T>`](super::PositionType::generate_moves_into<T>).
 pub trait MoveStore<M>: Default {
     /// push adds the given Move to the MoveStore.
     fn push(&mut self, m: M);
 
-    /// len returns the number of [Move]s stored in the MoveStore.
+    /// len returns the number of [Moves](MoveType) stored in the MoveStore.
     fn len(&self) -> usize;
 
     /// is_empty checks if no [Move]s are stored in the MoveStore.

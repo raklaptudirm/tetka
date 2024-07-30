@@ -39,11 +39,11 @@ use super::moves;
 /// necessary to manipulate such a snapshot.
 #[derive(Copy, Clone)]
 pub struct Position {
-    /// bitboards stores [BitBoard]s for the piece configuration of each [Piece].
+    /// bitboards stores [BitBoard]s for the piece configuration of each piece.
     pub bitboards: [BitBoard; ColoredPiece::N],
     /// checksum stores the semi-unique [struct@Hash] of the current Position.
     pub checksum: Hash,
-    /// side_to_move stores the [Piece] whose turn to move it currently is.
+    /// side_to_move stores the piece whose turn to move it currently is.
     pub side_to_move: Color,
     pub ply_count: u16,
     /// half-move clock stores the number of half-moves since the last irreversible
