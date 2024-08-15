@@ -51,6 +51,10 @@ impl<T: Send + 'static> Client<T> {
             let line = line.unwrap();
             let parts = line.split_whitespace().collect::<Vec<&str>>();
 
+            if parts.is_empty() {
+                continue 'reading;
+            }
+
             let (cmd_name, args) = (parts[0], &parts[1..]);
 
             // Try to find a Command with the given name.
