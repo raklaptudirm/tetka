@@ -16,8 +16,8 @@ use std::error::Error;
 use std::fmt;
 use std::thread;
 
-use crate::context::new_bundle;
-use crate::{flag, Bundle, Flag, GuardedBundledCtx};
+use crate::context::{new_bundle, GuardedBundledCtx};
+use crate::{flag, Bundle, Flag};
 
 /// Command represents a runnable UAI command. It contains all the metadata
 /// needed to parse and verify a Command request from the GUI for a Command, and
@@ -42,12 +42,16 @@ impl<T: Send + 'static> Command<T> {
     /// run runs the current Command with the given context and flag values.
     /// A new thread is spawned and detached to run parallel Commands. It returns
     /// the error returned by the Command's execution, or [`Ok`] for parallel.
-    pub fn run(&self, context: &GuardedBundledCtx<T>, flags: flag::Values) -> CmdResult {
+    pub fn run<const PARALLEL: bool>(
+        &self,
+        context: &GuardedBundledCtx<T>,
+        flags: flag::Values,
+    ) -> CmdResult {
         // Clone values which might be moved by spawning a new thread.
         let context = new_bundle(context, flags);
         let func = self.run_fn;
 
-        if self.parallel {
+        if PARALLEL && self.parallel {
             // If the Command is supposed to be run in parallel, spawn a new
             // thread and detach it for its execution. Syncing with the thread
             // should be handled by the user using the context.
