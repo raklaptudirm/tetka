@@ -90,3 +90,49 @@ impl Values {
         };
     }
 }
+
+impl Values {
+    /// parses converts the given arguments flags into a Flag [Values] value.
+    pub fn parse(value: &[&str], flag_set: &HashMap<String, Flag>) -> Result<Self, String> {
+        let mut flags: Self = Default::default();
+
+        let mut args = value;
+
+        // The arguments have the following format:
+        // { flag_name { flag_arg... } ... }
+        while !args.is_empty() {
+            let flag_name = args[0]; // The first arg has to be a flag name.
+            args = &args[1..]; // Remove the flag name from the rest of the args.
+
+            // Try to find a flag with the given name.
+            let flag = flag_set.get(flag_name);
+            if flag.is_none() {
+                // Flag not found, return error and continue.
+                return Err(format!("info error flag {} not found", flag_name));
+            }
+
+            // The Option<Flag> in not None, so it can be safely unwrapped.
+            let flag = flag.unwrap();
+
+            // Find the number of arguments the Flag expects.
+            let yank = flag.collect(args);
+
+            // Check if args has the required number of arguments.
+            if args.len() < yank {
+                return Err(format!(
+                    "info error flag {} expects {} arguments, found {}",
+                    flag_name,
+                    yank,
+                    args.len(),
+                ));
+            }
+
+            // Collect that number of arguments from the remaining args.
+            let collected = &args[..yank];
+            flags.insert(flag_name, *flag, collected);
+            args = &args[yank..];
+        }
+
+        Ok(flags)
+    }
+}

@@ -14,7 +14,7 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex};
 
-use crate::{context::Context, GuardedBundledCtx};
+use crate::context::{Context, GuardedBundledCtx};
 
 /// A BundledCtx bundles the user-provided context `C` and the inbuilt context
 /// into a single type of ease of mutex guarding for concurrency. It provides

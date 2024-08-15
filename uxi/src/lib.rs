@@ -9,7 +9,7 @@
 // without their parent namespace.
 pub use self::client::*;
 pub use self::cmd::*;
-pub use self::context::{Bundle, GuardedBundledCtx};
+pub use self::context::Bundle;
 pub use self::flag::Flag;
 pub use self::inbuilt::BundledCtx;
 pub use self::parameter::Parameter;
