@@ -53,6 +53,17 @@ impl Values {
     pub fn get_spin(&self, name: &str) -> Option<i64> {
         self.numbers.get(name).copied()
     }
+
+    pub fn get_string_rep(&self, name: &str) -> String {
+        self.checks.get(name).map(ToString::to_string).unwrap_or(
+            self.strings.get(name).map(ToString::to_string).unwrap_or(
+                self.strings
+                    .get(name)
+                    .map(ToString::to_string)
+                    .unwrap_or("<none>".to_string()),
+            ),
+        )
+    }
 }
 
 impl Values {

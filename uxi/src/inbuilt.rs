@@ -63,7 +63,7 @@ impl Default for Context {
 /// Commands which come pre-registered with the Client.
 pub mod commands {
     use crate::inbuilt::Context;
-    use crate::{error, quit, Command, Flag, Parameter, RunError};
+    use crate::{error, quit, Command, Flag, RunError};
 
     /// quit resolves into the quit Command which quits the Client.
     pub fn quit<C: Send>() -> Command<C> {
@@ -152,28 +152,12 @@ pub mod commands {
         Command::new(|ctx| {
             let ctx = ctx.lock();
 
-            for (name, option) in ctx.client.options.clone() {
-                print!("option name {} value ", name);
-                match option {
-                    Parameter::Check(_) => {
-                        println!(
-                            "{}",
-                            ctx.client.option_values.get_check(&name).unwrap()
-                        )
-                    }
-                    Parameter::String(_) | Parameter::Combo(_, _) => {
-                        println!(
-                            "{}",
-                            ctx.client.option_values.get_string(&name).unwrap()
-                        )
-                    }
-                    Parameter::Spin(_, _, _) => {
-                        println!(
-                            "{}",
-                            ctx.client.option_values.get_spin(&name).unwrap()
-                        )
-                    }
-                }
+            for name in ctx.client.options.keys() {
+                print!(
+                    "option name {} value {}",
+                    name,
+                    ctx.client.option_values.get_string_rep(name)
+                );
             }
 
             Ok(())
