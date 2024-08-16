@@ -32,17 +32,18 @@ pub struct Client<T: Send> {
     commands: HashMap<String, Command<T>>,
 }
 
-impl<T: Send + 'static> Client<T> {
+impl<T: Send + Default + 'static> Client<T> {
     /// start starts the Client so that it can now accept Commands from the GUI and
     /// send Commands back to the GUI as necessary. The Client will return only if
     /// it encounters a fatal error while running a command ([`RunError::Fatal`])
     /// or one of the commands asks the Client to quit ([`RunError::Quit`]).
-    pub fn start(&self, context: T) {
+    pub fn start(&self) {
         // The GUI sends commands to the stdin.
         let stdin = io::stdin();
 
         // Make the context thread safe to allow commands to run in parallel.
-        let context = new_guarded_ctx(context, self.initial_context.clone());
+        let context =
+            new_guarded_ctx(Default::default(), self.initial_context.clone());
 
         // Iterate over the lines in the input, since Commands for the GUI are
         // separated by newlines and we want to parse each Command separately.
@@ -62,12 +63,9 @@ impl<T: Send + 'static> Client<T> {
     /// run_cmd_strings allows running a Command independently from the main uxi
     /// loop. Since the commands are run in a standalone way, everything is run
     /// synchronously.
-    pub fn run_cmd_string(
-        &self,
-        str: String,
-        context: T,
-    ) -> Result<(), RunError> {
-        let context = new_guarded_ctx(context, self.initial_context.clone());
+    pub fn run_cmd_string(&self, str: String) -> Result<(), RunError> {
+        let context =
+            new_guarded_ctx(Default::default(), self.initial_context.clone());
         self.run_from_string::<false>(str, &context)
     }
 
