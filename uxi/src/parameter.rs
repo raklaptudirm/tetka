@@ -35,7 +35,7 @@ pub enum Parameter {
 }
 
 #[derive(Clone, Default)]
-pub struct Values {
+pub(crate) struct Values {
     checks: HashMap<String, bool>,
     strings: HashMap<String, String>,
     numbers: HashMap<String, i64>,

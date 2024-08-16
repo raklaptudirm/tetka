@@ -46,7 +46,7 @@ impl Flag {
 /// FlagValues stores the arguments provided to each Flag during a single
 /// invocation of the parent Command. It is provided to the run function.
 #[derive(Default)]
-pub struct Values {
+pub(crate) struct Values {
     bool_flags: HashSet<String>,
     sing_flags: HashMap<String, String>,
     arry_flags: HashMap<String, Vec<String>>,

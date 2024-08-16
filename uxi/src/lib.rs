@@ -7,11 +7,11 @@
 // Make the contents of the non-namespaced
 // modules public, so they can be accessed
 // without their parent namespace.
-pub use self::bundles::{Bundle, BundledCtx};
+pub use self::bundles::*;
 pub use self::client::*;
 pub use self::cmd::*;
-pub use self::flag::Flag;
-pub use self::parameter::Parameter;
+pub use self::flag::*;
+pub use self::parameter::*;
 
 // Non-namespaced modules.
 mod bundles;

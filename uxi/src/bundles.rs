@@ -42,7 +42,7 @@ pub struct Bundle<T: Send> {
 }
 
 /// new creates a new [`Bundle`] with the given [`BundledCtx`] and [`FlagValues`].
-pub fn new_bundle<T: Send>(
+pub(crate) fn new_bundle<T: Send>(
     context: &GuardedBundledCtx<T>,
     flags: flag::Values,
 ) -> Bundle<T> {
@@ -91,7 +91,7 @@ impl<T: Send> Bundle<T> {
 
 /// A GuardedBundledCtx is a [BundledCtx] with a reference-counted mutex guard,
 /// which allows it to be used by multiple Commands concurrently without issues.
-pub type GuardedBundledCtx<C> = Arc<Mutex<BundledCtx<C>>>;
+pub(crate) type GuardedBundledCtx<C> = Arc<Mutex<BundledCtx<C>>>;
 
 /// A BundledCtx bundles the user-provided context `C` and the inbuilt context
 /// into a single type of ease of mutex guarding for concurrency. It provides
@@ -103,7 +103,7 @@ pub struct BundledCtx<C: Send> {
 
 /// new_guarded_ctx created a new [GuardedBundledCtx] from the given user and
 /// client contexts.
-pub fn new_guarded_ctx<C: Send>(
+pub(crate) fn new_guarded_ctx<C: Send>(
     user: C,
     client: Context,
 ) -> GuardedBundledCtx<C> {
