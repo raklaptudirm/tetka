@@ -41,8 +41,11 @@ pub struct Bundle<T: Send> {
     flags: flag::Values,
 }
 
-/// new creates a new [`Bundle<T>`] with the given [`BundledCtx`] and [`FlagValues`].
-pub fn new_bundle<T: Send>(context: &GuardedBundledCtx<T>, flags: flag::Values) -> Bundle<T> {
+/// new creates a new [`Bundle`] with the given [`BundledCtx`] and [`FlagValues`].
+pub fn new_bundle<T: Send>(
+    context: &GuardedBundledCtx<T>,
+    flags: flag::Values,
+) -> Bundle<T> {
     let context = Arc::clone(context);
     Bundle { context, flags }
 }
@@ -100,7 +103,10 @@ pub struct BundledCtx<C: Send> {
 
 /// new_guarded_ctx created a new [GuardedBundledCtx] from the given user and
 /// client contexts.
-pub fn new_guarded_ctx<C: Send>(user: C, client: Context) -> GuardedBundledCtx<C> {
+pub fn new_guarded_ctx<C: Send>(
+    user: C,
+    client: Context,
+) -> GuardedBundledCtx<C> {
     Arc::new(Mutex::new(BundledCtx { user, client }))
 }
 

@@ -131,7 +131,9 @@ impl fmt::Display for Parameter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Parameter::Check(default) => write!(f, "check default {}", default),
-            Parameter::String(default) => write!(f, "string default {}", default),
+            Parameter::String(default) => {
+                write!(f, "string default {}", default)
+            }
             Parameter::Spin(default, min, max) => {
                 write!(f, "spin default {} min {} max {}", default, min, max)
             }

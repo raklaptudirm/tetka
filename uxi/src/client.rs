@@ -48,7 +48,9 @@ impl<T: Send + 'static> Client<T> {
         // separated by newlines and we want to parse each Command separately.
         'reading: for line in stdin.lock().lines() {
             // Run the Command and handle any errors.
-            if let Err(err) = self.run_from_string::<false>(line.unwrap(), &context) {
+            if let Err(err) =
+                self.run_from_string::<false>(line.unwrap(), &context)
+            {
                 println!("{}", err);
                 if err.should_quit() {
                     break 'reading;
@@ -60,7 +62,11 @@ impl<T: Send + 'static> Client<T> {
     /// run_cmd_strings allows running a Command independently from the main uxi
     /// loop. Since the commands are run in a standalone way, everything is run
     /// synchronously.
-    pub fn run_cmd_string(&self, str: String, context: T) -> Result<(), RunError> {
+    pub fn run_cmd_string(
+        &self,
+        str: String,
+        context: T,
+    ) -> Result<(), RunError> {
         let context = new_guarded_ctx(context, self.initial_context.clone());
         self.run_from_string::<false>(str, &context)
     }

@@ -156,13 +156,22 @@ pub mod commands {
                 print!("option name {} value ", name);
                 match option {
                     Parameter::Check(_) => {
-                        println!("{}", ctx.client.option_values.get_check(&name).unwrap())
+                        println!(
+                            "{}",
+                            ctx.client.option_values.get_check(&name).unwrap()
+                        )
                     }
                     Parameter::String(_) | Parameter::Combo(_, _) => {
-                        println!("{}", ctx.client.option_values.get_string(&name).unwrap())
+                        println!(
+                            "{}",
+                            ctx.client.option_values.get_string(&name).unwrap()
+                        )
                     }
                     Parameter::Spin(_, _, _) => {
-                        println!("{}", ctx.client.option_values.get_spin(&name).unwrap())
+                        println!(
+                            "{}",
+                            ctx.client.option_values.get_spin(&name).unwrap()
+                        )
                     }
                 }
             }

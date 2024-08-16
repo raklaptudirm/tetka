@@ -93,7 +93,10 @@ impl Values {
 
 impl Values {
     /// parses converts the given arguments flags into a Flag [Values] value.
-    pub fn parse(value: &[&str], flag_set: &HashMap<String, Flag>) -> Result<Self, String> {
+    pub fn parse(
+        value: &[&str],
+        flag_set: &HashMap<String, Flag>,
+    ) -> Result<Self, String> {
         let mut flags: Self = Default::default();
 
         let mut args = value;
