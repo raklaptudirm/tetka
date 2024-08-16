@@ -16,7 +16,7 @@ use std::error::Error;
 use std::fmt;
 use std::thread;
 
-use crate::context::{new_bundle, GuardedBundledCtx};
+use crate::bundles::{new_bundle, GuardedBundledCtx};
 use crate::{flag, Bundle, Flag};
 
 /// Command represents a runnable UAI command. It contains all the metadata

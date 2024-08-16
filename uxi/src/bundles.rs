@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::{flag, parameter, Parameter};
+use crate::flag;
+use crate::inbuilt::Context;
 
 // Dependency Graph of the Various Bundles:
 // Bundle(Encapsulation) >>--locking-->> MutexGuard<'_, BundledCtx>
@@ -139,50 +139,5 @@ impl<T: Send> Deref for BundledCtx<T> {
 impl<T: Send> DerefMut for BundledCtx<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.user
-    }
-}
-
-#[derive(Clone)]
-pub struct Context {
-    /// The name of this Client's engine.
-    pub engine: String,
-    /// The author of this Client's engine.
-    pub author: String,
-
-    /// The UXI protocol supported by this Client.
-    pub protocol: String,
-    /// The currently selected protocol. It can have the values "" for when no uxi
-    /// command has been received, "ugi", or <protocol> for those protocols.
-    pub selected_protocol: String,
-
-    /// Schema of the options supported by this Client.
-    pub options: HashMap<String, Parameter>,
-    /// Values of the options supported by this Client.
-    pub option_values: parameter::Values,
-}
-
-impl Context {
-    /// setoption sets the value of the given option to the given value.
-    pub fn setoption(&mut self, name: &str, value: &str) -> Result<(), String> {
-        let option = self.options.get(name);
-        if option.is_none() {
-            return Err(format!("unknown option \"{}\"", name));
-        }
-
-        self.option_values
-            .insert(name.to_owned(), option.unwrap(), value)
-    }
-}
-
-impl Default for Context {
-    fn default() -> Self {
-        Context {
-            engine: "Nameless v0.0.0".to_string(),
-            author: "Anonymous".to_string(),
-            protocol: "".to_string(),
-            selected_protocol: "".to_string(),
-            options: HashMap::new(),
-            option_values: Default::default(),
-        }
     }
 }

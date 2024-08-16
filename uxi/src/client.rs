@@ -15,7 +15,8 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::io::{self, BufRead};
 
-use crate::context::{new_guarded_ctx, Context, GuardedBundledCtx};
+use crate::bundles::{new_guarded_ctx, GuardedBundledCtx};
+use crate::inbuilt::Context;
 use crate::{error, flag, inbuilt, Command, Parameter, RunError};
 
 /// Client represents an UXI engine client. It can accept and parse commands
