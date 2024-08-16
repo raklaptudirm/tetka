@@ -31,18 +31,18 @@ use crate::{flag, Bundle, Flag};
 /// flag schema. See the documentation of [`Flag`] for more details.
 pub struct Command<T: Send> {
     /// run_fn is the function used to run this Command.
-    pub run_fn: RunFn<T>,
+    run_fn: RunFn<T>,
     /// flags is the schema of the Flags this Command accepts.
-    pub flags: HashMap<String, Flag>,
+    pub(crate) flags: HashMap<String, Flag>,
     /// parallel says whether to run this command in a separate thread.
-    pub parallel: bool,
+    parallel: bool,
 }
 
 impl<T: Send + 'static> Command<T> {
     /// run runs the current Command with the given context and flag values.
     /// A new thread is spawned and detached to run parallel Commands. It returns
     /// the error returned by the Command's execution, or [`Ok`] for parallel.
-    pub fn run<const PARALLEL: bool>(
+    pub(crate) fn run<const PARALLEL: bool>(
         &self,
         context: &GuardedBundledCtx<T>,
         flags: flag::Values,
