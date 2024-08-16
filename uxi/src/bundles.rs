@@ -41,13 +41,15 @@ pub struct Bundle<T: Send> {
     flags: flag::Values,
 }
 
-/// new creates a new [`Bundle`] with the given [`BundledCtx`] and [`FlagValues`].
-pub(crate) fn new_bundle<T: Send>(
-    context: &GuardedBundledCtx<T>,
-    flags: flag::Values,
-) -> Bundle<T> {
-    let context = Arc::clone(context);
-    Bundle { context, flags }
+impl<T: Send> Bundle<T> {
+    /// new creates a new [`Bundle`] with the given [`BundledCtx`] and [`FlagValues`].
+    pub(crate) fn new(
+        context: &GuardedBundledCtx<T>,
+        flags: flag::Values,
+    ) -> Bundle<T> {
+        let context = Arc::clone(context);
+        Bundle { context, flags }
+    }
 }
 
 impl<T: Send> Bundle<T> {
@@ -93,14 +95,6 @@ impl<T: Send> Bundle<T> {
 /// which allows it to be used by multiple Commands concurrently without issues.
 pub(crate) type GuardedBundledCtx<C> = Arc<Mutex<BundledCtx<C>>>;
 
-/// A BundledCtx bundles the user-provided context `C` and the inbuilt context
-/// into a single type of ease of mutex guarding for concurrency. It provides
-/// methods which allow Commands to retrieve information from those contexts.
-pub struct BundledCtx<C: Send> {
-    user: C,
-    pub(crate) client: Context,
-}
-
 /// new_guarded_ctx created a new [GuardedBundledCtx] from the given user and
 /// client contexts.
 pub(crate) fn new_guarded_ctx<C: Send>(
@@ -108,6 +102,14 @@ pub(crate) fn new_guarded_ctx<C: Send>(
     client: Context,
 ) -> GuardedBundledCtx<C> {
     Arc::new(Mutex::new(BundledCtx { user, client }))
+}
+
+/// A BundledCtx bundles the user-provided context `C` and the inbuilt context
+/// into a single type of ease of mutex guarding for concurrency. It provides
+/// methods which allow Commands to retrieve information from those contexts.
+pub struct BundledCtx<C: Send> {
+    user: C,
+    pub(crate) client: Context,
 }
 
 impl<T: Send> BundledCtx<T> {

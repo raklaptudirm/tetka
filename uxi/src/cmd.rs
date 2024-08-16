@@ -16,8 +16,8 @@ use std::error::Error;
 use std::fmt;
 use std::thread;
 
-use crate::bundles::{new_bundle, GuardedBundledCtx};
-use crate::{flag, Bundle, Flag};
+use crate::bundles::{Bundle, GuardedBundledCtx};
+use crate::{flag, Flag};
 
 /// Command represents a runnable UAI command. It contains all the metadata
 /// needed to parse and verify a Command request from the GUI for a Command, and
@@ -48,7 +48,7 @@ impl<T: Send + 'static> Command<T> {
         flags: flag::Values,
     ) -> CmdResult {
         // Clone values which might be moved by spawning a new thread.
-        let context = new_bundle(context, flags);
+        let context = Bundle::new(context, flags);
         let func = self.run_fn;
 
         if PARALLEL && self.parallel {
