@@ -16,6 +16,17 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::{flag, parameter, BundledCtx, Parameter};
 
+// Dependency Graph of the Various Bundles:
+// Bundle(Encapsulation) >>--locking-->> MutexGuard<'_, BundledCtx>
+//     /      \
+// Flag Values \
+//         GuardedBundledCtx(Mutex Guard/Shared) ?private?
+//                 \
+//             BundledCtx(Encapsulation)
+//                     /       \
+//                 C(User)      \
+//                         Context(Inbuilt)
+
 /// Bundle is a packet containing all the relevant context necessary for a
 /// [Command](crate::Command) invocation. It provides access to the values of
 /// the flags provided to the command during invocation, the user specific
@@ -74,7 +85,7 @@ impl<T: Send> Bundle<T> {
 
 /// A GuardedBundledCtx is a [BundledCtx] with a reference-counted mutex guard,
 /// which allows it to be used by multiple Commands concurrently without issues.
-pub type GuardedBundledCtx<T> = Arc<Mutex<BundledCtx<T>>>;
+pub type GuardedBundledCtx<C> = Arc<Mutex<BundledCtx<C>>>;
 
 #[derive(Clone)]
 pub struct Context {
