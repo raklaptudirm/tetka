@@ -17,16 +17,18 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use crate::flag;
 use crate::inbuilt::Context;
 
-// Dependency Graph of the Various Bundles:
-// Bundle(Encapsulation) >>--locking-->> MutexGuard<'_, BundledCtx>
-//     /      \
-// Flag Values \
-//         GuardedBundledCtx(Mutex Guard/Shared) ?private?
-//                 \
-//             BundledCtx(Encapsulation)
-//                     /       \
-//                 C(User)      \
-//                         Context(Inbuilt)
+// -------------------------------------------------- //
+// Dependency Graph of the Various Bundle structures: //
+// -------------------------------------------------- //
+// Bundle(Encapsulation) --locking--vv                //
+//      /                  MutexGuard<'_, BundledCtx> //
+// Flag Values            \                           //
+//         GuardedBundledCtx(Mutex-guard)             //
+//                          \                         //
+//               BundledCtx(Encapsulation)            //
+//                     /            \                 //
+//            User::Context   Inbuilt::Context        //
+// -------------------------------------------------- //
 
 /// Bundle is a packet containing all the relevant context necessary for a
 /// [Command](crate::Command) invocation. It provides access to the values of
