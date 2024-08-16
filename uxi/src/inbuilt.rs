@@ -11,65 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, Mutex};
-
-use crate::context::{Context, GuardedBundledCtx};
-
-/// A BundledCtx bundles the user-provided context `C` and the inbuilt context
-/// into a single type of ease of mutex guarding for concurrency. It provides
-/// methods which allow Commands to retrieve information from those contexts.
-pub struct BundledCtx<C: Send> {
-    user: C,
-    client: Context,
-}
-
-/// new_guarded_ctx created a new [GuardedBundledCtx] from the given user and
-/// client contexts.
-pub fn new_guarded_ctx<C: Send>(user: C, client: Context) -> GuardedBundledCtx<C> {
-    Arc::new(Mutex::new(BundledCtx { user, client }))
-}
-
-impl<T: Send> BundledCtx<T> {
-    /// protocol returns the last protocol command which was issues to the Client.
-    /// It returns "" if no protocol command has been issued to the engine till now.
-    pub fn protocol(&self) -> String {
-        self.client.selected_protocol.clone()
-    }
-
-    /// get_check_option returns the value of a check option with the given name.
-    pub fn get_check_option(&self, name: &str) -> Option<bool> {
-        self.client.option_values.get_check(name)
-    }
-
-    /// get_string_option returns the value of a combo/string option with the given
-    /// name.
-    pub fn get_string_option(&self, name: &str) -> Option<String> {
-        self.client.option_values.get_string(name)
-    }
-
-    /// get_spin_option returns the value of a spin option with the given name.
-    pub fn get_spin_option(&self, name: &str) -> Option<i64> {
-        self.client.option_values.get_spin(name)
-    }
-}
-
-impl<T: Send> Deref for BundledCtx<T> {
-    /// A BundledCtx can be dereferenced into the user's context and freely
-    /// manipulated. This is because both Deref and DerefMut are implemented.
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.user
-    }
-}
-
-impl<T: Send> DerefMut for BundledCtx<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.user
-    }
-}
-
 /// The commands module contains functions which resolve into one of the inbuilt
 /// Commands which come pre-registered with the Client.
 pub mod commands {
