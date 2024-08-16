@@ -182,7 +182,7 @@ impl<T: Send> Client<T> {
     /// game-agnostic protocol which is supported by all Clients by default.
     /// ```rust,ignore
     /// let client = Client::new()
-    ///     .protocol("uai");
+    ///     .protocol("uci");
     /// ```
     pub fn protocol(mut self, name: &str) -> Self {
         assert!(!self.commands.contains_key(name));
@@ -203,7 +203,7 @@ impl<T: Send> Client<T> {
     /// is also accessible by Commands through their [bundles](crate::BundledCtx).
     /// ```rust,ignore
     /// let client = Client::new()
-    ///     .protocol("uai");
+    ///     .engine("Stockfish2");
     /// ```
     pub fn engine(mut self, name: &str) -> Self {
         name.clone_into(&mut self.initial_context.engine);
@@ -216,7 +216,7 @@ impl<T: Send> Client<T> {
     /// is also accessible by Commands through their [bundles](crate::BundledCtx).
     /// ```rust,ignore
     /// let client = Client::new()
-    ///     .protocol("uai");
+    ///     .author("Rak Laptudirm");
     /// ```
     pub fn author(mut self, name: &str) -> Self {
         name.clone_into(&mut self.initial_context.author);
