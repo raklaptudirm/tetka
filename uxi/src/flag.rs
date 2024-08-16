@@ -111,7 +111,7 @@ impl Values {
             let flag = flag_set.get(flag_name);
             if flag.is_none() {
                 // Flag not found, return error and continue.
-                return Err(format!("info error flag {} not found", flag_name));
+                return Err(format!("flag {} not found", flag_name));
             }
 
             // The Option<Flag> in not None, so it can be safely unwrapped.
@@ -123,7 +123,7 @@ impl Values {
             // Check if args has the required number of arguments.
             if args.len() < yank {
                 return Err(format!(
-                    "info error flag {} expects {} arguments, found {}",
+                    "flag {} expects {} arguments, found {}",
                     flag_name,
                     yank,
                     args.len(),

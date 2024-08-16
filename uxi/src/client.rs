@@ -89,7 +89,7 @@ impl<T: Send + Default + 'static> Client<T> {
             Some(c) => c,
             None => {
                 // Command not found, return error and continue.
-                return error!("info error command {} not found", cmd_name);
+                return error!("command {} not found", cmd_name);
             }
         };
 
