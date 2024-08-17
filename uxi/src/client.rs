@@ -17,7 +17,7 @@ use std::io::{self, BufRead};
 
 use crate::bundles::{new_guarded_ctx, GuardedBundledCtx};
 use crate::inbuilt::Context;
-use crate::{error, flag, inbuilt, Command, Parameter, RunError};
+use crate::{error, flag, inbuilt, CmdResult, Command, Parameter, RunError};
 
 /// Client represents an UXI engine client. It can accept and parse commands
 /// from the GUI and send commands to the GUI though its input and output.
@@ -63,7 +63,7 @@ impl<C: Send + Default + 'static> Client<C> {
     /// run_cmd_strings allows running a Command independently from the main uxi
     /// loop. Since the commands are run in a standalone way, everything is run
     /// synchronously.
-    pub fn run_cmd_string(&self, str: String) -> Result<(), RunError> {
+    pub fn run_cmd_string(&self, str: String) -> CmdResult {
         let context =
             new_guarded_ctx(Default::default(), self.initial_context.clone());
         self.run_from_string::<false>(str, &context)
@@ -75,7 +75,7 @@ impl<C: Send + Default + 'static> Client<C> {
         &self,
         str: String,
         context: &GuardedBundledCtx<C>,
-    ) -> Result<(), RunError> {
+    ) -> CmdResult {
         let parts = str.split_whitespace().collect::<Vec<&str>>();
 
         if parts.is_empty() {
@@ -104,7 +104,7 @@ impl<C: Send + Default + 'static> Client<C> {
         cmd: &Command<C>,
         context: &GuardedBundledCtx<C>,
         args: &[&str],
-    ) -> Result<(), RunError> {
+    ) -> CmdResult {
         // Initialize an empty list of the Command's Flags' values.
         let flags = match flag::Values::parse(args, &cmd.flags) {
             Ok(values) => values,
