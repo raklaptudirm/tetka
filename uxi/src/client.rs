@@ -27,12 +27,12 @@ use crate::{error, flag, inbuilt, Command, Parameter, RunError};
 /// Options can also be added to a Client in the form of [parameters](Parameter).
 /// See the documentation of [`Parameter`] and the [`Client::option`] function
 /// for more details.
-pub struct Client<T: Send> {
+pub struct Client<C: Send> {
     initial_context: Context,
-    commands: HashMap<String, Command<T>>,
+    commands: HashMap<String, Command<C>>,
 }
 
-impl<T: Send + Default + 'static> Client<T> {
+impl<C: Send + Default + 'static> Client<C> {
     /// start starts the Client so that it can now accept Commands from the GUI and
     /// send Commands back to the GUI as necessary. The Client will return only if
     /// it encounters a fatal error while running a command ([`RunError::Fatal`])
@@ -74,7 +74,7 @@ impl<T: Send + Default + 'static> Client<T> {
     fn run_from_string<const PARALLEL: bool>(
         &self,
         str: String,
-        context: &GuardedBundledCtx<T>,
+        context: &GuardedBundledCtx<C>,
     ) -> Result<(), RunError> {
         let parts = str.split_whitespace().collect::<Vec<&str>>();
 
@@ -101,8 +101,8 @@ impl<T: Send + Default + 'static> Client<T> {
     /// started. Only use this function if you know what you are doing.
     fn run<const PARALLEL: bool>(
         &self,
-        cmd: &Command<T>,
-        context: &GuardedBundledCtx<T>,
+        cmd: &Command<C>,
+        context: &GuardedBundledCtx<C>,
         args: &[&str],
     ) -> Result<(), RunError> {
         // Initialize an empty list of the Command's Flags' values.
@@ -116,7 +116,7 @@ impl<T: Send + Default + 'static> Client<T> {
     }
 }
 
-impl<T: Send> Client<T> {
+impl<C: Send> Client<C> {
     /// new creates a new [Client]. The Client can be configured using builder
     /// methods like [`Client::command`], [`Client::option`], etc. These functions
     /// take the ownership of the given Client value and return that ownership
@@ -130,7 +130,7 @@ impl<T: Send> Client<T> {
     #[allow(clippy::new_without_default)]
     #[rustfmt::skip]
     pub fn new() -> Self {
-        Client::<T> {
+        Client::<C> {
             initial_context: Default::default(),
             commands: HashMap::from([
                 ("quit".to_owned(), inbuilt::commands::quit()),
@@ -150,7 +150,7 @@ impl<T: Send> Client<T> {
     ///     .command("go", go_cmd)
     ///     .command("perft", perft_cmd);
     /// ```
-    pub fn command(mut self, name: &str, cmd: Command<T>) -> Self {
+    pub fn command(mut self, name: &str, cmd: Command<C>) -> Self {
         self.commands.insert(name.to_string(), cmd);
         self
     }

@@ -22,29 +22,29 @@ use crate::{flag, Flag};
 /// Command represents a runnable UAI command. It contains all the metadata
 /// needed to parse and verify a Command request from the GUI for a Command, and
 /// to run that Command with the current context and the provided flag values.
-/// `T` is the context type of the Client, while `E` is the error type. `E`
+/// `C` is the context type of the Client, while `E` is the error type. `E`
 /// must implement the [`RunError`] trait to be usable.
 ///
 /// A Command's schema is composed of its name, run function, flag schema, and
 /// whether it is run in parallel. When a Command is invoked by a GUI, the
 /// invocation starts with its name followed by any number of flags from its
 /// flag schema. See the documentation of [`Flag`] for more details.
-pub struct Command<T: Send> {
+pub struct Command<C: Send> {
     /// run_fn is the function used to run this Command.
-    run_fn: RunFn<T>,
+    run_fn: RunFn<C>,
     /// flags is the schema of the Flags this Command accepts.
     pub(crate) flags: HashMap<String, Flag>,
     /// parallel says whether to run this command in a separate thread.
     parallel: bool,
 }
 
-impl<T: Send + 'static> Command<T> {
+impl<C: Send + 'static> Command<C> {
     /// run runs the current Command with the given context and flag values.
     /// A new thread is spawned and detached to run parallel Commands. It returns
     /// the error returned by the Command's execution, or [`Ok`] for parallel.
     pub(crate) fn run<const PARALLEL: bool>(
         &self,
-        context: &GuardedBundledCtx<T>,
+        context: &GuardedBundledCtx<C>,
         flags: flag::Values,
     ) -> CmdResult {
         // Clone values which might be moved by spawning a new thread.
@@ -64,7 +64,7 @@ impl<T: Send + 'static> Command<T> {
     }
 }
 
-impl<T: Send> Command<T> {
+impl<C: Send> Command<C> {
     /// new creates a new Command with the given run function.
     ///
     /// By default the flag schema is empty the the Command is run synchronously.
@@ -75,7 +75,7 @@ impl<T: Send> Command<T> {
     /// changes and then return it. These allows them to be chained in builder
     /// pattern style to create fully configured Commands.
     /// ```rust,ignore
-    /// let cmd: Command<T> =
+    /// let cmd: Command<C> =
     ///     // new invocation to create a Command. In this example, a very
     ///     // simple run function which returns `Ok(())` is provided.
     ///     Command::new(|_ctx, _flg| Ok(()))
@@ -87,7 +87,7 @@ impl<T: Send> Command<T> {
     ///         // Make the command run in parallel.
     ///         .parallelize(true);
     /// ```
-    pub fn new(func: RunFn<T>) -> Command<T> {
+    pub fn new(func: RunFn<C>) -> Command<C> {
         Command {
             run_fn: func,
             flags: Default::default(),
@@ -121,10 +121,10 @@ impl<T: Send> Command<T> {
     }
 }
 
-/// `RunFn<T>` represents the run function of a Command. This function is called
-/// with the context ([`Bundle<T>`]) and the flag values whenever the Command
+/// `RunFn<C>` represents the run function of a Command. This function is called
+/// with the context ([`Bundle<C>`]) and the flag values whenever the Command
 /// is invoked. It returns a `CmdResult` which is then handled by the Client.
-pub type RunFn<T> = fn(Bundle<T>) -> CmdResult;
+pub type RunFn<C> = fn(Bundle<C>) -> CmdResult;
 
 /// CmdResult is the [Result] type returned by a [run function](RunFn). It is
 /// a shorthand for `Result<(), RunError>`.

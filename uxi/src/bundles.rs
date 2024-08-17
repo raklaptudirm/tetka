@@ -36,29 +36,29 @@ use crate::inbuilt::Context;
 /// context, and the inbuilt context for use in a Command's run function. A
 /// given Bundle is tied to a Command's invocation and can't be used outside
 /// that context.
-pub struct Bundle<T: Send> {
-    context: GuardedBundledCtx<T>,
+pub struct Bundle<C: Send> {
+    context: GuardedBundledCtx<C>,
     flags: flag::Values,
 }
 
-impl<T: Send> Bundle<T> {
+impl<C: Send> Bundle<C> {
     /// new creates a new [`Bundle`] with the given [`BundledCtx`] and [`FlagValues`].
     pub(crate) fn new(
-        context: &GuardedBundledCtx<T>,
+        context: &GuardedBundledCtx<C>,
         flags: flag::Values,
-    ) -> Bundle<T> {
+    ) -> Bundle<C> {
         let context = Arc::clone(context);
         Bundle { context, flags }
     }
 }
 
-impl<T: Send> Bundle<T> {
+impl<C: Send> Bundle<C> {
     /// lock locks the internal mutex of the Bundle and returns a mutex-locked
     /// [`BundledCtx`] which allows access to the user provided and inbuilt contexts
     /// stored in the [Client](crate::Client). The mutex can be unlocked by calling
     /// the `drop` function on the variable storing the mutex guard.
     /// ```rust,ignore
-    /// // bundle: Bundle<T>
+    /// // bundle: Bundle<C>
     /// let context = bundle.lock(); // Locking the mutex.
     /// drop(context);               // Unlocking the mutex.
     /// ```
@@ -66,7 +66,7 @@ impl<T: Send> Bundle<T> {
     /// Remember to unlock the mutex when not in use in parallel or long-running
     /// Commands so that other Commands don't get stuck trying to access the
     /// contexts. In other cases, the mutex is unlocked when the Command ends.
-    pub fn lock(&self) -> MutexGuard<'_, BundledCtx<T>> {
+    pub fn lock(&self) -> MutexGuard<'_, BundledCtx<C>> {
         self.context.lock().unwrap()
     }
 
@@ -112,7 +112,7 @@ pub struct BundledCtx<C: Send> {
     pub(crate) client: Context,
 }
 
-impl<T: Send> BundledCtx<T> {
+impl<C: Send> BundledCtx<C> {
     /// protocol returns the last protocol command which was issues to the Client.
     /// It returns "" if no protocol command has been issued to the engine till now.
     pub fn protocol(&self) -> String {
@@ -136,17 +136,17 @@ impl<T: Send> BundledCtx<T> {
     }
 }
 
-impl<T: Send> Deref for BundledCtx<T> {
+impl<C: Send> Deref for BundledCtx<C> {
     /// A BundledCtx can be dereferenced into the user's context and freely
     /// manipulated. This is because both Deref and DerefMut are implemented.
-    type Target = T;
+    type Target = C;
 
     fn deref(&self) -> &Self::Target {
         &self.user
     }
 }
 
-impl<T: Send> DerefMut for BundledCtx<T> {
+impl<C: Send> DerefMut for BundledCtx<C> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.user
     }
