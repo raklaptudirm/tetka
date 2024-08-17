@@ -105,8 +105,9 @@ pub(crate) fn new_guarded_ctx<C: Send>(
 }
 
 /// A BundledCtx bundles the user-provided context `C` and the inbuilt context
-/// into a single type of ease of mutex guarding for concurrency. It provides
-/// methods which allow Commands to retrieve information from those contexts.
+/// into a single type for ease of mutex guarding for concurrency. It provides
+/// methods which allow Commands to retrieve information from those contexts. A
+/// [BundledCtx] can be obtained by locking a [Bundle] provided to a Command.
 pub struct BundledCtx<C: Send> {
     user: C,
     pub(crate) client: Context,

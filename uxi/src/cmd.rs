@@ -19,11 +19,11 @@ use std::thread;
 use crate::bundles::{Bundle, GuardedBundledCtx};
 use crate::{flag, Flag};
 
-/// Command represents a runnable UAI command. It contains all the metadata
+/// Command represents a runnable UXI command. It contains all the metadata
 /// needed to parse and verify a Command request from the GUI for a Command, and
 /// to run that Command with the current context and the provided flag values.
-/// `C` is the context type of the Client, while `E` is the error type. `E`
-/// must implement the [`RunError`] trait to be usable.
+/// The `C` type parameter is the type of the context used by Client to maintain
+/// its state across different command invocations and to synchronize threads.
 ///
 /// A Command's schema is composed of its name, run function, flag schema, and
 /// whether it is run in parallel. When a Command is invoked by a GUI, the
@@ -161,8 +161,12 @@ macro_rules! fatal {
     };
 }
 
-/// RunError is the error that is used internally in Client. All user errors
-/// must support conversion into this type so that the Client can handle them.
+/// RunError is the error type returned when running a Command. Its a powerful
+/// dynamic error type which supports conversion from most error types which
+/// allows for idiomatic error handling with rust language features like `?`.
+///
+/// A blanket implementation of [`Into<RunError>`] is available for all types
+/// which are [`Error`], [`Send`], [`Sync`], and `'static`.
 #[derive(Debug, Clone)]
 pub enum RunError {
     /// Quit directs the Client to quit itself, without reporting any errors.
