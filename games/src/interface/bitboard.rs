@@ -5,17 +5,16 @@ use super::{RepresentableType, SquareType};
 pub trait BitBoardType:
     Sized
     + Copy
-    + From<Self::Square>
-    + BitAnd<Self, Output = Self>
-    + BitOr<Self, Output = Self>
     + Eq
+    + From<Self::Square>
     + Not<Output = Self>
+    + Sub<usize, Output = Self>
     + Shr<usize, Output = Self>
     + Shl<usize, Output = Self>
+    + BitOr<Self, Output = Self>
+    + BitAnd<Self, Output = Self>
     + BitXor<Self, Output = Self>
-    + Sub<usize, Output = Self>
 where
-    <Self as BitOr<Self>>::Output: Into<Self>,
     Self::Square: SquareType,
 {
     type Square;
