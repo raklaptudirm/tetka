@@ -1,4 +1,4 @@
-use std::ops::BitOr;
+use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr, Sub};
 
 use super::{RepresentableType, SquareType};
 
@@ -6,10 +6,14 @@ pub trait BitBoardType:
     Sized
     + Copy
     + From<Self::Square>
-    + From<u64>
-    + Into<u64>
-    + BitOr<Self>
-    + From<<Self as BitOr<Self>>::Output>
+    + BitAnd<Self, Output = Self>
+    + BitOr<Self, Output = Self>
+    + Eq
+    + Not<Output = Self>
+    + Shr<usize, Output = Self>
+    + Shl<usize, Output = Self>
+    + BitXor<Self, Output = Self>
+    + Sub<usize, Output = Self>
 where
     <Self as BitOr<Self>>::Output: Into<Self>,
     Self::Square: SquareType,
@@ -28,13 +32,13 @@ where
     /// is_disjoint checks if the two Selfs are disjoint, i.e. don't have
     /// any squares in common among themselves.
     fn is_disjoint(self, other: Self) -> bool {
-        self.into() & other.into() == Self::EMPTY.into()
+        self & other == Self::EMPTY
     }
 
     /// is_subset checks if the given Self is a subset of the target, i.e.
     /// all the squares in the target are also present in the given Self.
     fn is_subset(self, other: Self) -> bool {
-        other.into() & !self.into() == Self::EMPTY.into()
+        other & !self == Self::EMPTY
     }
 
     /// is_superset checks if the given Self is a superset of the target, i.e.
@@ -45,71 +49,63 @@ where
 
     /// is_empty checks if the target Self is empty.
     fn is_empty(self) -> bool {
-        self.into() == Self::EMPTY.into()
+        self == Self::EMPTY
     }
 
     /// cardinality returns the number of Squares present in the Self.
     fn cardinality(self) -> usize {
-        self.into().count_ones() as usize
+        self.count_ones() as usize
     }
 
     /// contains checks if the Self contains the given Self::Square.
     fn contains(self, square: Self::Square) -> bool {
-        self.into() & (1 << square.into()) != Self::EMPTY.into()
+        self & Self::from(square) != Self::EMPTY
     }
 
     /// north returns a new Self with all the squares shifted to the north.
     fn north(self) -> Self {
-        Self::from((self.into() << <Self::Square as SquareType>::File::N) & Self::UNIVERSE.into())
+        (self << <Self::Square as SquareType>::File::N) & Self::UNIVERSE
     }
 
     /// south returns a new Self with all the squares shifted to the south.
     fn south(self) -> Self {
-        Self::from(self.into() >> <Self::Square as SquareType>::File::N)
+        self >> <Self::Square as SquareType>::File::N
     }
 
     /// east returns a new Self with all the squares shifted to the east.
     fn east(self) -> Self {
-        Self::from(
-            (self.into() << 1)
-                & (Self::UNIVERSE.into()
-                    ^ unsafe { Self::file(<Self::Square as SquareType>::File::unsafe_from(0u8)) }
-                        .into()),
-        )
+        (self << 1)
+            & (Self::UNIVERSE
+                ^ unsafe { Self::file(<Self::Square as SquareType>::File::unsafe_from(0u8)) })
     }
 
     /// west returns a new Self with all the squares shifted to the west.
     fn west(self) -> Self {
-        Self::from(
-            (self.into() >> 1)
-                & (Self::UNIVERSE.into()
-                    ^ unsafe {
-                        Self::file(<Self::Square as SquareType>::File::unsafe_from(
-                            <Self::Square as SquareType>::File::N as u8 - 1,
-                        ))
-                    }
-                    .into()),
-        )
+        (self >> 1)
+            & (Self::UNIVERSE
+                ^ unsafe {
+                    Self::file(<Self::Square as SquareType>::File::unsafe_from(
+                        <Self::Square as SquareType>::File::N as u8 - 1,
+                    ))
+                })
     }
 
     /// insert puts the given Self::Square into the Self.
     fn insert(&mut self, square: Self::Square) {
-        *self =
-            Self::from(<Self as std::convert::Into<u64>>::into(*self) | Self::from(square).into())
+        *self = *self | Self::from(square)
     }
 
     /// remove removes the given Self::Square from the Self.
     fn remove(&mut self, square: Self::Square) {
-        *self =
-            Self::from(<Self as std::convert::Into<u64>>::into(*self) & !Self::from(square).into())
+        *self = *self & !Self::from(square)
     }
 
     /// pop_lsb pops the least significant Self::Square from the Self, i.e. it
     /// removes the lsb from the Self and returns its value.
     fn pop_lsb(&mut self) -> Option<Self::Square> {
         let lsb = self.lsb();
-        let copy = <Self as Into<u64>>::into(*self);
-        *self = <Self as From<u64>>::from(copy & (copy - 1));
+        let copy = *self;
+        *self = copy & (copy - 1);
 
         lsb
     }
@@ -119,7 +115,7 @@ where
     fn pop_msb(&mut self) -> Option<Self::Square> {
         let msb = self.msb();
         if let Some(msb) = msb {
-            *self = Self::from(<Self as Into<u64>>::into(*self) ^ Self::from(msb).into());
+            *self = *self ^ Self::from(msb);
         }
 
         msb
@@ -127,7 +123,7 @@ where
 
     /// get_lsb returns the least significant Self::Square from the Self.
     fn lsb(self) -> Option<Self::Square> {
-        let sq = self.into().trailing_zeros() as usize;
+        let sq = self.trailing_zeros() as usize;
         if sq < Self::Square::N {
             Some(unsafe { Self::Square::unsafe_from(sq) })
         } else {
@@ -137,7 +133,7 @@ where
 
     /// get_msb returns the most significant Self::Square from the Self.
     fn msb(self) -> Option<Self::Square> {
-        let sq = 63 - self.into().leading_zeros() as usize;
+        let sq = 63 - self.leading_zeros() as usize;
         if sq < Self::Square::N {
             Some(unsafe { Self::Square::unsafe_from(sq) })
         } else {
@@ -147,14 +143,15 @@ where
 
     /// file returns a Self containing all the squares from the given <Self::Square as Square>::File.
     fn file(file: <Self::Square as SquareType>::File) -> Self {
-        Self::from(Self::FIRST_FILE.into() << file.into())
+        Self::FIRST_FILE << file.into() as usize
     }
 
     /// rank returns a Self containing all the squares from the given Self::Square::Rank.
     fn rank(rank: <Self::Square as SquareType>::Rank) -> Self {
-        Self::from(
-            Self::FIRST_RANK.into()
-                << (<Self::Square as SquareType>::File::N * rank.into() as usize),
-        )
+        Self::FIRST_RANK << (<Self::Square as SquareType>::File::N * rank.into() as usize)
     }
+
+    fn count_ones(&self) -> u32;
+    fn leading_zeros(&self) -> u32;
+    fn trailing_zeros(&self) -> u32;
 }

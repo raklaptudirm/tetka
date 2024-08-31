@@ -13,6 +13,7 @@
 
 use std::fmt;
 use std::ops;
+use std::ops::Sub;
 
 use derive_more::{
     BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, ShlAssign, Shr, ShrAssign,
@@ -145,6 +146,18 @@ impl BitBoardType for BitBoard {
     const UNIVERSE: Self = BitBoard(0x1ffffffffffff);
     const FIRST_FILE: Self = BitBoard(0x0040810204081);
     const FIRST_RANK: Self = BitBoard(0x000000000007f);
+
+    fn count_ones(&self) -> u32 {
+        self.0.count_ones()
+    }
+
+    fn trailing_zeros(&self) -> u32 {
+        self.0.trailing_zeros()
+    }
+
+    fn leading_zeros(&self) -> u32 {
+        self.0.leading_zeros()
+    }
 }
 
 // Iterator trait allows BitBoard to be used in a for loop.
@@ -153,6 +166,14 @@ impl Iterator for BitBoard {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.pop_lsb()
+    }
+}
+
+impl Sub<usize> for BitBoard {
+    type Output = Self;
+
+    fn sub(self, rhs: usize) -> Self::Output {
+        Self(self.0 - rhs as u64)
     }
 }
 
