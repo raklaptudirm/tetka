@@ -27,7 +27,7 @@ use thiserror::Error;
 #[rustfmt::skip]
 use crate::ataxx::{
     BitBoard, ColoredPiece, File, Hash, Move,
-    Rank, Square, Color
+    Rank, Square, Color, Piece
 };
 use crate::interface::MoveStore;
 
@@ -83,7 +83,7 @@ impl PositionType for Position {
         }
     }
 
-    fn piece_bb(&self, piece: Color) -> BitBoard {
+    fn piece_bb(&self, piece: Piece) -> BitBoard {
         self.bitboards[piece as usize]
     }
 

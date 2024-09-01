@@ -36,19 +36,23 @@ impl ops::Not for Color {
 }
 
 representable_type!(
+    /// Piece represents the types of pieces in ataxx, namely Piece and Block.
+    enum Piece: u8 { Piece "x", Block "■", }
+);
+
+representable_type!(
     /// Piece represents all the possible ataxx pieces.
     enum ColoredPiece: u8 { Black "x", White "o", Block "■", }
 );
 
 impl ColoredPieceType for ColoredPiece {
-    type Piece = Color;
+    type Piece = Piece;
     type Color = Color;
 
-    fn piece(self) -> Color {
+    fn piece(self) -> Piece {
         match self {
-            ColoredPiece::Black => Color::Black,
-            ColoredPiece::White => Color::White,
-            _ => panic!("Piece::color() called on Piece::Block"),
+            ColoredPiece::Black | ColoredPiece::White => Piece::Piece,
+            ColoredPiece::Block => Piece::Block,
         }
     }
 
