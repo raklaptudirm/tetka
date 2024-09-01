@@ -216,8 +216,8 @@ macro_rules! bitboard_type {
             }
         }
 
-        impl From<u64> for $name {
-            fn from(num: u64) -> Self {
+        impl From<$typ> for $name {
+            fn from(num: $typ) -> Self {
                 Self(num)
             }
         }
