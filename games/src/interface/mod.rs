@@ -43,15 +43,6 @@ pub enum TypeParseError {
 
 #[macro_export]
 macro_rules! representable_type {
-    ($(#[doc = $doc:expr])* super enum $type:tt: $base:tt { $($variant:tt)* }) => {
-        representable_type!(
-            $(#[doc = $doc])*
-            enum $type: $base {
-                $($variant stringify!($variant),)*
-            }
-        );
-    };
-
     ($(#[doc = $doc:expr])* enum $type:tt: $base:tt { $($variant:tt $repr:expr,)* }) => {
         $(#[doc = $doc])*
         #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
