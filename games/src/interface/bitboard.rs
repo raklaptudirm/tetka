@@ -154,3 +154,147 @@ where
     fn leading_zeros(&self) -> u32;
     fn trailing_zeros(&self) -> u32;
 }
+
+#[macro_export]
+macro_rules! bitboard_type {
+    ($name:tt : $typ:tt { Square = $sq:tt; Empty = $empty:expr; Universe = $universe:expr; FirstFile = $first_file:expr; FirstRank = $first_rank:expr; } ) => {
+        #[derive(
+            Copy,
+            Clone,
+            PartialEq,
+            Eq,
+            num_derive::FromPrimitive,
+            derive_more::BitOr,
+            derive_more::BitAnd,
+            derive_more::BitXor,
+            derive_more::Shl,
+            derive_more::Shr,
+            derive_more::BitAndAssign,
+            derive_more::BitOrAssign,
+            derive_more::BitXorAssign,
+            derive_more::ShlAssign,
+            derive_more::ShrAssign,
+            derive_more::SubAssign,
+        )]
+        pub struct $name(pub $typ);
+
+        impl $crate::interface::BitBoardType for $name {
+            type Square = $sq;
+
+            const EMPTY: Self = $empty;
+            const UNIVERSE: Self = $universe;
+            const FIRST_FILE: Self = $first_file;
+            const FIRST_RANK: Self = $first_rank;
+
+            fn count_ones(&self) -> u32 {
+                self.0.count_ones()
+            }
+
+            fn trailing_zeros(&self) -> u32 {
+                self.0.trailing_zeros()
+            }
+
+            fn leading_zeros(&self) -> u32 {
+                self.0.leading_zeros()
+            }
+        }
+
+        // Iterator trait allows $name to be used in a for loop.
+        impl Iterator for $name {
+            type Item = Square;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                $crate::interface::BitBoardType::pop_lsb(self)
+            }
+        }
+
+        impl std::ops::Sub<usize> for $name {
+            type Output = Self;
+
+            fn sub(self, rhs: usize) -> Self::Output {
+                Self(self.0 - rhs as u64)
+            }
+        }
+
+        impl From<u64> for $name {
+            fn from(num: u64) -> Self {
+                Self(num)
+            }
+        }
+
+        impl From<$name> for $typ {
+            fn from(value: $name) -> Self {
+                value.0
+            }
+        }
+
+        // From trait allows a square to be converted into it's $name representation.
+        impl From<Square> for $name {
+            fn from(square: Square) -> Self {
+                Self(1 << square as u64)
+            }
+        }
+
+        // Not(!)/Complement operation implementation for $name.
+        impl std::ops::Not for $name {
+            type Output = Self;
+
+            fn not(self) -> Self::Output {
+                // ! will set the unused bits so remove them with an &.
+                Self(!self.0) & <Self as $crate::interface::BitBoardType>::UNIVERSE
+            }
+        }
+
+        // Implementation of subtraction(removal) of BitBoards.
+        #[allow(clippy::suspicious_arithmetic_impl)]
+        impl std::ops::Sub for $name {
+            type Output = Self;
+
+            fn sub(self, rhs: Self) -> Self::Output {
+                self & !rhs
+            }
+        }
+
+        // Implementation of |(or)/set-union of a $name with a Square.
+        #[allow(clippy::suspicious_arithmetic_impl)]
+        impl std::ops::BitOr<Square> for $name {
+            type Output = Self;
+
+            fn bitor(self, rhs: Square) -> Self::Output {
+                self | Self::from(rhs)
+            }
+        }
+
+        // Implementation of -(subtraction)/set-removal of a $name with a Square.
+        impl std::ops::Sub<Square> for $name {
+            type Output = Self;
+
+            fn sub(self, rhs: Square) -> Self::Output {
+                self & !Self::from(rhs)
+            }
+        }
+
+        // Display a bitboard as ASCII art with 0s and 1s.
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let mut string_rep = String::from("");
+                for rank in <<$sq as $crate::interface::SquareType>::Rank as strum::IntoEnumIterator>::iter().rev() {
+                    for file in <<$sq as $crate::interface::SquareType>::File as strum::IntoEnumIterator>::iter() {
+                        let square = <$sq as $crate::interface::SquareType>::new(file, rank);
+                        string_rep += if $crate::interface::BitBoardType::contains(*self, square) { "1 " } else { "0 " };
+                    }
+
+                    string_rep += "\n";
+                }
+
+                write!(f, "{string_rep}")
+            }
+        }
+
+        impl std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self)
+            }
+        }
+    };
+}
