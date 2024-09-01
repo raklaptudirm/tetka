@@ -15,8 +15,6 @@ use std::fmt;
 use std::ops;
 use std::str::FromStr;
 
-use thiserror::Error;
-
 use crate::interface::ColoredPieceType;
 use crate::interface::RepresentableType;
 use crate::representable_type;
@@ -24,7 +22,7 @@ use crate::representable_type;
 representable_type!(
     /// Color represents all the possible colors that an ataxx piece can have,
     /// specifically, Black and White.
-    enum Color: u8 { Black White }
+    enum Color: u8 { Black "x", White "o", }
 );
 
 impl ops::Not for Color {
@@ -37,52 +35,9 @@ impl ops::Not for Color {
     }
 }
 
-#[derive(Error, Debug)]
-pub enum ColorParseError {
-    #[error("color identifier string has more than 1 character")]
-    StringTooLong,
-    #[error("unknown color identifier '{0}'")]
-    StringFormatInvalid(String),
-}
-
-impl fmt::Display for Color {
-    /// Implements displaying the Color in a human-readable form. [`Color::Black`]
-    /// is formatted as `x` and [`Color::White`] is formatted as `o`.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                Self::Black => "x",
-                Self::White => "o",
-            }
-        )
-    }
-}
-
-impl FromStr for Color {
-    type Err = ColorParseError;
-
-    /// from_str converts the given human-readable string into its corresponding
-    /// [`Color`]. `x`, `X`, `b`, `B` are parsed as [`Color::Black`] and `o`, `O`,
-    /// `w`, `W` are parsed as [`Color::White`]. Best practice is to use `x` and `o`
-    /// respectively for Black and White.
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 1 {
-            return Err(ColorParseError::StringTooLong);
-        }
-
-        match s {
-            "x" | "X" | "b" | "B" => Ok(Color::Black),
-            "o" | "O" | "w" | "W" => Ok(Color::White),
-            _ => Err(ColorParseError::StringFormatInvalid(s.to_string())),
-        }
-    }
-}
-
 representable_type!(
     /// Piece represents all the possible ataxx pieces.
-    enum ColoredPiece: u8 { Black White Block }
+    enum ColoredPiece: u8 { Black "x", White "o", Block "■", }
 );
 
 impl ColoredPieceType for ColoredPiece {
@@ -103,50 +58,5 @@ impl ColoredPieceType for ColoredPiece {
             ColoredPiece::White => Color::White,
             _ => panic!("Piece::color() called on Piece::Block"),
         }
-    }
-}
-
-#[derive(Error, Debug)]
-pub enum PieceParseError {
-    #[error("piece identifier string has more than 1 character")]
-    StringTooLong,
-    #[error("unknown piece identifier '{0}'")]
-    StringFormatInvalid(String),
-}
-
-impl FromStr for ColoredPiece {
-    type Err = ColorParseError;
-
-    /// from_str converts the given human-readable string into its corresponding
-    /// [`Color`]. `x`, `X`, `b`, `B` are parsed as [`Color::Black`] and `o`, `O`,
-    /// `w`, `W` are parsed as [`Color::White`]. Best practice is to use `x` and `o`
-    /// respectively for Black and White.
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 1 {
-            return Err(ColorParseError::StringTooLong);
-        }
-
-        match s {
-            "x" | "X" | "b" | "B" => Ok(ColoredPiece::Black),
-            "o" | "O" | "w" | "W" => Ok(ColoredPiece::White),
-            _ => Err(ColorParseError::StringFormatInvalid(s.to_string())),
-        }
-    }
-}
-
-impl fmt::Display for ColoredPiece {
-    /// Implements displaying the Piece in a human-readable form.
-    /// [`ColoredPiece::Black`] is formatted as `x` and [`ColoredPiece::White`]
-    /// is formatted as `o`.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                Self::Black => "x",
-                Self::White => "o",
-                Self::Block => "■",
-            }
-        )
     }
 }

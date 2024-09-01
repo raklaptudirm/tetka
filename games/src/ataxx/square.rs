@@ -14,14 +14,12 @@
 use std::fmt;
 use std::str::FromStr;
 
-use thiserror::Error;
-
 use crate::interface::{representable_type, RepresentableType, SquareType};
 
 representable_type!(
     /// Square represents all the squares present on an Ataxx Board.
     /// The index of each Square is equal to `rank-index * 8 + file-index`.
-    enum Square: u8 {
+    super enum Square: u8 {
         A1 B1 C1 D1 E1 F1 G1
         A2 B2 C2 D2 E2 F2 G2
         A3 B3 C3 D3 E3 F3 G3
@@ -37,168 +35,16 @@ impl SquareType for Square {
     type Rank = Rank;
 }
 
-/// SquareParseError represents the various errors that can
-/// be encountered while parsing a given string into a Square.
-#[derive(Error, Debug)]
-pub enum SquareParseError {
-    #[error("wrong square string size")]
-    WrongStringSize,
-    #[error("{0}")]
-    FileParseError(#[from] FileParseError),
-    #[error("{0}")]
-    RankParseError(#[from] RankParseError),
-}
-
-impl FromStr for Square {
-    type Err = SquareParseError;
-
-    /// from_str converts a square given in the format `<file><rank>` into
-    /// a Square. For the formats of `<file>` and `<rank>` see the documentation
-    /// for [`File::FromStr`](File::from_str) and [`Rank::FromStr`](Rank::from_str).
-    /// It is effectively the inverse operation of Display.
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// assert_eq!(Square::from_str("a1").unwrap(), Square::A1);
-    /// ```
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 2 {
-            return Err(SquareParseError::WrongStringSize);
-        }
-
-        let file = File::from_str(&s[..1])?; // Parse the File specification.
-        let rank = Rank::from_str(&s[1..])?; // Parse the Rank specification.
-
-        Ok(SquareType::new(file, rank))
-    }
-}
-
-impl fmt::Display for Square {
-    /// Display formats the given Square in the format `<file><rank>`. For how
-    /// `<file>` and `<rank>` are formatted, see the documentation for
-    /// `File::Display` and `Rank::Display` trait implementations.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(Square::A1.to_string(), "a1");
-    /// ```
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.file(), self.rank())
-    }
-}
-
 representable_type!(
     /// File represents a file on the Ataxx Board. Each vertical column of Squares
     /// on an Ataxx Board is known as a File. There are 7 of them in total.
-    enum File: u8 { A B C D E F G }
+    super enum File: u8 { A B C D E F G }
 );
-
-/// FileParseError represents the various errors that can
-/// be encountered while parsing a given string into a File.
-#[derive(Error, Debug)]
-pub enum FileParseError {
-    #[error("wrong string size for file identifier")]
-    WrongStringSize,
-    #[error("invalid file identifier string")]
-    InvalidFileString,
-}
-
-impl FromStr for File {
-    type Err = FileParseError;
-
-    /// from_str converts the given string representation of a File into its
-    /// corresponding File value. String representations are lowercase alphabets
-    ///  from a to g which represent Files from [`File::A`] to [`File::G`].
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// assert_eq!(File::from_str("a").unwrap(), File::A);
-    /// ```
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 1 {
-            return Err(FileParseError::WrongStringSize);
-        }
-
-        let ident = s.chars().next().unwrap() as u8;
-
-        // File identifier should be one of a..h.
-        if !(b'a'..=b'h').contains(&ident) {
-            return Err(FileParseError::InvalidFileString);
-        }
-
-        Ok(unsafe { File::unsafe_from(ident - b'a') })
-    }
-}
-
-impl fmt::Display for File {
-    /// Display formats the given File into a string. Specifically,
-    /// it formats the File into a lowercase letter representing that File.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(File::A.to_string(), "a");
-    /// ```
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", (b'a' + *self as u8) as char)
-    }
-}
 
 representable_type!(
     /// Rank represents a rank on the Ataxx Board. Each horizontal row of Squares
     /// on an Ataxx Board is known as a Rank. There are 7 of them in total.
-    enum Rank: u8 { First Second Third Fourth Fifth Sixth Seventh }
+    enum Rank: u8 {
+        First "1", Second "2", Third "3", Fourth "4", Fifth "5", Sixth "6", Seventh "7",
+    }
 );
-
-/// RankParseError represents the various errors that can
-/// be encountered while parsing a given string into a Rank.
-#[derive(Error, Debug)]
-pub enum RankParseError {
-    #[error("wrong string size for rank identifier")]
-    WrongStringSize,
-    #[error("invalid rank identifier string")]
-    InvalidRankString,
-}
-
-impl FromStr for Rank {
-    type Err = RankParseError;
-
-    /// from_str converts the given string representation of a Rank into its
-    /// corresponding Rank value. String representations are single digit long
-    /// decimal digits from 1 to 7 which represent the Ranks from
-    /// [`Rank::First`] to [`Rank::Seventh`] respectively.
-    /// ```
-    /// use ataxx::*;
-    /// use std::str::FromStr;
-    ///
-    /// assert_eq!(Rank::from_str("1").unwrap(), Rank::First);
-    /// ```
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 1 {
-            return Err(RankParseError::WrongStringSize);
-        }
-
-        let ident = s.chars().next().unwrap() as u8;
-
-        // Rank identifier should be one of 1..8.
-        if !(b'1'..=b'8').contains(&ident) {
-            return Err(RankParseError::InvalidRankString);
-        }
-
-        Ok(unsafe { Rank::unsafe_from(ident - b'1') })
-    }
-}
-
-impl fmt::Display for Rank {
-    /// Display formats the given Rank into a string. Specifically, it formats
-    /// the Rank into a numerical digit from 1-7 representing that Rank.
-    /// ```
-    /// use ataxx::*;
-    ///
-    /// assert_eq!(Rank::First.to_string(), "1");
-    /// ```
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", *self as usize + 1)
-    }
-}

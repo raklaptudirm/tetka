@@ -19,6 +19,7 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 
 use crate::interface::PositionType;
+use crate::interface::TypeParseError;
 use crate::interface::{BitBoardType, RepresentableType, SquareType};
 
 use thiserror::Error;
@@ -26,8 +27,7 @@ use thiserror::Error;
 #[rustfmt::skip]
 use crate::ataxx::{
     BitBoard, ColoredPiece, File, Hash, Move,
-    Rank, Square,
-    ColorParseError, Color
+    Rank, Square, Color
 };
 use crate::interface::MoveStore;
 
@@ -297,7 +297,7 @@ pub enum PositionParseError {
     TooManyRanks,
 
     #[error("parsing side to move: {0}")]
-    BadSideToMove(#[from] ColorParseError),
+    BadSideToMove(#[from] TypeParseError),
     #[error("parsing half-move clock: {0}")]
     BadHalfMoveClock(#[from] ParseIntError),
 }

@@ -1,6 +1,8 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
+use thiserror::Error;
+
 mod bitboard;
 mod r#move;
 mod piece;
@@ -33,9 +35,24 @@ pub trait RepresentableType<B: Into<usize>>:
     }
 }
 
+#[derive(Error, Debug)]
+pub enum TypeParseError {
+    #[error("invalid {0} identifier string")]
+    Error(String),
+}
+
 #[macro_export]
 macro_rules! representable_type {
-    ($(#[doc = $doc:expr])* enum $type:tt: $base:tt { $($variant:tt)* }) => {
+    ($(#[doc = $doc:expr])* super enum $type:tt: $base:tt { $($variant:tt)* }) => {
+        representable_type!(
+            $(#[doc = $doc])*
+            enum $type: $base {
+                $($variant stringify!($variant),)*
+            }
+        );
+    };
+
+    ($(#[doc = $doc:expr])* enum $type:tt: $base:tt { $($variant:tt $repr:expr,)* }) => {
         $(#[doc = $doc])*
         #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
         #[repr($base)]
@@ -58,6 +75,25 @@ macro_rules! representable_type {
                     Err(())
                 } else {
                     Ok(unsafe { Self::unsafe_from(value) })
+                }
+            }
+        }
+
+        impl FromStr for $type {
+            type Err = $crate::interface::TypeParseError;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                match s {
+                    $($repr => Ok(Self::$variant),)*
+                    _ => Err($crate::interface::TypeParseError::Error(stringify!($type).to_string())),
+                }
+            }
+        }
+
+        impl fmt::Display for $type {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+                match *self {
+                    $(Self::$variant => write!(f, "{}", $repr),)*
                 }
             }
         }
