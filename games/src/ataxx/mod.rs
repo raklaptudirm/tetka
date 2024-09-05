@@ -14,4 +14,5 @@ mod piece;
 mod position;
 mod square;
 
-pub mod moves;
+#[cfg(test)]
+mod tests;

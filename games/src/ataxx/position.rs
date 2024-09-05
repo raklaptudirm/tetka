@@ -31,8 +31,6 @@ use crate::ataxx::{
 };
 use crate::interface::MoveStore;
 
-use super::moves;
-
 /// Position represents the snapshot of an Ataxx Board, the state of the an
 /// ataxx game at a single point in time. It also provides all of the methods
 /// necessary to manipulate such a snapshot.
@@ -171,7 +169,7 @@ impl PositionType for Position {
         let stm_pieces = self.color_bb(stm);
         let xtm_pieces = self.color_bb(!stm);
 
-        let captured = moves::single(m.target()) & xtm_pieces;
+        let captured = BitBoard::single(m.target()) & xtm_pieces;
         let from_to = BitBoard::from(m.target()) | BitBoard::from(m.source());
 
         // Move the captured pieces from xtm to stm.
@@ -219,14 +217,14 @@ impl PositionType for Position {
         // Pieces can only move to unoccupied Squares.
         let allowed = !(stm | xtm | gap);
 
-        for target in moves::singles(stm) & allowed {
+        for target in BitBoard::singles(stm) & allowed {
             movelist.push(Move::new_single(target));
         }
 
         for piece in stm {
             // There may be multiple jump moves to a single Square, so they need to be
             // verified (& allowed) and serialized into the movelist immediately.
-            let double = moves::double(piece) & allowed;
+            let double = BitBoard::double(piece) & allowed;
             for target in double {
                 movelist.push(Move::new(piece, target));
             }
@@ -256,12 +254,12 @@ impl PositionType for Position {
         let allowed = !(stm | xtm | gap);
 
         // Count the number single moves in the Position.
-        let mut moves: usize = (moves::singles(stm) & allowed).cardinality();
+        let mut moves: usize = (BitBoard::singles(stm) & allowed).cardinality();
 
         for piece in stm {
             // There may be multiple jump moves to a single Square, so they need to be
             // verified (& allowed) and counted into the Position total immediately.
-            let double = moves::double(piece) & allowed;
+            let double = BitBoard::double(piece) & allowed;
             moves += double.cardinality();
         }
 
