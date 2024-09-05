@@ -79,3 +79,101 @@ where
         self.generate_moves::<QUIET, NOISY>().len()
     }
 }
+
+#[macro_export]
+macro_rules! position_type {
+    (struct $name:tt {
+        BitBoard = $bitboard_type:tt
+        ColoredPiece = $piece_type:tt
+        Move = $move_type:tt
+
+        self = $my_self:tt
+
+        fn winner $fn_winner:block
+        fn is_game_over $fn_is_game_over:block
+        fn after_move($arg_update:tt, $arg_move:tt) $fn_after_move:block
+        fn generate_moves_into($arg_quiet:tt, $arg_noisy:tt, $arg_typ:tt, $arg_movelist:tt)
+            $fn_generate_moves_into:block
+        fn count_moves($arg_quiet_2:tt, $arg_noisy_2:tt) $fn_count_moves:block
+    }) => {
+        #[derive(Copy, Clone)]
+        pub struct $name {
+            /// bitboards stores [BitBoard]s for the piece configuration of each piece.
+            pub bitboards: [BitBoard; $piece_type::N],
+            /// checksum stores the semi-unique [struct@Hash] of the current Position.
+            pub checksum: Hash,
+            /// side_to_move stores the piece whose turn to move it currently is.
+            pub side_to_move: <$piece_type as $crate::interface::ColoredPieceType>::Color,
+            pub ply_count: u16,
+            /// half-move clock stores the number of half-moves since the last irreversible
+            /// Move. It is used to adjudicate games using the 50-move/100-ply rule.
+            pub half_move_clock: u8,
+        }
+
+        impl $crate::interface::PositionType for $name {
+            type BitBoard = $bitboard_type;
+            type ColoredPiece = $piece_type;
+            type Move = $move_type;
+
+            /// put puts the given piece represented by its Piece on the given Square.
+            fn insert(
+                &mut self,
+                sq: <$bitboard_type as $crate::interface::BitBoardType>::Square,
+                piece: $piece_type,
+            ) {
+                self.bitboards[piece as usize].insert(sq);
+            }
+
+            fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
+                match self.at(sq) {
+                    Some(piece) => {
+                        self.bitboards[piece as usize].remove(sq);
+                        Some(piece)
+                    }
+                    None => None,
+                }
+            }
+
+            fn at(&self, sq: Square) -> Option<ColoredPiece> {
+                ColoredPiece::iter().find(|piece| self.colored_piece_bb(*piece).contains(sq))
+            }
+
+            fn piece_bb(
+                &self,
+                piece: <$piece_type as $crate::interface::ColoredPieceType>::Piece,
+            ) -> BitBoard {
+                self.bitboards[piece as usize]
+            }
+
+            fn color_bb(&self, color: Color) -> BitBoard {
+                self.bitboards[color as usize]
+            }
+
+            fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
+                self.bitboards[piece as usize]
+            }
+
+            fn winner(&$my_self) -> Option<Color>
+                $fn_winner
+
+            fn is_game_over(&$my_self) -> bool
+                $fn_is_game_over
+
+            fn after_move<const $arg_update: bool>(&$my_self, $arg_move: Move) -> Self
+                $fn_after_move
+
+            fn generate_moves_into<
+                const $arg_quiet: bool,
+                const $arg_noisy: bool,
+                $arg_typ: $crate::interface::MoveStore<Move>,
+            >(
+                &$my_self,
+                $arg_movelist: &mut $arg_typ,
+            )
+                $fn_generate_moves_into
+
+            fn count_moves<const $arg_quiet_2: bool, const $arg_noisy_2: bool>(&$my_self) -> usize
+                $fn_count_moves
+        }
+    };
+}
