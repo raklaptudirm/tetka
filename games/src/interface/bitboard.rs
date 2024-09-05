@@ -215,7 +215,7 @@ macro_rules! bitboard_type {
 
         // Iterator trait allows $name to be used in a for loop.
         impl Iterator for $name {
-            type Item = Square;
+            type Item = $sq;
 
             fn next(&mut self) -> Option<Self::Item> {
                 $crate::interface::BitBoardType::pop_lsb(self)
@@ -243,8 +243,8 @@ macro_rules! bitboard_type {
         }
 
         // From trait allows a square to be converted into it's $name representation.
-        impl From<Square> for $name {
-            fn from(square: Square) -> Self {
+        impl From<$sq> for $name {
+            fn from(square: $sq) -> Self {
                 Self(1 << square as u64)
             }
         }
@@ -269,21 +269,21 @@ macro_rules! bitboard_type {
             }
         }
 
-        // Implementation of |(or)/set-union of a $name with a Square.
+        // Implementation of |(or)/set-union of a $name with a $sq.
         #[allow(clippy::suspicious_arithmetic_impl)]
-        impl std::ops::BitOr<Square> for $name {
+        impl std::ops::BitOr<$sq> for $name {
             type Output = Self;
 
-            fn bitor(self, rhs: Square) -> Self::Output {
+            fn bitor(self, rhs: $sq) -> Self::Output {
                 self | Self::from(rhs)
             }
         }
 
-        // Implementation of -(subtraction)/set-removal of a $name with a Square.
-        impl std::ops::Sub<Square> for $name {
+        // Implementation of -(subtraction)/set-removal of a $name with a $sq.
+        impl std::ops::Sub<$sq> for $name {
             type Output = Self;
 
-            fn sub(self, rhs: Square) -> Self::Output {
+            fn sub(self, rhs: $sq) -> Self::Output {
                 self & !Self::from(rhs)
             }
         }
