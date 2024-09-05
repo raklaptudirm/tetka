@@ -11,191 +11,263 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::position_type;
-
-use thiserror::Error;
-
-use super::{BitBoard, Color, ColoredPiece, File, Hash, Move, Rank, Square};
-
+use std::cmp;
 use std::fmt;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
 use strum::IntoEnumIterator;
 
-use crate::interface::{BitBoardType, PositionType, RepresentableType, SquareType, TypeParseError};
+use crate::interface::PositionType;
+use crate::interface::TypeParseError;
+use crate::interface::{BitBoardType, RepresentableType, SquareType};
 
-position_type! {
-    struct Position {
-        BitBoard = BitBoard
-        ColoredPiece = ColoredPiece
-        Move = Move
+use thiserror::Error;
 
-        self = self
+#[rustfmt::skip]
+use crate::ataxx::{
+    BitBoard, ColoredPiece, File, Hash, Move,
+    Rank, Square, Color, Piece
+};
+use crate::interface::MoveStore;
 
-        fn winner {
-            if self.half_move_clock >= 100 {
-                // Draw by 50 move rule.
-                return None;
+use super::moves;
+
+/// Position represents the snapshot of an Ataxx Board, the state of the an
+/// ataxx game at a single point in time. It also provides all of the methods
+/// necessary to manipulate such a snapshot.
+#[derive(Copy, Clone)]
+pub struct Position {
+    /// bitboards stores [BitBoard]s for the piece configuration of each piece.
+    pub bitboards: [BitBoard; ColoredPiece::N],
+    /// checksum stores the semi-unique [struct@Hash] of the current Position.
+    pub checksum: Hash,
+    /// side_to_move stores the piece whose turn to move it currently is.
+    pub side_to_move: Color,
+    pub ply_count: u16,
+    /// half-move clock stores the number of half-moves since the last irreversible
+    /// Move. It is used to adjudicate games using the 50-move/100-ply rule.
+    pub half_move_clock: u8,
+}
+
+impl PositionType for Position {
+    type BitBoard = BitBoard;
+    type ColoredPiece = ColoredPiece;
+    type Move = Move;
+
+    /// put puts the given piece represented by its Piece on the given Square.
+    fn insert(&mut self, sq: Square, piece: ColoredPiece) {
+        self.bitboards[piece as usize].insert(sq);
+    }
+
+    fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
+        match self.at(sq) {
+            Some(piece) => {
+                self.bitboards[piece as usize].remove(sq);
+                Some(piece)
             }
+            None => None,
+        }
+    }
 
-            let black = self.colored_piece_bb(ColoredPiece::Black);
-            let white = self.colored_piece_bb(ColoredPiece::White);
-            let block = self.colored_piece_bb(ColoredPiece::Block);
+    /// at returns the Piece of the piece present on the given Square.
+    fn at(&self, sq: Square) -> Option<ColoredPiece> {
+        ColoredPiece::iter().find(|piece| self.colored_piece_bb(*piece).contains(sq))
+    }
 
-            if black == BitBoard::EMPTY {
-                // Black lost all its pieces, White won.
-                return Some(Color::White);
-            } else if white == BitBoard::EMPTY {
-                // White lost all its pieces, Black won.
-                return Some(Color::Black);
-            }
+    fn piece_bb(&self, piece: Piece) -> BitBoard {
+        self.bitboards[piece as usize]
+    }
 
-            debug_assert!(black | white | block == BitBoard::UNIVERSE);
+    fn color_bb(&self, color: Color) -> BitBoard {
+        self.bitboards[color as usize]
+    }
 
-            let black_n = black.cardinality();
-            let white_n = white.cardinality();
+    fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
+        self.bitboards[piece as usize]
+    }
 
-            match black_n.cmp(&white_n) {
-                std::cmp::Ordering::Less => Some(Color::White),
-                std::cmp::Ordering::Greater => Some(Color::Black),
-                // Though there can't be an equal number of black and white pieces
-                // on an empty ataxx board, it is possible with an odd number of
-                // blocker pieces.
-                std::cmp::Ordering::Equal => None,
-            }
+    /// is_game_over checks if the game is over, i.e. is a win or a draw.
+    fn is_game_over(&self) -> bool {
+        let black = self.colored_piece_bb(ColoredPiece::Black);
+        let white = self.colored_piece_bb(ColoredPiece::White);
+        let block = self.colored_piece_bb(ColoredPiece::Block);
+
+        self.half_move_clock >= 100 ||                           // Fifty-move rule
+			white | black | block == BitBoard::UNIVERSE ||       // All squares occupied
+			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
+    }
+
+    /// winner returns the Piece which has won the game. It returns [`None`]
+    /// if the game is a draw. If [`Position::is_game_over`] is false, then the
+    /// behavior of this function is undefined.
+    fn winner(&self) -> Option<Color> {
+        if self.half_move_clock >= 100 {
+            // Draw by 50 move rule.
+            return None;
         }
 
-        fn is_game_over {
-            let black = self.colored_piece_bb(ColoredPiece::Black);
-            let white = self.colored_piece_bb(ColoredPiece::White);
-            let block = self.colored_piece_bb(ColoredPiece::Block);
+        let black = self.colored_piece_bb(ColoredPiece::Black);
+        let white = self.colored_piece_bb(ColoredPiece::White);
+        let block = self.colored_piece_bb(ColoredPiece::Block);
 
-            self.half_move_clock >= 100 ||                           // Fifty-move rule
-                white | black | block == BitBoard::UNIVERSE ||       // All squares occupied
-                white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
+        if black == BitBoard::EMPTY {
+            // Black lost all its pieces, White won.
+            return Some(Color::White);
+        } else if white == BitBoard::EMPTY {
+            // White lost all its pieces, Black won.
+            return Some(Color::Black);
         }
 
-        fn after_move(UPDATE_HASH, m) {
-            let stm = self.side_to_move;
+        debug_assert!(black | white | block == BitBoard::UNIVERSE);
 
-            macro_rules! update_hash {
-                ($e:expr) => {
-                    if UPDATE_HASH {
-                        $e
-                    } else {
-                        Hash::ZERO
-                    }
-                };
-            }
+        // All the squares are occupied by pieces. Victory is decided by
+        // which Piece has the most number of pieces on the Board.
 
-            // A pass move is a do nothing move; just change the side to move.
-            if m == Move::PASS {
-                return Position {
-                    bitboards: self.bitboards,
-                    checksum: update_hash!(!self.checksum),
-                    side_to_move: !self.side_to_move,
-                    ply_count: self.ply_count + 1,
-                    half_move_clock: self.half_move_clock + 1,
-                };
-            }
+        let black_n = black.cardinality();
+        let white_n = white.cardinality();
 
-            let stm_pieces = self.color_bb(stm);
-            let xtm_pieces = self.color_bb(!stm);
-
-            let captured = crate::ataxx::moves::single(m.target()) & xtm_pieces;
-            let from_to = BitBoard::from(m.target()) | BitBoard::from(m.source());
-
-            // Move the captured pieces from xtm to stm.
-            let new_xtm = xtm_pieces ^ captured;
-            let new_stm = stm_pieces ^ captured ^ from_to;
-
-            // Reset half move clock on a singular move.
-            let half_move_clock = if m.is_single() {
-                0
-            } else {
-                self.half_move_clock + 1
-            };
-
-            let (white, black) = if stm == Color::White {
-                (new_stm, new_xtm)
-            } else {
-                (new_xtm, new_stm)
-            };
-
-            Position {
-                bitboards: [black, white, self.colored_piece_bb(ColoredPiece::Block)],
-                checksum: update_hash!(Hash::new(black, white, !stm)),
-                side_to_move: !stm,
-                ply_count: self.ply_count + 1,
-                half_move_clock,
-            }
+        match black_n.cmp(&white_n) {
+            cmp::Ordering::Less => Some(Color::White),
+            cmp::Ordering::Greater => Some(Color::Black),
+            // Though there can't be an equal number of black and white pieces
+            // on an empty ataxx board, it is possible with an odd number of
+            // blocker pieces.
+            cmp::Ordering::Equal => None,
         }
+    }
 
-        fn generate_moves_into(QUIET, NOISY, T, movelist) {
-            if self.is_game_over() {
-                // Game is over, so don't generate any moves.
-                return;
-            }
+    /// after_move returns a new Position which occurs when the given Move is
+    /// played on the current Position. Its behavior is undefined if the given
+    /// Move is illegal.
+    fn after_move<const UPDATE_HASH: bool>(&self, m: Move) -> Position {
+        let stm = self.side_to_move;
 
-            let stm = self.color_bb(self.side_to_move);
-            let xtm = self.color_bb(!self.side_to_move);
-            let gap = self.colored_piece_bb(ColoredPiece::Block);
-
-            // Pieces can only move to unoccupied Squares.
-            let allowed = !(stm | xtm | gap);
-
-            for target in crate::ataxx::moves::singles(stm) & allowed {
-                movelist.push(Move::new_single(target));
-            }
-
-            for piece in stm {
-                // There may be multiple jump moves to a single Square, so they need to be
-                // verified (& allowed) and serialized into the movelist immediately.
-                let double = crate::ataxx::moves::double(piece) & allowed;
-                for target in double {
-                    movelist.push(Move::new(piece, target));
+        macro_rules! update_hash {
+            ($e:expr) => {
+                if UPDATE_HASH {
+                    $e
+                } else {
+                    Hash::ZERO
                 }
-            }
+            };
+        }
 
-            // If there are no legal moves possible on the Position and the game isn't
-            // over, a pass move is the only move possible to be played.
-            if movelist.len() == 0 {
-                movelist.push(Move::PASS);
+        // A pass move is a do nothing move; just change the side to move.
+        if m == Move::PASS {
+            return Position {
+                bitboards: self.bitboards,
+                checksum: update_hash!(!self.checksum),
+                side_to_move: !self.side_to_move,
+                ply_count: self.ply_count + 1,
+                half_move_clock: self.half_move_clock + 1,
+            };
+        }
+
+        let stm_pieces = self.color_bb(stm);
+        let xtm_pieces = self.color_bb(!stm);
+
+        let captured = moves::single(m.target()) & xtm_pieces;
+        let from_to = BitBoard::from(m.target()) | BitBoard::from(m.source());
+
+        // Move the captured pieces from xtm to stm.
+        let new_xtm = xtm_pieces ^ captured;
+        let new_stm = stm_pieces ^ captured ^ from_to;
+
+        // Reset half move clock on a singular move.
+        let half_move_clock = if m.is_single() {
+            0
+        } else {
+            self.half_move_clock + 1
+        };
+
+        let (white, black) = if stm == Color::White {
+            (new_stm, new_xtm)
+        } else {
+            (new_xtm, new_stm)
+        };
+
+        Position {
+            bitboards: [black, white, self.colored_piece_bb(ColoredPiece::Block)],
+            checksum: update_hash!(Hash::new(black, white, !stm)),
+            side_to_move: !stm,
+            ply_count: self.ply_count + 1,
+            half_move_clock,
+        }
+    }
+
+    /// generate_moves_into generates all the legal moves in the current Position
+    /// and adds them to the given movelist. The type of the movelist must
+    /// implement the [`MoveStore`] trait.
+    fn generate_moves_into<const QUIET: bool, const NOISY: bool, T: MoveStore<Move>>(
+        &self,
+        movelist: &mut T,
+    ) {
+        if self.is_game_over() {
+            // Game is over, so don't generate any moves.
+            return;
+        }
+
+        let stm = self.color_bb(self.side_to_move);
+        let xtm = self.color_bb(!self.side_to_move);
+        let gap = self.colored_piece_bb(ColoredPiece::Block);
+
+        // Pieces can only move to unoccupied Squares.
+        let allowed = !(stm | xtm | gap);
+
+        for target in moves::singles(stm) & allowed {
+            movelist.push(Move::new_single(target));
+        }
+
+        for piece in stm {
+            // There may be multiple jump moves to a single Square, so they need to be
+            // verified (& allowed) and serialized into the movelist immediately.
+            let double = moves::double(piece) & allowed;
+            for target in double {
+                movelist.push(Move::new(piece, target));
             }
         }
 
-        fn count_moves(QUIET, NOISY) {
-            if self.is_game_over() {
-                // Game is over, so don't generate any moves.
-                return 0;
-            }
-
-            let stm = self.color_bb(self.side_to_move);
-            let xtm = self.color_bb(!self.side_to_move);
-            let gap = self.colored_piece_bb(ColoredPiece::Block);
-
-            // Pieces can only move to unoccupied Squares.
-            let allowed = !(stm | xtm | gap);
-
-            // Count the number single moves in the Position.
-            let mut moves: usize = (crate::ataxx::moves::singles(stm) & allowed).cardinality();
-
-            for piece in stm {
-                // There may be multiple jump moves to a single Square, so they need to be
-                // verified (& allowed) and counted into the Position total immediately.
-                let double = crate::ataxx::moves::double(piece) & allowed;
-                moves += double.cardinality();
-            }
-
-            // If there are no legal moves possible on the Position and the game isn't
-            // over, a pass move is the only move possible to be played.
-            if moves == 0 {
-                return 1;
-            }
-
-            moves
+        // If there are no legal moves possible on the Position and the game isn't
+        // over, a pass move is the only move possible to be played.
+        if movelist.len() == 0 {
+            movelist.push(Move::PASS);
         }
+    }
+
+    /// count_moves returns the number of legal moves in the current Position. It
+    /// is faster than calling [`Position::generate_moves`] or
+    ///  [`Position::generate_moves_into<T>`] and then finding the length.
+    fn count_moves<const QUIET: bool, const NOISY: bool>(&self) -> usize {
+        if self.is_game_over() {
+            // Game is over, so don't generate any moves.
+            return 0;
+        }
+
+        let stm = self.color_bb(self.side_to_move);
+        let xtm = self.color_bb(!self.side_to_move);
+        let gap = self.colored_piece_bb(ColoredPiece::Block);
+
+        // Pieces can only move to unoccupied Squares.
+        let allowed = !(stm | xtm | gap);
+
+        // Count the number single moves in the Position.
+        let mut moves: usize = (moves::singles(stm) & allowed).cardinality();
+
+        for piece in stm {
+            // There may be multiple jump moves to a single Square, so they need to be
+            // verified (& allowed) and counted into the Position total immediately.
+            let double = moves::double(piece) & allowed;
+            moves += double.cardinality();
+        }
+
+        // If there are no legal moves possible on the Position and the game isn't
+        // over, a pass move is the only move possible to be played.
+        if moves == 0 {
+            return 1;
+        }
+
+        moves
     }
 }
 
