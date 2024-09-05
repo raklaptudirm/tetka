@@ -20,13 +20,13 @@ use strum::IntoEnumIterator;
 
 use crate::interface::PositionType;
 use crate::interface::TypeParseError;
-use crate::interface::{BitBoardType, RepresentableType, SquareType};
+use crate::interface::{BitBoardType, Hash, RepresentableType, SquareType};
 
 use thiserror::Error;
 
 #[rustfmt::skip]
 use crate::ataxx::{
-    BitBoard, ColoredPiece, File, Hash, Move,
+    BitBoard, ColoredPiece, File, Move,
     Rank, Square, Color, Piece
 };
 use crate::interface::MoveStore;
@@ -85,6 +85,10 @@ impl PositionType for Position {
 
     fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
         self.bitboards[piece as usize]
+    }
+
+    fn hash(&self) -> Hash {
+        self.checksum
     }
 
     /// is_game_over checks if the game is over, i.e. is a win or a draw.
@@ -189,7 +193,7 @@ impl PositionType for Position {
 
         Position {
             bitboards: [black, white, self.colored_piece_bb(ColoredPiece::Block)],
-            checksum: update_hash!(Hash::new(black, white, !stm)),
+            checksum: update_hash!(Self::get_hash(black, white, !stm)),
             side_to_move: !stm,
             ply_count: self.ply_count + 1,
             half_move_clock,
@@ -268,6 +272,44 @@ impl PositionType for Position {
         }
 
         moves
+    }
+}
+
+impl Position {
+    fn get_hash(black: BitBoard, white: BitBoard, stm: Color) -> Hash {
+        let a = black.into();
+        let b = white.into();
+
+        // Currently, an 2^-63-almost delta universal hash function, based on
+        // https://eprint.iacr.org/2011/116.pdf by Long Hoang Nguyen and Andrew
+        // William Roscoe is used to create the Hash. This may change in the future.
+
+        // 3 64-bit integer constants used in the hash function.
+        const X: u64 = 6364136223846793005;
+        const Y: u64 = 1442695040888963407;
+        const Z: u64 = 2305843009213693951;
+
+        // xa + yb + floor(ya/2^64) + floor(zb/2^64)
+        // floor(pq/2^64) is essentially getting the top 64 bits of p*q.
+        let part_1 = X.wrapping_mul(a); // xa
+        let part_2 = Y.wrapping_mul(b); // yb
+        let part_3 = (Y as u128 * a as u128) >> 64; // floor(ya/2^64) = ya >> 64
+        let part_4 = (Z as u128 * b as u128) >> 64; // floor(zb/2^64) = zb >> 64
+
+        // add the parts together and return the resultant hash.
+        let hash = part_1
+            .wrapping_add(part_2)
+            .wrapping_add(part_3 as u64)
+            .wrapping_add(part_4 as u64);
+
+        // The Hash is bitwise complemented if the given side to move is Black.
+        // Therefore, if two Positions only differ in side to move,
+        // `a.Hash == !b.Hash`.
+        if stm == Color::Black {
+            Hash::new(!hash)
+        } else {
+            Hash::new(hash)
+        }
     }
 }
 
@@ -377,7 +419,7 @@ impl FromStr for Position {
         }
 
         // Calculate the Hash value for the Position.
-        position.checksum = Hash::new(
+        position.checksum = Self::get_hash(
             position.colored_piece_bb(ColoredPiece::Black),
             position.colored_piece_bb(ColoredPiece::White),
             position.side_to_move,

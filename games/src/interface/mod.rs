@@ -4,12 +4,14 @@ use std::str::FromStr;
 use thiserror::Error;
 
 mod bitboard;
+mod hash;
 mod r#move;
 mod piece;
 mod position;
 mod square;
 
 pub use bitboard::*;
+pub use hash::*;
 pub use piece::*;
 pub use position::*;
 pub use r#move::*;
