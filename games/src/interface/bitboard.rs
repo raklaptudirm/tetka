@@ -16,6 +16,7 @@ pub trait BitBoardType:
     + BitOr<Self, Output = Self>
     + BitAnd<Self, Output = Self>
     + BitXor<Self, Output = Self>
+    + Iterator<Item = Self::Square>
 where
     Self::Base: PrimInt,
     Self::Square: SquareType,
@@ -31,6 +32,11 @@ where
 
     const FIRST_FILE: Self;
     const FIRST_RANK: Self;
+
+    /// Makes a new, empty `BitBoard`.
+    fn new() -> Self {
+        Self::EMPTY
+    }
 
     /// is_disjoint checks if the two Selfs are disjoint, i.e. don't have
     /// any squares in common among themselves.
@@ -56,7 +62,7 @@ where
     }
 
     /// cardinality returns the number of Squares present in the Self.
-    fn cardinality(self) -> usize {
+    fn len(self) -> usize {
         self.into().count_ones() as usize
     }
 
@@ -127,6 +133,11 @@ where
         msb
     }
 
+    /// Clears the BitBoard, removing all elements.
+    fn clear(&mut self) {
+        *self = Self::EMPTY
+    }
+
     /// get_lsb returns the least significant Self::Square from the Self.
     fn lsb(self) -> Option<Self::Square> {
         if self != Self::EMPTY {
@@ -144,6 +155,18 @@ where
             Some(unsafe { Self::Square::unsafe_from(sq) })
         } else {
             None
+        }
+    }
+
+    /// Retains only the elements specified by the predicate.
+    ///
+    /// In other words, remove all elements `e` for which `f(&e)` returns `false`.
+    /// The elements are visited in ascending order.
+    fn retain<F: FnMut(Self::Square) -> bool>(&mut self, mut f: F) {
+        for sq in *self {
+            if !f(sq) {
+                self.remove(sq)
+            }
         }
     }
 

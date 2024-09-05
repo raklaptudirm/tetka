@@ -126,8 +126,8 @@ impl PositionType for Position {
         // All the squares are occupied by pieces. Victory is decided by
         // which Piece has the most number of pieces on the Board.
 
-        let black_n = black.cardinality();
-        let white_n = white.cardinality();
+        let black_n = black.len();
+        let white_n = white.len();
 
         match black_n.cmp(&white_n) {
             cmp::Ordering::Less => Some(Color::White),
@@ -254,13 +254,13 @@ impl PositionType for Position {
         let allowed = !(stm | xtm | gap);
 
         // Count the number single moves in the Position.
-        let mut moves: usize = (BitBoard::singles(stm) & allowed).cardinality();
+        let mut moves: usize = (BitBoard::singles(stm) & allowed).len();
 
         for piece in stm {
             // There may be multiple jump moves to a single Square, so they need to be
             // verified (& allowed) and counted into the Position total immediately.
             let double = BitBoard::double(piece) & allowed;
-            moves += double.cardinality();
+            moves += double.len();
         }
 
         // If there are no legal moves possible on the Position and the game isn't
