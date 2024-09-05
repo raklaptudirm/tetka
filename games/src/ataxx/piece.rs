@@ -15,9 +15,9 @@ use std::fmt;
 use std::ops;
 use std::str::FromStr;
 
+use crate::interface::representable_type;
 use crate::interface::ColoredPieceType;
 use crate::interface::RepresentableType;
-use crate::representable_type;
 
 representable_type!(
     /// Color represents all the possible colors that an ataxx piece can have,

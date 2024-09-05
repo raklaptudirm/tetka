@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::bitboard_type;
+use crate::interface::bitboard_type;
 
 use super::Square;
 

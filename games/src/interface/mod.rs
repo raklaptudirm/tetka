@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
+use strum::IntoEnumIterator;
 use thiserror::Error;
 
 mod bitboard;
@@ -10,12 +11,14 @@ mod piece;
 mod position;
 mod square;
 
-pub use bitboard::*;
+pub use bitboard::BitBoardType;
 pub use hash::*;
 pub use piece::*;
 pub use position::*;
 pub use r#move::*;
 pub use square::*;
+
+pub(crate) use bitboard::bitboard_type;
 
 /// RepresentableType is a basic trait which is implemented by enums with both a
 /// binary and string representation and backed by an integer.
@@ -43,7 +46,6 @@ pub enum TypeParseError {
     Error(String),
 }
 
-#[macro_export]
 macro_rules! representable_type {
     ($(#[doc = $doc:expr])* enum $type:tt: $base:tt { $($variant:tt $repr:expr,)* }) => {
         $(#[doc = $doc])*
@@ -95,5 +97,4 @@ macro_rules! representable_type {
     (@__puke_1 $t:tt) => { 1 };
 }
 
-pub use representable_type;
-use strum::IntoEnumIterator;
+pub(crate) use representable_type;

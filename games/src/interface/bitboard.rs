@@ -155,7 +155,6 @@ where
     fn trailing_zeros(&self) -> u32;
 }
 
-#[macro_export]
 macro_rules! bitboard_type {
     ($name:tt : $typ:tt { Square = $sq:tt; Empty = $empty:expr; Universe = $universe:expr; FirstFile = $first_file:expr; FirstRank = $first_rank:expr; } ) => {
         #[derive(
@@ -298,3 +297,5 @@ macro_rules! bitboard_type {
         }
     };
 }
+
+pub(crate) use bitboard_type;
