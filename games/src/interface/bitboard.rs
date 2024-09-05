@@ -1,3 +1,4 @@
+use num_traits::int::PrimInt;
 use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr, Sub};
 
 use super::{RepresentableType, SquareType};
@@ -6,6 +7,7 @@ pub trait BitBoardType:
     Sized
     + Copy
     + Eq
+    + Into<Self::Base>
     + From<Self::Square>
     + Not<Output = Self>
     + Sub<usize, Output = Self>
@@ -15,8 +17,10 @@ pub trait BitBoardType:
     + BitAnd<Self, Output = Self>
     + BitXor<Self, Output = Self>
 where
+    Self::Base: PrimInt,
     Self::Square: SquareType,
 {
+    type Base;
     type Square;
 
     /// EMPTY is an empty Self containing no Squares.
@@ -53,7 +57,7 @@ where
 
     /// cardinality returns the number of Squares present in the Self.
     fn cardinality(self) -> usize {
-        self.count_ones() as usize
+        self.into().count_ones() as usize
     }
 
     /// contains checks if the Self contains the given Self::Square.
@@ -126,7 +130,7 @@ where
     /// get_lsb returns the least significant Self::Square from the Self.
     fn lsb(self) -> Option<Self::Square> {
         if self != Self::EMPTY {
-            let sq = self.trailing_zeros() as usize;
+            let sq = self.into().trailing_zeros() as usize;
             Some(unsafe { Self::Square::unsafe_from(sq) })
         } else {
             None
@@ -136,7 +140,7 @@ where
     /// get_msb returns the most significant Self::Square from the Self.
     fn msb(self) -> Option<Self::Square> {
         if self != Self::EMPTY {
-            let sq = 63 - self.leading_zeros() as usize;
+            let sq = 63 - self.into().leading_zeros() as usize;
             Some(unsafe { Self::Square::unsafe_from(sq) })
         } else {
             None
@@ -152,10 +156,6 @@ where
     fn rank(rank: <Self::Square as SquareType>::Rank) -> Self {
         Self::FIRST_RANK << (<Self::Square as SquareType>::File::N * rank.into() as usize)
     }
-
-    fn count_ones(&self) -> u32;
-    fn leading_zeros(&self) -> u32;
-    fn trailing_zeros(&self) -> u32;
 }
 
 macro_rules! bitboard_type {
@@ -181,24 +181,13 @@ macro_rules! bitboard_type {
         pub struct $name(pub $typ);
 
         impl $crate::interface::BitBoardType for $name {
+            type Base = $typ;
             type Square = $sq;
 
             const EMPTY: Self = $empty;
             const UNIVERSE: Self = $universe;
             const FIRST_FILE: Self = $first_file;
             const FIRST_RANK: Self = $first_rank;
-
-            fn count_ones(&self) -> u32 {
-                self.0.count_ones()
-            }
-
-            fn trailing_zeros(&self) -> u32 {
-                self.0.trailing_zeros()
-            }
-
-            fn leading_zeros(&self) -> u32 {
-                self.0.leading_zeros()
-            }
         }
 
         // Iterator trait allows $name to be used in a for loop.
