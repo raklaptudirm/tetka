@@ -41,13 +41,13 @@ where
     /// is_disjoint checks if the two Selfs are disjoint, i.e. don't have
     /// any squares in common among themselves.
     fn is_disjoint(self, other: Self) -> bool {
-        self & other == Self::EMPTY
+        (self & other).is_empty()
     }
 
     /// is_subset checks if the given Self is a subset of the target, i.e.
     /// all the squares in the target are also present in the given Self.
     fn is_subset(self, other: Self) -> bool {
-        other & !self == Self::EMPTY
+        (other & !self).is_empty()
     }
 
     /// is_superset checks if the given Self is a superset of the target, i.e.
@@ -68,7 +68,7 @@ where
 
     /// contains checks if the Self contains the given Self::Square.
     fn contains(self, square: Self::Square) -> bool {
-        self & Self::from(square) != Self::EMPTY
+        !(self & Self::from(square)).is_empty()
     }
 
     /// north returns a new Self with all the squares shifted to the north.
@@ -114,7 +114,7 @@ where
     fn pop_lsb(&mut self) -> Option<Self::Square> {
         let lsb = self.lsb();
 
-        if *self != Self::EMPTY {
+        if !self.is_empty() {
             let copy = *self;
             *self = copy & (copy - 1);
         }
@@ -140,21 +140,21 @@ where
 
     /// get_lsb returns the least significant Self::Square from the Self.
     fn lsb(self) -> Option<Self::Square> {
-        if self != Self::EMPTY {
+        if self.is_empty() {
+            None
+        } else {
             let sq = self.into().trailing_zeros() as usize;
             Some(unsafe { Self::Square::unsafe_from(sq) })
-        } else {
-            None
         }
     }
 
     /// get_msb returns the most significant Self::Square from the Self.
     fn msb(self) -> Option<Self::Square> {
-        if self != Self::EMPTY {
+        if self.is_empty() {
+            None
+        } else {
             let sq = 63 - self.into().leading_zeros() as usize;
             Some(unsafe { Self::Square::unsafe_from(sq) })
-        } else {
-            None
         }
     }
 
