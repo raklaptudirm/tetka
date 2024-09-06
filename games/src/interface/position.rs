@@ -61,15 +61,22 @@ where
     /// generate_moves_into generates all the moves in the current position into
     /// the given move storage. The QUIET and NOISY flags toggles the generation
     /// of reversible and irreversible moves respectively.
-    fn generate_moves_into<const QUIET: bool, const NOISY: bool, T: MoveStore<Self::Move>>(
+    fn generate_moves_into<
+        const ALLOW_ILLEGAL: bool,
+        const QUIET: bool,
+        const NOISY: bool,
+        T: MoveStore<Self::Move>,
+    >(
         &self,
         movelist: &mut T,
     );
     /// generate_moves is similar to generate_moves_into, except that instead of
     /// taking some storage as input it stores into a custom stack-based type.
-    fn generate_moves<const QUIET: bool, const NOISY: bool>(&self) -> MoveList<Self::Move> {
+    fn generate_moves<const ALLOW_ILLEGAL: bool, const QUIET: bool, const NOISY: bool>(
+        &self,
+    ) -> MoveList<Self::Move> {
         let mut movelist: MoveList<Self::Move> = Default::default();
-        self.generate_moves_into::<QUIET, NOISY, _>(&mut movelist);
+        self.generate_moves_into::<ALLOW_ILLEGAL, QUIET, NOISY, _>(&mut movelist);
         movelist
     }
     /// count_moves is similar to generate_moves, except instead of returning a
@@ -78,6 +85,6 @@ where
     /// may take advantage of various optimizations counting as opposed to
     /// storing the moves allows to provide a more efficient version.
     fn count_moves<const QUIET: bool, const NOISY: bool>(&self) -> usize {
-        self.generate_moves::<QUIET, NOISY>().len()
+        self.generate_moves::<false, QUIET, NOISY>().len()
     }
 }

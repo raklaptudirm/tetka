@@ -27,7 +27,7 @@ pub fn perft<const SPLIT: bool, const BULK: bool, T: PositionType>(position: T, 
     }
 
     let mut nodes: u64 = 0;
-    let movelist = position.generate_moves::<true, true>();
+    let movelist = position.generate_moves::<false, true, true>();
 
     // MoveList implements IntoIterator, so it should be possible to use it
     // directly in the for loop, but manual iterations seems to be faster.

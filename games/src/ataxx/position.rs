@@ -201,7 +201,12 @@ impl PositionType for Position {
     /// generate_moves_into generates all the legal moves in the current Position
     /// and adds them to the given movelist. The type of the movelist must
     /// implement the [`MoveStore`] trait.
-    fn generate_moves_into<const QUIET: bool, const NOISY: bool, T: MoveStore<Move>>(
+    fn generate_moves_into<
+        const ALLOW_ILLEGAL: bool,
+        const QUIET: bool,
+        const NOISY: bool,
+        T: MoveStore<Move>,
+    >(
         &self,
         movelist: &mut T,
     ) {
