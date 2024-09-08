@@ -18,6 +18,8 @@ use std::str::FromStr;
 
 use strum::IntoEnumIterator;
 
+use crate::interface;
+use crate::interface::PiecePlacementParseError;
 use crate::interface::PositionType;
 use crate::interface::TypeParseError;
 use crate::interface::{BitBoardType, Hash, RepresentableType, SquareType};
@@ -323,15 +325,8 @@ pub enum PositionParseError {
     #[error("expected 3 fields, found {0}")]
     TooManyFields(usize),
 
-    #[error("a jump value was too long and overshot")]
-    JumpTooLong,
-
-    #[error("invalid piece identifier '{0}'")]
-    InvalidPieceIdent(char),
-    #[error("insufficient data to fill the entire {0} file")]
-    FileDataIncomplete(File),
-    #[error("expected 7 ranks, found more")]
-    TooManyRanks,
+    #[error("parsing piece placement: {0}")]
+    BadPiecePlacement(#[from] PiecePlacementParseError),
 
     #[error("parsing side to move: {0}")]
     BadSideToMove(#[from] TypeParseError),
@@ -363,56 +358,7 @@ impl FromStr for Position {
             half_move_clock: 0,
         };
 
-        // Spilt the position spec by the Ranks which are separated by '/'.
-        let ranks: Vec<&str> = pos.split('/').collect();
-
-        let mut rank = Ok(Rank::Seventh);
-        let mut file = Ok(File::A);
-
-        // Iterate over the Ranks in the string spec.
-        for rank_data in ranks {
-            // Rank pointer ran out, but data carried on.
-            if rank.is_err() {
-                return Err(PositionParseError::TooManyRanks);
-            }
-
-            // Iterate over the Square specs in the Rank spec.
-            for data in rank_data.chars() {
-                // Check if a jump spec was too big and we landed on an invalid File.
-                if file.is_err() {
-                    return Err(PositionParseError::JumpTooLong);
-                }
-                let square = Square::new(file.unwrap(), rank.unwrap());
-                match data {
-                    'o' | 'O' | 'w' | 'W' => position.insert(square, ColoredPiece::White),
-                    'x' | 'X' | 'b' | 'B' => position.insert(square, ColoredPiece::Black),
-                    '-' => position.insert(square, ColoredPiece::Block),
-
-                    // Numbers represent jump specs to jump over empty squares.
-                    '1'..='8' => {
-                        file = File::try_from(file.unwrap() as u8 + data as u8 - b'1');
-                        if file.is_err() {
-                            return Err(PositionParseError::JumpTooLong);
-                        }
-                    }
-
-                    _ => return Err(PositionParseError::InvalidPieceIdent(data)),
-                }
-
-                // On to the next Square spec in the Rank spec.
-                file = File::try_from(file.unwrap() as u8 + 1);
-            }
-
-            // After rank data runs out, file pointer should be
-            // at the last file, i.e, rank is completely filled.
-            if let Ok(file) = file {
-                return Err(PositionParseError::FileDataIncomplete(file));
-            }
-
-            // Switch rank pointer and reset file pointer.
-            rank = Rank::try_from((rank.unwrap() as u8).wrapping_sub(1));
-            file = Ok(File::A);
-        }
+        interface::parse_piece_placement(&mut position, pos)?;
 
         position.side_to_move = Color::from_str(stm)?;
         position.half_move_clock = hmc.parse::<u8>()?;

@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
 use strum::IntoEnumIterator;
@@ -23,7 +23,7 @@ pub(crate) use bitboard::bitboard_type;
 /// RepresentableType is a basic trait which is implemented by enums with both a
 /// binary and string representation and backed by an integer.
 pub trait RepresentableType<B: Into<usize>>:
-    Copy + Eq + FromStr + Display + Into<B> + IntoEnumIterator
+    Copy + Eq + FromStr + Display + Into<B> + TryFrom<B, Error: Debug> + IntoEnumIterator
 {
     /// N is the number of specializations of the enum.
     const N: usize;
@@ -43,7 +43,9 @@ pub trait RepresentableType<B: Into<usize>>:
 #[derive(Error, Debug)]
 pub enum TypeParseError {
     #[error("invalid {0} identifier string")]
-    Error(String),
+    StrError(String),
+    #[error("invalid integer representation for {0}")]
+    RangeError(String),
 }
 
 macro_rules! representable_type {
@@ -64,10 +66,10 @@ macro_rules! representable_type {
         }
 
         impl TryFrom<$base> for $type {
-            type Error = ();
+            type Error = $crate::interface::TypeParseError;
             fn try_from(value: $base) -> Result<Self, Self::Error> {
                 if value as usize >= Self::N {
-                    Err(())
+                    Err($crate::interface::TypeParseError::RangeError(stringify!($type).to_string()))
                 } else {
                     Ok(unsafe { Self::unsafe_from(value) })
                 }
@@ -80,7 +82,7 @@ macro_rules! representable_type {
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 match s {
                     $($repr => Ok(Self::$variant),)*
-                    _ => Err($crate::interface::TypeParseError::Error(stringify!($type).to_string())),
+                    _ => Err($crate::interface::TypeParseError::StrError(stringify!($type).to_string())),
                 }
             }
         }
