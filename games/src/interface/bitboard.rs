@@ -3,6 +3,9 @@ use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr, Sub};
 
 use super::{RepresentableType, SquareType};
 
+/// BitBoardType is a generalized interface implemented by BitBoards of
+/// arbitrary size. This allows programs to handle BitBoards of any size with
+/// generic functions using this common interface.
 pub trait BitBoardType:
     Sized
     + Copy
@@ -38,35 +41,35 @@ where
         Self::EMPTY
     }
 
-    /// is_disjoint checks if the two Selfs are disjoint, i.e. don't have
-    /// any squares in common among themselves.
+    /// Returns `true` if `self` has no elements in `common` with other. This is
+    /// equivalent to checking for an empty intersection.
     fn is_disjoint(self, other: Self) -> bool {
         (self & other).is_empty()
     }
 
-    /// is_subset checks if the given Self is a subset of the target, i.e.
-    /// all the squares in the target are also present in the given Self.
+    /// Returns true if the BitBoard is a subset of another, i.e., `other`
+    /// contains at least all the values in `self`.
     fn is_subset(self, other: Self) -> bool {
         (other & !self).is_empty()
     }
 
-    /// is_superset checks if the given Self is a superset of the target, i.e.
-    /// all the squares in the given Self are also present in the target.
+    /// Returns true if the BitBoard is a superset of another, i.e., `self`
+    /// contains at least all the values in `other`.
     fn is_superset(self, other: Self) -> bool {
         other.is_subset(self)
     }
 
-    /// is_empty checks if the target Self is empty.
+    /// Returns `true` if the BitBoard contains no elements.
     fn is_empty(self) -> bool {
         self == Self::EMPTY
     }
 
-    /// cardinality returns the number of Squares present in the Self.
+    /// Returns the number of elements in the BitBoard.
     fn len(self) -> usize {
         self.into().count_ones() as usize
     }
 
-    /// contains checks if the Self contains the given Self::Square.
+    /// Returns `true` if the BitBoard contains a value.
     fn contains(self, square: Self::Square) -> bool {
         !(self & Self::from(square)).is_empty()
     }
@@ -99,12 +102,12 @@ where
                 })
     }
 
-    /// insert puts the given Self::Square into the Self.
+    /// Adds `square` to the BitBoard.
     fn insert(&mut self, square: Self::Square) {
         *self = *self | Self::from(square)
     }
 
-    /// remove removes the given Self::Square from the Self.
+    /// Removes `square` from the BitBoard.
     fn remove(&mut self, square: Self::Square) {
         *self = *self & !Self::from(square)
     }
@@ -160,7 +163,7 @@ where
 
     /// Retains only the elements specified by the predicate.
     ///
-    /// In other words, remove all elements `e` for which `f(&e)` returns `false`.
+    /// In other words, remove all elements `s` for which `f(s)` returns `false`.
     /// The elements are visited in ascending order.
     fn retain<F: FnMut(Self::Square) -> bool>(&mut self, mut f: F) {
         for sq in *self {
@@ -170,19 +173,42 @@ where
         }
     }
 
-    /// file returns a Self containing all the squares from the given <Self::Square as Square>::File.
+    /// Returns a BitBoard containing all the squares from the given `File`.
     fn file(file: <Self::Square as SquareType>::File) -> Self {
         Self::FIRST_FILE << file.into() as usize
     }
 
-    /// rank returns a Self containing all the squares from the given Self::Square::Rank.
+    /// Returns a BitBoard containing all the squares from the given `Rank`.
     fn rank(rank: <Self::Square as SquareType>::Rank) -> Self {
         Self::FIRST_RANK << (<Self::Square as SquareType>::File::N * rank.into() as usize)
     }
 }
 
+/// bitboard_type generates a new BitBoard with the given type as its base
+/// representation. The base type must implement num_traits::int::PrimInt so
+/// that the BitBoardType trait can be implemented.
+///
+/// # Examples
+///
+/// ```
+/// bitboard_type! {
+///     BitBoardTypeName: u64 {
+///         Square = OurSquareType;
+///         Empty = OurEmptyBitBoard;
+///         Universe = OurUniverseBitBoard;
+///         FirstFile = OurFirstFileBitBoard;
+///         FirstRank = OurFirstRankBitBoard;
+///     }
+/// }
+/// ```
 macro_rules! bitboard_type {
-    ($name:tt : $typ:tt { Square = $sq:tt; Empty = $empty:expr; Universe = $universe:expr; FirstFile = $first_file:expr; FirstRank = $first_rank:expr; } ) => {
+    ($name:tt : $typ:tt {
+        Square = $sq:tt;
+        Empty = $empty:expr;
+        Universe = $universe:expr;
+        FirstFile = $first_file:expr;
+        FirstRank = $first_rank:expr;
+    } ) => {
         #[derive(
             Copy,
             Clone,
@@ -213,10 +239,10 @@ macro_rules! bitboard_type {
             const FIRST_RANK: Self = $first_rank;
         }
 
-        // Iterator trait allows $name to be used in a for loop.
         impl Iterator for $name {
             type Item = $sq;
 
+            /// next pops the next Square from the BitBoard and returns it.
             fn next(&mut self) -> Option<Self::Item> {
                 $crate::interface::BitBoardType::pop_lsb(self)
             }
@@ -242,47 +268,46 @@ macro_rules! bitboard_type {
             }
         }
 
-        // From trait allows a square to be converted into it's $name representation.
         impl From<$sq> for $name {
             fn from(square: $sq) -> Self {
                 Self(1 << square as u64)
             }
         }
 
-        // Not(!)/Complement operation implementation for $name.
         impl std::ops::Not for $name {
             type Output = Self;
 
+            /// Returns the complementary BitBoard of `self`.
             fn not(self) -> Self::Output {
                 // ! will set the unused bits so remove them with an &.
                 Self(!self.0) & <Self as $crate::interface::BitBoardType>::UNIVERSE
             }
         }
 
-        // Implementation of subtraction(removal) of BitBoards.
         #[allow(clippy::suspicious_arithmetic_impl)]
         impl std::ops::Sub for $name {
             type Output = Self;
 
+            /// Returns the difference of `self` and `rhs` as a new BitBoard.
             fn sub(self, rhs: Self) -> Self::Output {
                 self & !rhs
             }
         }
 
-        // Implementation of |(or)/set-union of a $name with a $sq.
         #[allow(clippy::suspicious_arithmetic_impl)]
         impl std::ops::BitOr<$sq> for $name {
             type Output = Self;
 
+            /// Returns the union of `self` and `rhs` as a new BitBoard.
             fn bitor(self, rhs: $sq) -> Self::Output {
                 self | Self::from(rhs)
             }
         }
 
-        // Implementation of -(subtraction)/set-removal of a $name with a $sq.
         impl std::ops::Sub<$sq> for $name {
             type Output = Self;
 
+            /// Returns the BitBoard obtained on removing `rhs` from `self`.
             fn sub(self, rhs: $sq) -> Self::Output {
                 self & !Self::from(rhs)
             }
