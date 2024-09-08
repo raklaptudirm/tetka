@@ -25,12 +25,14 @@ impl Hash {
     pub const ZERO: Hash = Hash(0);
 
     /// new creates a new Hash value from a raw u64.
+    #[must_use]
     pub fn new(raw: u64) -> Hash {
         Hash(raw)
     }
 }
 
 impl From<Hash> for u64 {
+    #[must_use]
     fn from(value: Hash) -> Self {
         value.0
     }
@@ -40,6 +42,7 @@ impl ops::Not for Hash {
     type Output = Self;
 
     /// Not operator (!) switches the side to move for the Hash.
+    #[must_use]
     fn not(self) -> Self::Output {
         Hash(!self.0)
     }

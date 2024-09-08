@@ -43,6 +43,7 @@ pub trait RepresentableType<B: Into<usize>>:
     /// number, i.e. the number has a valid representation in the target type.
     /// The function comes with a debug check for the same, and failure to
     /// uphold this invariant will result in undefined behavior.
+    #[must_use]
     unsafe fn unsafe_from<T: Copy + Into<usize>>(number: T) -> Self {
         debug_assert!(number.into() < Self::N);
         std::mem::transmute_copy(&number)
@@ -69,6 +70,7 @@ macro_rules! representable_type {
         }
 
         impl From<$type> for $base {
+            #[must_use]
             fn from(value: $type) -> Self {
                 value as $base
             }
@@ -76,6 +78,7 @@ macro_rules! representable_type {
 
         impl TryFrom<$base> for $type {
             type Error = $crate::interface::TypeParseError;
+
             fn try_from(value: $base) -> Result<Self, Self::Error> {
                 if value as usize >= Self::N {
                     Err($crate::interface::TypeParseError::RangeError(stringify!($type).to_string()))
@@ -189,24 +192,28 @@ macro_rules! bitboard_type {
         impl std::ops::Sub<usize> for $name {
             type Output = Self;
 
+            #[must_use]
             fn sub(self, rhs: usize) -> Self::Output {
                 Self(self.0 - rhs as u64)
             }
         }
 
         impl From<$typ> for $name {
+            #[must_use]
             fn from(num: $typ) -> Self {
                 Self(num)
             }
         }
 
         impl From<$name> for $typ {
+            #[must_use]
             fn from(value: $name) -> Self {
                 value.0
             }
         }
 
         impl From<$sq> for $name {
+            #[must_use]
             fn from(square: $sq) -> Self {
                 Self(1 << square as u64)
             }
@@ -216,6 +223,7 @@ macro_rules! bitboard_type {
             type Output = Self;
 
             /// Returns the complementary BitBoard of `self`.
+            #[must_use]
             fn not(self) -> Self::Output {
                 // ! will set the unused bits so remove them with an &.
                 Self(!self.0) & <Self as $crate::interface::BitBoardType>::UNIVERSE
@@ -227,6 +235,7 @@ macro_rules! bitboard_type {
             type Output = Self;
 
             /// Returns the difference of `self` and `rhs` as a new BitBoard.
+            #[must_use]
             fn sub(self, rhs: Self) -> Self::Output {
                 self & !rhs
             }
@@ -237,6 +246,7 @@ macro_rules! bitboard_type {
             type Output = Self;
 
             /// Returns the union of `self` and `rhs` as a new BitBoard.
+            #[must_use]
             fn bitor(self, rhs: $sq) -> Self::Output {
                 self | Self::from(rhs)
             }
@@ -246,6 +256,7 @@ macro_rules! bitboard_type {
             type Output = Self;
 
             /// Returns the BitBoard obtained on removing `rhs` from `self`.
+            #[must_use]
             fn sub(self, rhs: $sq) -> Self::Output {
                 self & !Self::from(rhs)
             }

@@ -43,48 +43,57 @@ where
 
     /// Returns `true` if `self` has no elements in `common` with other. This is
     /// equivalent to checking for an empty intersection.
+    #[must_use]
     fn is_disjoint(self, other: Self) -> bool {
         (self & other).is_empty()
     }
 
     /// Returns true if the BitBoard is a subset of another, i.e., `other`
     /// contains at least all the values in `self`.
+    #[must_use]
     fn is_subset(self, other: Self) -> bool {
         (other & !self).is_empty()
     }
 
     /// Returns true if the BitBoard is a superset of another, i.e., `self`
     /// contains at least all the values in `other`.
+    #[must_use]
     fn is_superset(self, other: Self) -> bool {
         other.is_subset(self)
     }
 
     /// Returns `true` if the BitBoard contains no elements.
+    #[must_use]
     fn is_empty(self) -> bool {
         self == Self::EMPTY
     }
 
     /// Returns the number of elements in the BitBoard.
+    #[must_use]
     fn len(self) -> usize {
         self.into().count_ones() as usize
     }
 
     /// Returns `true` if the BitBoard contains a value.
+    #[must_use]
     fn contains(self, square: Self::Square) -> bool {
         !(self & Self::from(square)).is_empty()
     }
 
     /// north returns a new Self with all the squares shifted to the north.
+    #[must_use]
     fn north(self) -> Self {
         (self << <Self::Square as SquareType>::File::N) & Self::UNIVERSE
     }
 
     /// south returns a new Self with all the squares shifted to the south.
+    #[must_use]
     fn south(self) -> Self {
         self >> <Self::Square as SquareType>::File::N
     }
 
     /// east returns a new Self with all the squares shifted to the east.
+    #[must_use]
     fn east(self) -> Self {
         (self << 1)
             & (Self::UNIVERSE
@@ -92,6 +101,7 @@ where
     }
 
     /// west returns a new Self with all the squares shifted to the west.
+    #[must_use]
     fn west(self) -> Self {
         (self >> 1)
             & (Self::UNIVERSE
@@ -130,11 +140,13 @@ where
     }
 
     /// Returns a BitBoard containing all the squares from the given `File`.
+    #[must_use]
     fn file(file: <Self::Square as SquareType>::File) -> Self {
         Self::FIRST_FILE << file.into() as usize
     }
 
     /// Returns a BitBoard containing all the squares from the given `Rank`.
+    #[must_use]
     fn rank(rank: <Self::Square as SquareType>::Rank) -> Self {
         Self::FIRST_RANK << (<Self::Square as SquareType>::File::N * rank.into() as usize)
     }

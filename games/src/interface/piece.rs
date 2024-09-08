@@ -15,12 +15,15 @@ where
     type Color;
 
     /// new creates a new ColoredPiece from the given Piece and Color.
+    #[must_use]
     fn new(piece: Self::Piece, color: Self::Color) -> Self {
         unsafe { Self::unsafe_from(color.into() * Self::Piece::N as u8 + piece.into()) }
     }
 
     /// piece returns the Piece part of the given ColoredPiece.
+    #[must_use]
     fn piece(self) -> Self::Piece;
     /// color returns the Color part of the given ColoredPiece.
+    #[must_use]
     fn color(self) -> Self::Color;
 }

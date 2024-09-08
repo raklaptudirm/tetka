@@ -23,9 +23,11 @@ pub trait MoveStore<M>: Default {
     fn push(&mut self, m: M);
 
     /// len returns the number of [Moves](MoveType) stored in the MoveStore.
+    #[must_use]
     fn len(&self) -> usize;
 
     /// is_empty checks if no [Moves](MoveType) are stored in the MoveStore.
+    #[must_use]
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -42,10 +44,12 @@ impl<M> MoveStore<M> for MoveList<M> {
         self.push(m);
     }
 
+    #[must_use]
     fn len(&self) -> usize {
         self.len()
     }
 
+    #[must_use]
     fn is_empty(&self) -> bool {
         self.is_empty()
     }
