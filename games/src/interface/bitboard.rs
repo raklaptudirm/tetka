@@ -112,53 +112,9 @@ where
         *self = *self & !Self::from(square)
     }
 
-    /// pop_lsb pops the least significant Self::Square from the Self, i.e. it
-    /// removes the lsb from the Self and returns its value.
-    fn pop_lsb(&mut self) -> Option<Self::Square> {
-        let lsb = self.lsb();
-
-        if !self.is_empty() {
-            let copy = *self;
-            *self = copy & (copy - 1);
-        }
-
-        lsb
-    }
-
-    /// pop_msb pops the most significant Self::Square from the Self i.e. it
-    /// removes the msb from the Self and returns its value.
-    fn pop_msb(&mut self) -> Option<Self::Square> {
-        let msb = self.msb();
-        if let Some(msb) = msb {
-            *self = *self ^ Self::from(msb);
-        }
-
-        msb
-    }
-
     /// Clears the BitBoard, removing all elements.
     fn clear(&mut self) {
         *self = Self::EMPTY
-    }
-
-    /// get_lsb returns the least significant Self::Square from the Self.
-    fn lsb(self) -> Option<Self::Square> {
-        if self.is_empty() {
-            None
-        } else {
-            let sq = self.into().trailing_zeros() as usize;
-            Some(unsafe { Self::Square::unsafe_from(sq) })
-        }
-    }
-
-    /// get_msb returns the most significant Self::Square from the Self.
-    fn msb(self) -> Option<Self::Square> {
-        if self.is_empty() {
-            None
-        } else {
-            let sq = 63 - self.into().leading_zeros() as usize;
-            Some(unsafe { Self::Square::unsafe_from(sq) })
-        }
     }
 
     /// Retains only the elements specified by the predicate.

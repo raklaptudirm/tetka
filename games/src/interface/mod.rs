@@ -159,7 +159,19 @@ macro_rules! bitboard_type {
 
             /// next pops the next Square from the BitBoard and returns it.
             fn next(&mut self) -> Option<Self::Item> {
-                $crate::interface::BitBoardType::pop_lsb(self)
+                let lsb = if self.is_empty() {
+                    None
+                } else {
+                    let sq = <Self as Into<<Self as BitBoardType>::Base>>::into(*self).trailing_zeros() as usize;
+                    Some(unsafe { <Self as BitBoardType>::Square::unsafe_from(sq) })
+                };
+
+                if !self.is_empty() {
+                    let copy = *self;
+                    *self = copy & (copy - 1);
+                }
+
+                lsb
             }
         }
 
