@@ -1,7 +1,9 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use super::{BitBoardType, ColoredPieceType, Hash, MoveList, MoveStore, MoveType};
+use super::{
+    BitBoardType, Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType, Piece, Square,
+};
 
 /// Position is a generalized interface for board representations of a wide
 /// range of games. It can be used to create game-agnostic software. Tetka
@@ -26,17 +28,14 @@ where
 
     /// insert puts the given piece at the given square. The implementation is
     /// free to assume that the square is currently empty.
-    fn insert(&mut self, sq: <Self::BitBoard as BitBoardType>::Square, piece: Self::ColoredPiece);
+    fn insert(&mut self, sq: Square<Self>, piece: Self::ColoredPiece);
     /// remove clears the given square, and returns the piece that was there.
-    fn remove(
-        &mut self,
-        sq: <Self::BitBoard as BitBoardType>::Square,
-    ) -> Option<Self::ColoredPiece>;
+    fn remove(&mut self, sq: Square<Self>) -> Option<Self::ColoredPiece>;
     /// at returns the piece that is in the given square.
     fn at(&self, sq: <Self::BitBoard as BitBoardType>::Square) -> Option<Self::ColoredPiece>;
 
-    fn piece_bb(&self, piece: <Self::ColoredPiece as ColoredPieceType>::Piece) -> Self::BitBoard;
-    fn color_bb(&self, color: <Self::ColoredPiece as ColoredPieceType>::Color) -> Self::BitBoard;
+    fn piece_bb(&self, piece: Piece<Self>) -> Self::BitBoard;
+    fn color_bb(&self, color: Color<Self>) -> Self::BitBoard;
     fn colored_piece_bb(&self, piece: Self::ColoredPiece) -> Self::BitBoard;
 
     fn hash(&self) -> Hash;
@@ -44,7 +43,7 @@ where
     // Game Result functions.
 
     /// winner returns the winning side in the current position.
-    fn winner(&self) -> Option<<Self::ColoredPiece as ColoredPieceType>::Color>;
+    fn winner(&self) -> Option<Color<Self>>;
     /// is_game_over returns a boolean representing if the game is over.
     fn is_game_over(&self) -> bool {
         self.winner().is_some()

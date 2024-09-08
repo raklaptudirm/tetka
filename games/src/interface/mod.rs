@@ -18,6 +18,17 @@ pub use position::*;
 pub use r#move::*;
 pub use square::*;
 
+pub type BitBoard<P> = <P as PositionType>::BitBoard;
+pub type Square<P> = <BitBoard<P> as BitBoardType>::Square;
+pub type File<P> = <Square<P> as SquareType>::File;
+pub type Rank<P> = <Square<P> as SquareType>::Rank;
+
+pub type ColoredPiece<P> = <P as PositionType>::ColoredPiece;
+pub type Piece<P> = <ColoredPiece<P> as ColoredPieceType>::Piece;
+pub type Color<P> = <ColoredPiece<P> as ColoredPieceType>::Color;
+
+pub type Move<P> = <P as PositionType>::Move;
+
 /// RepresentableType is a basic trait which is implemented by enums with both a
 /// binary and string representation and backed by an integer.
 pub trait RepresentableType<B: Into<usize>>:
@@ -281,11 +292,6 @@ pub enum PiecePlacementParseError {
     #[error("expected {0} ranks, found more")]
     TooManyRanks(usize),
 }
-
-type Square<P> = <<P as PositionType>::BitBoard as BitBoardType>::Square;
-type File<P> = <Square<P> as SquareType>::File;
-type Rank<P> = <Square<P> as SquareType>::Rank;
-type ColoredPiece<P> = <P as PositionType>::ColoredPiece;
 
 pub(crate) fn parse_piece_placement<T: PositionType>(
     position: &mut T,
