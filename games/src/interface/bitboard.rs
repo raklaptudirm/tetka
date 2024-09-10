@@ -101,7 +101,11 @@ where
     fn east(self) -> Self {
         (self << 1)
             & (Self::UNIVERSE
-                ^ unsafe { Self::file(<Self::Square as SquareType>::File::unsafe_from(0u8)) })
+                ^ unsafe {
+                    Self::file(<Self::Square as SquareType>::File::unsafe_from(
+                        0u8,
+                    ))
+                })
     }
 
     /// west returns a new Self with all the squares shifted to the west.
@@ -152,6 +156,7 @@ where
     /// Returns a BitBoard containing all the squares from the given `Rank`.
     #[must_use]
     fn rank(rank: <Self::Square as SquareType>::Rank) -> Self {
-        Self::FIRST_RANK << (<Self::Square as SquareType>::File::N * rank.into() as usize)
+        Self::FIRST_RANK
+            << (<Self::Square as SquareType>::File::N * rank.into() as usize)
     }
 }

@@ -2,7 +2,8 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use super::{
-    BitBoardType, Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType, Piece, Square,
+    BitBoardType, Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType,
+    Piece, Square,
 };
 
 /// Position is a generalized interface for board representations of a wide
@@ -33,7 +34,10 @@ where
     fn remove(&mut self, sq: Square<Self>) -> Option<Self::ColoredPiece>;
     /// Returns the Piece present at the given Square.
     #[must_use]
-    fn at(&self, sq: <Self::BitBoard as BitBoardType>::Square) -> Option<Self::ColoredPiece>;
+    fn at(
+        &self,
+        sq: <Self::BitBoard as BitBoardType>::Square,
+    ) -> Option<Self::ColoredPiece>;
 
     /// Returns a BitBoard with all the Squares containing the given Piece.
     #[must_use]
@@ -67,7 +71,10 @@ where
     /// non-essential updated which are done by this function, like the hash
     /// function for the position.
     #[must_use]
-    fn after_move<const UPDATE_PERIPHERALS: bool>(&self, mov: Self::Move) -> Self;
+    fn after_move<const UPDATE_PERIPHERALS: bool>(
+        &self,
+        mov: Self::Move,
+    ) -> Self;
 
     // Move Generation functions for the board representation.
 
@@ -91,11 +98,17 @@ where
     /// `generate_moves` is similar to [`generate_moves_into`], except that
     /// instead of taking some storage as input it stores into a [MoveList].
     #[must_use]
-    fn generate_moves<const ALLOW_ILLEGAL: bool, const QUIET: bool, const NOISY: bool>(
+    fn generate_moves<
+        const ALLOW_ILLEGAL: bool,
+        const QUIET: bool,
+        const NOISY: bool,
+    >(
         &self,
     ) -> MoveList<Self::Move> {
         let mut movelist: MoveList<Self::Move> = Default::default();
-        self.generate_moves_into::<ALLOW_ILLEGAL, QUIET, NOISY, _>(&mut movelist);
+        self.generate_moves_into::<ALLOW_ILLEGAL, QUIET, NOISY, _>(
+            &mut movelist,
+        );
         movelist
     }
     /// `count_moves` is similar to [`generate_moves`], except instead of

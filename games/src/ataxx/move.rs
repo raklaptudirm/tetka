@@ -117,7 +117,11 @@ impl Move {
     /// assert_eq!(mov.source(), Square::A1);
     /// ```
     pub fn source(self) -> Square {
-        unsafe { Square::unsafe_from((self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK) }
+        unsafe {
+            Square::unsafe_from(
+                (self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK,
+            )
+        }
     }
 
     /// Target returns the target Square of the moving piece.
@@ -129,7 +133,11 @@ impl Move {
     /// assert_eq!(mov.target(), Square::A3);
     /// ```
     pub fn target(self) -> Square {
-        unsafe { Square::unsafe_from((self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK) }
+        unsafe {
+            Square::unsafe_from(
+                (self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK,
+            )
+        }
     }
 
     /// is_single checks if the given Move is singular in nature. The result of this

@@ -72,7 +72,8 @@ impl PositionType for Position {
 
     /// at returns the Piece of the piece present on the given Square.
     fn at(&self, sq: Square) -> Option<ColoredPiece> {
-        ColoredPiece::iter().find(|piece| self.colored_piece_bb(*piece).contains(sq))
+        ColoredPiece::iter()
+            .find(|piece| self.colored_piece_bb(*piece).contains(sq))
     }
 
     fn piece_bb(&self, piece: Piece) -> BitBoard {
@@ -192,7 +193,11 @@ impl PositionType for Position {
         };
 
         Position {
-            bitboards: [black, white, self.colored_piece_bb(ColoredPiece::Block)],
+            bitboards: [
+                black,
+                white,
+                self.colored_piece_bb(ColoredPiece::Block),
+            ],
             checksum: update_hash!(Self::get_hash(black, white, !stm)),
             side_to_move: !stm,
             ply_count: self.ply_count + 1,

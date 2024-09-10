@@ -39,7 +39,13 @@ pub type Move<P> = <P as PositionType>::Move;
 /// RepresentableType is a basic trait which is implemented by enums with both a
 /// binary and string representation and backed by an integer.
 pub trait RepresentableType<B: Into<usize>>:
-    Copy + Eq + FromStr + Display + Into<B> + TryFrom<B, Error: Debug> + IntoEnumIterator
+    Copy
+    + Eq
+    + FromStr
+    + Display
+    + Into<B>
+    + TryFrom<B, Error: Debug>
+    + IntoEnumIterator
 {
     /// N is the number of specializations of the enum.
     const N: usize;
@@ -349,7 +355,9 @@ pub(crate) fn parse_piece_placement<T: PositionType>(
             match data {
                 // Numbers represent jump specs to jump over empty squares.
                 '1'..='8' => {
-                    file = <File<T>>::try_from(file_value.into() + data as u8 - b'1');
+                    file = <File<T>>::try_from(
+                        file_value.into() + data as u8 - b'1',
+                    );
                     if file.is_err() {
                         return Err(PiecePlacementParseError::JumpTooLong);
                     }
@@ -357,7 +365,11 @@ pub(crate) fn parse_piece_placement<T: PositionType>(
 
                 _ => match <ColoredPiece<T>>::from_str(&data.to_string()) {
                     Ok(piece) => position.insert(square, piece),
-                    Err(_) => return Err(PiecePlacementParseError::InvalidPieceIdent(data)),
+                    Err(_) => {
+                        return Err(
+                            PiecePlacementParseError::InvalidPieceIdent(data),
+                        )
+                    }
                 },
             }
 

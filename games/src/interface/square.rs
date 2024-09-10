@@ -16,7 +16,9 @@ where
     /// Creates a new Square from the given File and Rank.
     #[must_use]
     fn new(file: Self::File, rank: Self::Rank) -> Self {
-        unsafe { Self::unsafe_from(rank.into() * Self::File::N as u8 + file.into()) }
+        unsafe {
+            Self::unsafe_from(rank.into() * Self::File::N as u8 + file.into())
+        }
     }
 
     /// Returns the File of self.
@@ -38,7 +40,9 @@ where
         if self.rank().into() as usize == Self::Rank::N - 1 {
             None
         } else {
-            Some(unsafe { Self::unsafe_from(self.into() + Self::File::N as u8) })
+            Some(unsafe {
+                Self::unsafe_from(self.into() + Self::File::N as u8)
+            })
         }
     }
 
@@ -49,7 +53,9 @@ where
         if self.rank().into() as usize == 0 {
             None
         } else {
-            Some(unsafe { Self::unsafe_from(self.into() - Self::File::N as u8) })
+            Some(unsafe {
+                Self::unsafe_from(self.into() - Self::File::N as u8)
+            })
         }
     }
 

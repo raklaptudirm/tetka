@@ -15,7 +15,10 @@ use interface::PositionType;
 /// the number of move paths of a certain depth. Perft ignores draws by
 /// repetition, by the fifty-move rule and by insufficient material.
 #[must_use]
-pub fn perft<const SPLIT: bool, const BULK: bool, T: PositionType>(position: T, depth: u8) -> u64 {
+pub fn perft<const SPLIT: bool, const BULK: bool, T: PositionType>(
+    position: T,
+    depth: u8,
+) -> u64 {
     // Bulk counting if enabled. Instead of calling make move and perft for each
     // move at depth 1, just return the number of legal moves, which is equivalent.
     if BULK && depth == 1 {
