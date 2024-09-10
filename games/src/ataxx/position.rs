@@ -55,7 +55,6 @@ impl PositionType for Position {
     type ColoredPiece = ColoredPiece;
     type Move = Move;
 
-    /// put puts the given piece represented by its Piece on the given Square.
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
         self.bitboards[piece as usize].insert(sq);
     }
@@ -70,7 +69,6 @@ impl PositionType for Position {
         }
     }
 
-    /// at returns the Piece of the piece present on the given Square.
     fn at(&self, sq: Square) -> Option<ColoredPiece> {
         ColoredPiece::iter()
             .find(|piece| self.colored_piece_bb(*piece).contains(sq))
@@ -92,7 +90,6 @@ impl PositionType for Position {
         self.checksum
     }
 
-    /// is_game_over checks if the game is over, i.e. is a win or a draw.
     fn is_game_over(&self) -> bool {
         let black = self.colored_piece_bb(ColoredPiece::Black);
         let white = self.colored_piece_bb(ColoredPiece::White);
@@ -103,9 +100,6 @@ impl PositionType for Position {
 			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
     }
 
-    /// winner returns the Piece which has won the game. It returns [`None`]
-    /// if the game is a draw. If [`Position::is_game_over`] is false, then the
-    /// behavior of this function is undefined.
     fn winner(&self) -> Option<Color> {
         if self.half_move_clock >= 100 {
             // Draw by 50 move rule.
@@ -142,9 +136,6 @@ impl PositionType for Position {
         }
     }
 
-    /// after_move returns a new Position which occurs when the given Move is
-    /// played on the current Position. Its behavior is undefined if the given
-    /// Move is illegal.
     fn after_move<const UPDATE_HASH: bool>(&self, m: Move) -> Position {
         let stm = self.side_to_move;
 
@@ -158,7 +149,6 @@ impl PositionType for Position {
             };
         }
 
-        // A pass move is a do nothing move; just change the side to move.
         if m == Move::PASS {
             return Position {
                 bitboards: self.bitboards,
@@ -205,9 +195,6 @@ impl PositionType for Position {
         }
     }
 
-    /// generate_moves_into generates all the legal moves in the current Position
-    /// and adds them to the given movelist. The type of the movelist must
-    /// implement the [`MoveStore`] trait.
     fn generate_moves_into<
         const ALLOW_ILLEGAL: bool,
         const QUIET: bool,
@@ -249,9 +236,6 @@ impl PositionType for Position {
         }
     }
 
-    /// count_moves returns the number of legal moves in the current Position. It
-    /// is faster than calling [`Position::generate_moves`] or
-    ///  [`Position::generate_moves_into<T>`] and then finding the length.
     fn count_moves<const QUIET: bool, const NOISY: bool>(&self) -> usize {
         if self.is_game_over() {
             // Game is over, so don't generate any moves.
