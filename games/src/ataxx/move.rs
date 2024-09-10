@@ -14,14 +14,32 @@
 use std::fmt;
 use std::str::FromStr;
 
-use arrayvec::ArrayVec;
 use thiserror::Error;
 
-use crate::{Square, SquareParseError};
+use crate::ataxx::Square;
+use crate::interface::{MoveType, RepresentableType, TypeParseError};
 
 /// Move represents an Ataxx move which can be played on the Board.
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
 pub struct Move(u16);
+
+impl MoveType for Move {
+    const NULL: Self = Move(1 << 15);
+    const MAX_IN_GAME: usize = 256;
+    const MAX_IN_POSITION: usize = 256;
+}
+
+impl From<u16> for Move {
+    fn from(value: u16) -> Self {
+        Move(value)
+    }
+}
+
+impl From<Move> for u16 {
+    fn from(value: Move) -> Self {
+        value.0
+    }
+}
 
 impl Move {
     // Bit-widths of fields.
@@ -40,7 +58,8 @@ impl Move {
     pub const NULL: Move = Move(1 << 15);
     /// PASS Move represents a no move, where only the side to move changes.
     /// ```
-    /// use ataxx::*;
+    /// use tetka_games::ataxx::*;
+    /// use tetka_games::interface::PositionType;
     /// use std::str::FromStr;
     ///
     /// let old_pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
@@ -56,7 +75,7 @@ impl Move {
     /// target Square. For a singular Move, [`Move::source`] and [`Move::target`]
     /// are equal since the source Square is irrelevant to the Move.
     /// ```
-    /// use ataxx::*;
+    /// use tetka_games::ataxx::*;
     ///
     /// let mov = Move::new_single(Square::A1);
     ///
@@ -72,7 +91,7 @@ impl Move {
     /// target Square. These Squares can be recovered with the [`Move::source`] and
     /// [`Move::target`] methods respectively.
     /// ```
-    /// use ataxx::*;
+    /// use tetka_games::ataxx::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
@@ -91,40 +110,40 @@ impl Move {
     /// Source returns the source Square of the moving piece. This is equal to the
     /// target Square if the given Move is of singular type.
     /// ```
-    /// use ataxx::*;
+    /// use tetka_games::ataxx::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
     /// assert_eq!(mov.source(), Square::A1);
     /// ```
-    #[inline(always)]
-    #[rustfmt::skip]
     pub fn source(self) -> Square {
-        Square::unsafe_from(
-            (self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK
-        )
+        unsafe {
+            Square::unsafe_from(
+                (self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK,
+            )
+        }
     }
 
     /// Target returns the target Square of the moving piece.
     /// ```
-    /// use ataxx::*;
+    /// use tetka_games::ataxx::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
     /// assert_eq!(mov.target(), Square::A3);
     /// ```
-    #[inline(always)]
-    #[rustfmt::skip]
     pub fn target(self) -> Square {
-        Square::unsafe_from(
-            (self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK
-        )
+        unsafe {
+            Square::unsafe_from(
+                (self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK,
+            )
+        }
     }
 
     /// is_single checks if the given Move is singular in nature. The result of this
     /// function for [`Move::NULL`] and [`Move::PASS`] is undefined.
     /// ```
-    /// use ataxx::*;
+    /// use tetka_games::ataxx::*;
     ///
     /// let sing = Move::new_single(Square::A1);
     /// let jump = Move::new(Square::A1, Square::A3);
@@ -143,7 +162,7 @@ pub enum MoveParseError {
     #[error("length of move string should be 2 or 4, not {0}")]
     BadLength(usize),
     #[error("bad source square string \"{0}\"")]
-    BadSquare(#[from] SquareParseError),
+    BadSquare(#[from] TypeParseError),
 }
 
 impl FromStr for Move {
@@ -156,7 +175,7 @@ impl FromStr for Move {
     /// [`Square::FromStr`](Square::from_str). This function can be treated as the
     /// inverse of the [`fmt::Display`] trait for [Move].
     /// ```
-    /// use ataxx::*;
+    /// use tetka_games::ataxx::*;
     /// use std::str::FromStr;
     ///
     /// let pass = Move::PASS;
@@ -197,7 +216,7 @@ impl fmt::Display for Move {
     /// refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`, while
     /// [`Move::PASS`] is formatted as `0000`.
     /// ```
-    /// use ataxx::*;
+    /// use tetka_games::ataxx::*;
     ///
     /// let null = Move::NULL;
     /// let pass = Move::PASS;
@@ -227,39 +246,5 @@ impl fmt::Debug for Move {
     /// `Move::Display` trait under the hood for formatting the Move.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
-    }
-}
-
-/// MoveStore is a trait implemented by types which are able to store [Move]s inside
-/// themselves and are thus usable in move-generation methods in
-/// [Position](super::Position) like
-/// [`Position::generate_moves_into<T>`](super::Position::generate_moves_into<T>).
-pub trait MoveStore {
-    /// push adds the given Move to the MoveStore.
-    fn push(&mut self, m: Move);
-
-    /// len returns the number of [Move]s stored in the MoveStore.
-    fn len(&self) -> usize;
-
-    /// is_empty checks if no [Move]s are stored in the MoveStore.
-    fn is_empty(&self) -> bool;
-}
-
-/// MoveList is a basic implementation of [`MoveStore`] that is used to allow users
-/// to utilize move-generation methods without having to implement a [MoveStore] by
-/// themselves. It also has utility methods other than the [`MoveStore`] trait.
-pub type MoveList = ArrayVec<Move, 256>;
-
-impl MoveStore for MoveList {
-    fn push(&mut self, m: Move) {
-        self.push(m);
-    }
-
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.is_empty()
     }
 }
