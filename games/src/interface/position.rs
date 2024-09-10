@@ -95,7 +95,7 @@ where
         &self,
         movelist: &mut T,
     );
-    /// `generate_moves` is similar to [`generate_moves_into`], except that
+    /// `generate_moves` is similar to `generate_moves_into`, except that
     /// instead of taking some storage as input it stores into a [MoveList].
     #[must_use]
     fn generate_moves<
@@ -111,7 +111,7 @@ where
         );
         movelist
     }
-    /// `count_moves` is similar to [`generate_moves`], except instead of
+    /// `count_moves` is similar to `generate_moves`, except instead of
     /// returning a list of the available moves, it returns the number of
     /// available moves.
     ///
