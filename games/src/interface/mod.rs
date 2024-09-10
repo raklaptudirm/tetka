@@ -72,7 +72,9 @@ pub enum TypeParseError {
 }
 
 macro_rules! representable_type {
-    ($(#[doc = $doc:expr])* enum $type:tt: $base:tt { $($variant:tt $repr:expr,)* }) => {
+    ($(#[doc = $doc:expr])* enum $type:tt: $base:tt {
+        $($variant:tt $repr:expr,)*
+    }) => {
         $(#[doc = $doc])*
         #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
         #[repr($base)]
@@ -94,7 +96,11 @@ macro_rules! representable_type {
 
             fn try_from(value: $base) -> Result<Self, Self::Error> {
                 if value as usize >= Self::N {
-                    Err($crate::interface::TypeParseError::RangeError(stringify!($type).to_string()))
+                    Err(
+                        $crate::interface::TypeParseError::RangeError(
+                            stringify!($type).to_string()
+                        )
+                    )
                 } else {
                     Ok(unsafe { Self::unsafe_from(value) })
                 }
@@ -107,7 +113,11 @@ macro_rules! representable_type {
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 match s {
                     $($repr => Ok(Self::$variant),)*
-                    _ => Err($crate::interface::TypeParseError::StrError(stringify!($type).to_string())),
+                    _ => Err(
+                        $crate::interface::TypeParseError::StrError(
+                            stringify!($type).to_string()
+                        )
+                    ),
                 }
             }
         }
@@ -172,7 +182,7 @@ macro_rules! bitboard_type {
         )]
         pub struct $name(pub $typ);
 
-        impl $crate::interface::BitBoardType for $name {
+        impl crate::interface::BitBoardType for $name {
             type Base = $typ;
             type Square = $sq;
 
@@ -190,8 +200,13 @@ macro_rules! bitboard_type {
                 let lsb = if self.is_empty() {
                     None
                 } else {
-                    let sq = <Self as Into<<Self as BitBoardType>::Base>>::into(*self).trailing_zeros() as usize;
-                    Some(unsafe { <Self as BitBoardType>::Square::unsafe_from(sq) })
+                    let sq = <Self as Into<<Self as BitBoardType>::Base>>::into(
+                        *self,
+                    )
+                    .trailing_zeros() as usize;
+                    Some(unsafe {
+                        <Self as BitBoardType>::Square::unsafe_from(sq)
+                    })
                 };
 
                 if !self.is_empty() {
@@ -240,7 +255,8 @@ macro_rules! bitboard_type {
             #[must_use]
             fn not(self) -> Self::Output {
                 // ! will set the unused bits so remove them with an &.
-                Self(!self.0) & <Self as $crate::interface::BitBoardType>::UNIVERSE
+                Self(!self.0)
+                    & <Self as crate::interface::BitBoardType>::UNIVERSE
             }
         }
 
@@ -280,10 +296,26 @@ macro_rules! bitboard_type {
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 let mut string_rep = String::from("");
-                for rank in <<$sq as $crate::interface::SquareType>::Rank as strum::IntoEnumIterator>::iter().rev() {
-                    for file in <<$sq as $crate::interface::SquareType>::File as strum::IntoEnumIterator>::iter() {
-                        let square = <$sq as $crate::interface::SquareType>::new(file, rank);
-                        string_rep += if $crate::interface::BitBoardType::contains(*self, square) { "1 " } else { "0 " };
+                for rank in
+                    <
+                        <$sq as crate::interface::SquareType>::Rank
+                            as strum::IntoEnumIterator
+                    >::iter().rev()
+                {
+                    for file in
+                        <
+                            <$sq as crate::interface::SquareType>::File
+                                as strum::IntoEnumIterator
+                        >::iter()
+                    {
+                        let square = <$sq as crate::interface::SquareType>
+                            ::new(file, rank);
+                        string_rep += if crate::interface::BitBoardType
+                            ::contains(*self, square) {
+                            "1 "
+                        } else {
+                            "0 "
+                        };
                     }
 
                     string_rep += "\n";
@@ -322,7 +354,8 @@ pub(crate) fn parse_piece_placement<T: PositionType>(
     position: &mut T,
     fen_fragment: &str,
 ) -> Result<(), PiecePlacementParseError> {
-    for sq in <<<T as PositionType>::BitBoard as BitBoardType>::Square as IntoEnumIterator>::iter()
+    for sq in <<<T as PositionType>::BitBoard as BitBoardType>::Square
+        as IntoEnumIterator>::iter()
     {
         position.remove(sq);
     }
@@ -339,12 +372,15 @@ pub(crate) fn parse_piece_placement<T: PositionType>(
     for rank_data in ranks {
         // Rank pointer ran out, but data carried on.
         if rank.is_err() {
-            return Err(PiecePlacementParseError::TooManyRanks(<<<T as PositionType>::BitBoard as BitBoardType>::Square as SquareType>::Rank::iter().len()));
+            return Err(PiecePlacementParseError::TooManyRanks(
+                <<<T as PositionType>::BitBoard as BitBoardType>::Square
+                    as SquareType>::Rank::iter().len()
+            ));
         }
 
         // Iterate over the Square specs in the Rank spec.
         for data in rank_data.chars() {
-            // Check if a jump spec was too big and we landed on an invalid File.
+            // Check if a jump was too big and we landed on an invalid File.
             if file.is_err() {
                 return Err(PiecePlacementParseError::JumpTooLong);
             }
