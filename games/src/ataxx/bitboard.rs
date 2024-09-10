@@ -16,10 +16,17 @@ use crate::interface::bitboard_type;
 use super::Square;
 
 bitboard_type! {
-    BitBoard : u64 {
+    /// A set of Squares implemented as a bitset where the `1 << sq.into()` bit
+    /// represents whether `sq` is in the BitBoard or not.
+    struct BitBoard : u64 {
+        // The BitBoard's Square type.
         Square = Square;
+
+        // BitBoards representing the null and the universe sets.
         Empty = Self(0);
         Universe = Self(0x1ffffffffffff);
+
+        // BitBoards containing the squares of the first file and the first rank.
         FirstFile = Self(0x0040810204081);
         FirstRank = Self(0x000000000007f);
     }
@@ -28,6 +35,8 @@ bitboard_type! {
 use crate::interface::{BitBoardType, RepresentableType};
 
 impl BitBoard {
+    /// singles returns the targets of all singular moves from all the source
+    /// squares given in the provided BitBoard.
     pub fn singles(bb: BitBoard) -> BitBoard {
         let bar = bb | bb.east() | bb.west();
         bar | bar.north() | bar.south()
