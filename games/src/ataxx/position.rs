@@ -153,7 +153,7 @@ impl PositionType for Position {
                 if UPDATE_HASH {
                     $e
                 } else {
-                    Hash::ZERO
+                    Default::default()
                 }
             };
         }
@@ -357,7 +357,7 @@ impl FromStr for Position {
 
         let mut position = Position {
             bitboards: [BitBoard::EMPTY; ColoredPiece::N],
-            checksum: Hash::ZERO,
+            checksum: Default::default(),
             side_to_move: Color::Black,
             ply_count: 0,
             half_move_clock: 0,

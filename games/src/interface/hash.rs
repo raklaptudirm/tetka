@@ -21,9 +21,6 @@ use std::{fmt, ops};
 pub struct Hash(u64);
 
 impl Hash {
-    /// ZERO represents the zero value of Hash.
-    pub const ZERO: Hash = Hash(0);
-
     /// new creates a new Hash value from a raw u64.
     #[must_use]
     pub fn new(raw: u64) -> Hash {
