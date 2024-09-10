@@ -8,10 +8,12 @@ where
     Self::File: RepresentableType<u8>,
     Self::Rank: RepresentableType<u8>,
 {
+    /// The type for the File of the Square.
     type File;
+    /// The type for the Rank of the Square.
     type Rank;
 
-    /// new creates a new Square from the given File and Rank.
+    /// Creates a new Square from the given File and Rank.
     #[must_use]
     fn new(file: Self::File, rank: Self::Rank) -> Self {
         unsafe { Self::unsafe_from(rank.into() * Self::File::N as u8 + file.into()) }

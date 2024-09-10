@@ -19,14 +19,15 @@ pub trait MoveType: FromStr + Display + From<u16> + Into<u16> + Copy {
 /// [Position](super::PositionType) like
 /// [`generate_moves_into<T>`](super::PositionType::generate_moves_into<T>).
 pub trait MoveStore<M>: Default {
-    /// push adds the given Move to the MoveStore.
+    /// Appends a move to the back of the [MoveStore].
     fn push(&mut self, m: M);
 
-    /// len returns the number of [Moves](MoveType) stored in the MoveStore.
+    /// Returns the number of moves in the [MoveStore], also referred to as its
+    /// ‘length’.
     #[must_use]
     fn len(&self) -> usize;
 
-    /// is_empty checks if no [Moves](MoveType) are stored in the MoveStore.
+    /// Returns `true` if the [MoveStore] contains no moves.
     #[must_use]
     fn is_empty(&self) -> bool {
         self.len() == 0
@@ -36,6 +37,11 @@ pub trait MoveStore<M>: Default {
 /// MoveList is a basic implementation of [`MoveStore`] that is used to allow users
 /// to utilize move-generation methods without having to implement a [MoveStore] by
 /// themselves. It also has utility methods other than the [`MoveStore`] trait.
+///
+/// MoveList is allocated on the stack and very fast for use. However, due to
+/// current limitations in the Rust type system, the current max capacity is
+/// capped at 256, which can be problematic for games which can have more moves
+/// in a position and might require a custom type.
 pub type MoveList<M> = ArrayVec<M, 256>;
 
 // MoveStore implementation for MoveList.

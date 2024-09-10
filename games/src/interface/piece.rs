@@ -9,21 +9,21 @@ where
     Self::Piece: RepresentableType<u8>,
     Self::Color: RepresentableType<u8> + Not,
 {
-    /// Piece is the piece representation for the game.
+    /// The type for the Piece of the ColoredPiece.
     type Piece;
-    /// Color is the color representation for the game.
+    /// The type for the Color of the ColoredPiece.
     type Color;
 
-    /// new creates a new ColoredPiece from the given Piece and Color.
+    /// Creates a new ColoredPiece from the given Piece and Color.
     #[must_use]
     fn new(piece: Self::Piece, color: Self::Color) -> Self {
         unsafe { Self::unsafe_from(color.into() * Self::Piece::N as u8 + piece.into()) }
     }
 
-    /// piece returns the Piece part of the given ColoredPiece.
+    /// Returns the Piece of the given ColoredPiece.
     #[must_use]
     fn piece(self) -> Self::Piece;
-    /// color returns the Color part of the given ColoredPiece.
+    /// Returns the Color of the given ColoredPiece.
     #[must_use]
     fn color(self) -> Self::Color;
 }

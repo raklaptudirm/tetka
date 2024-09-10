@@ -1,3 +1,10 @@
+//! A common interface for game logic.
+//!
+//! The main type when working with the logic for a game is the [`PositionType`]
+//! trait, which defines the common interface for the position representations
+//! of games. All the details regarding a game can be found as a child of the
+//! [`PositionType`] trait, see its documentation for more information.
+
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 

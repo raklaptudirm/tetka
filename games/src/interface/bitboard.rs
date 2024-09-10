@@ -24,16 +24,20 @@ where
     Self::Base: PrimInt,
     Self::Square: SquareType,
 {
+    /// The backing [`PrimInt`] type for the BitBoard.
     type Base;
+    /// The type of the Squares in the BitBoard.
     type Square;
 
-    /// EMPTY is an empty Self containing no Squares.
+    /// The null/empty set containing no squares.
     const EMPTY: Self;
 
-    /// UNIVERSE is a filled Self containing all Squares.
+    /// The universal set containing all squares.
     const UNIVERSE: Self;
 
+    /// The BitBoard containing Squares in the first File.
     const FIRST_FILE: Self;
+    /// The BitBoard containing Squares in the first Rank.
     const FIRST_RANK: Self;
 
     /// Makes a new, empty `BitBoard`.
