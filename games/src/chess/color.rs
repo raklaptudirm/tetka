@@ -21,7 +21,7 @@ use crate::interface::RepresentableType;
 representable_type!(
     /// Color represents all the possible colors that an ataxx piece can have,
     /// specifically, Black and White.
-    enum Color: u8 { Black "x", White "o", }
+    enum Color: u8 { White "w", Black "b", }
 );
 
 impl ops::Not for Color {
@@ -36,12 +36,19 @@ impl ops::Not for Color {
 
 representable_type!(
     /// Piece represents the types of pieces in ataxx, namely Piece and Block.
-    enum Piece: u8 { Piece "x", Block "■", }
+    enum Piece: u8 {
+        Pawn "p", Knight "n", Bishop "b", Rook "r", Queen "q", King "k",
+    }
 );
 
 representable_type!(
     /// Piece represents all the possible ataxx pieces.
-    enum ColoredPiece: u8 { Black "x", White "o", Block "■", }
+    enum ColoredPiece: u8 {
+        WhitePawn "P", WhiteKnight "N", WhiteBishop "B",
+        WhiteRook "R", WhiteQueen "Q", WhiteKing "K",
+        BlackPawn "p", BlackKnight "n", BlackBishop "b",
+        BlackRook "r", BlackQueen "q", BlackKing "k",
+    }
 );
 
 impl ColoredPieceType for ColoredPiece {
@@ -50,16 +57,33 @@ impl ColoredPieceType for ColoredPiece {
 
     fn piece(self) -> Piece {
         match self {
-            ColoredPiece::Black | ColoredPiece::White => Piece::Piece,
-            ColoredPiece::Block => Piece::Block,
+            ColoredPiece::BlackPawn | ColoredPiece::WhitePawn => Piece::Pawn,
+            ColoredPiece::BlackKnight | ColoredPiece::WhiteKnight => {
+                Piece::Knight
+            }
+            ColoredPiece::BlackBishop | ColoredPiece::WhiteBishop => {
+                Piece::Bishop
+            }
+            ColoredPiece::BlackRook | ColoredPiece::WhiteRook => Piece::Rook,
+            ColoredPiece::BlackQueen | ColoredPiece::WhiteQueen => Piece::Queen,
+            ColoredPiece::BlackKing | ColoredPiece::WhiteKing => Piece::King,
         }
     }
 
     fn color(self) -> Color {
         match self {
-            ColoredPiece::Black => Color::Black,
-            ColoredPiece::White => Color::White,
-            _ => panic!("Piece::color() called on Piece::Block"),
+            ColoredPiece::WhitePawn
+            | ColoredPiece::WhiteKnight
+            | ColoredPiece::WhiteBishop
+            | ColoredPiece::WhiteRook
+            | ColoredPiece::WhiteQueen
+            | ColoredPiece::WhiteKing => Color::White,
+            ColoredPiece::BlackPawn
+            | ColoredPiece::BlackKnight
+            | ColoredPiece::BlackBishop
+            | ColoredPiece::BlackRook
+            | ColoredPiece::BlackQueen
+            | ColoredPiece::BlackKing => Color::Black,
         }
     }
 }

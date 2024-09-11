@@ -107,7 +107,7 @@ macro_rules! representable_type {
             }
         }
 
-        impl FromStr for $type {
+        impl std::str::FromStr for $type {
             type Err = $crate::interface::TypeParseError;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -200,12 +200,12 @@ macro_rules! bitboard_type {
                 let lsb = if self.is_empty() {
                     None
                 } else {
-                    let sq = <Self as Into<<Self as BitBoardType>::Base>>::into(
+                    let sq = <Self as Into<<Self as $crate::interface::BitBoardType>::Base>>::into(
                         *self,
                     )
                     .trailing_zeros() as usize;
                     Some(unsafe {
-                        <Self as BitBoardType>::Square::unsafe_from(sq)
+                        <Self as $crate::interface::BitBoardType>::Square::unsafe_from(sq)
                     })
                 };
 

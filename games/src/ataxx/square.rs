@@ -12,7 +12,6 @@
 // limitations under the License.
 
 use std::fmt;
-use std::str::FromStr;
 
 use crate::interface::{representable_type, RepresentableType, SquareType};
 

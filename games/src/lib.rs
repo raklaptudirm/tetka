@@ -1,4 +1,6 @@
 pub mod ataxx;
+pub mod chess;
+
 pub mod interface;
 
 use interface::PositionType;

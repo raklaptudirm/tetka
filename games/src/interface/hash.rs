@@ -11,13 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use derive_more::{BitXor, BitXorAssign};
 use std::{fmt, ops};
 
 /// Hash represents the semi-unique checksum of a Position used to efficiently
 /// check for Position equality. Some properties that a Hash should possess
 /// include determinism, uniform distribution, avalanche effect, and collision
 /// resistance.
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, BitXor, BitXorAssign)]
 pub struct Hash(u64);
 
 impl Hash {
