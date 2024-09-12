@@ -18,6 +18,8 @@ use crate::{
     interface::{representable_type, MoveType, RepresentableType},
 };
 
+use super::ColoredPiece;
+
 #[derive(Copy, Clone, PartialEq, Default)]
 pub struct Move(u16);
 
@@ -50,22 +52,18 @@ impl Move {
     // Bit-widths of fields.
     const SOURCE_WIDTH: u16 = 6;
     const TARGET_WIDTH: u16 = 6;
-    const PROMOT_WIDTH: u16 = 2;
-    const MVFLAG_WIDTH: u16 = 2;
+    const MVFLAG_WIDTH: u16 = 4;
 
     // Bit-masks of fields.
     const SOURCE_MASK: u16 = (1 << Move::SOURCE_WIDTH) - 1;
     const TARGET_MASK: u16 = (1 << Move::TARGET_WIDTH) - 1;
-    const PROMOT_MASK: u16 = (1 << Move::PROMOT_WIDTH) - 1;
     const MVFLAG_MASK: u16 = (1 << Move::MVFLAG_WIDTH) - 1;
 
     // Bit-offsets of fields.
     const SOURCE_OFFSET: u16 = 0;
     const TARGET_OFFSET: u16 = Move::SOURCE_OFFSET + Move::SOURCE_WIDTH;
-    const PROMOT_OFFSET: u16 = Move::TARGET_OFFSET + Move::TARGET_WIDTH;
-    const MVFLAG_OFFSET: u16 = Move::PROMOT_OFFSET + Move::PROMOT_WIDTH;
+    const MVFLAG_OFFSET: u16 = Move::TARGET_OFFSET + Move::TARGET_WIDTH;
 
-    #[inline(always)]
     pub fn new(
         source: chess::Square,
         target: chess::Square,
@@ -78,21 +76,18 @@ impl Move {
         )
     }
 
-    #[inline(always)]
     pub fn new_with_promotion(
         source: chess::Square,
         target: chess::Square,
         promotion: chess::Piece,
     ) -> Move {
         Move(
-            (promotion as u16 - 1) << Move::PROMOT_OFFSET
-                | (MoveFlag::Promotion as u16) << Move::MVFLAG_OFFSET
+            (promotion as u16) << Move::MVFLAG_OFFSET
                 | (source as u16) << Move::SOURCE_OFFSET
                 | (target as u16) << Move::TARGET_OFFSET,
         )
     }
 
-    #[inline(always)]
     pub fn source(self) -> chess::Square {
         unsafe {
             chess::Square::unsafe_from(
@@ -101,7 +96,6 @@ impl Move {
         }
     }
 
-    #[inline(always)]
     pub fn target(self) -> chess::Square {
         unsafe {
             chess::Square::unsafe_from(
@@ -110,19 +104,7 @@ impl Move {
         }
     }
 
-    #[inline(always)]
-    pub fn promot(self) -> chess::Piece {
-        // +1 to account for the fact that move encodes
-        // Piece::Knight as 0, while actually it is 1.
-        unsafe {
-            chess::Piece::unsafe_from(
-                ((self.0 >> Move::PROMOT_OFFSET) & Move::PROMOT_MASK) + 1,
-            )
-        }
-    }
-
-    #[inline(always)]
-    pub fn flags(self) -> MoveFlag {
+    pub fn flag(self) -> MoveFlag {
         unsafe {
             MoveFlag::unsafe_from(
                 ((self.0 >> Move::MVFLAG_OFFSET) & Move::MVFLAG_MASK) as u8,
@@ -133,7 +115,19 @@ impl Move {
 
 representable_type! {
     enum MoveFlag: u8 {
-        Normal "n", Castle "c", Promotion "p", EnPassant "e",
+        Normal "N",
+        NPromotion "n", BPromotion "b", RPromotion "r", QPromotion "q",
+        EnPassant "e", DoublePush "d",
+        CastleHSide "h", CastleASide "a",
+    }
+}
+
+impl MoveFlag {
+    /// # Safety
+    /// This function can only be called safely if `self` is one of `NPromotion`,
+    /// `BPromotion`, `RPromotion`, and `QPromotion`.
+    pub unsafe fn promoted_piece(&self) -> ColoredPiece {
+        ColoredPiece::unsafe_from(*self as usize)
     }
 }
 
