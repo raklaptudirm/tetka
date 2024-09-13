@@ -15,6 +15,8 @@ use std::fmt;
 
 use crate::interface::{representable_type, RepresentableType, SquareType};
 
+use super::Color;
+
 representable_type!(
     /// Square represents all the squares present on an Ataxx Board.
     /// The index of each Square is equal to `rank-index * 8 + file-index`.
@@ -36,6 +38,20 @@ impl SquareType for Square {
 }
 
 impl Square {
+    pub fn up(self, stm: Color) -> Option<Square> {
+        match stm {
+            Color::White => self.north(),
+            Color::Black => self.south(),
+        }
+    }
+
+    pub fn down(self, stm: Color) -> Option<Square> {
+        match stm {
+            Color::White => self.south(),
+            Color::Black => self.north(),
+        }
+    }
+
     pub fn diagonal(self) -> usize {
         14 - self.rank() as usize - self.file() as usize
     }

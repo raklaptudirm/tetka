@@ -18,7 +18,7 @@ use crate::{
     interface::{representable_type, MoveType, RepresentableType},
 };
 
-use super::ColoredPiece;
+use super::Piece;
 
 #[derive(Copy, Clone, PartialEq, Default)]
 pub struct Move(u16);
@@ -126,8 +126,18 @@ impl MoveFlag {
     /// # Safety
     /// This function can only be called safely if `self` is one of `NPromotion`,
     /// `BPromotion`, `RPromotion`, and `QPromotion`.
-    pub unsafe fn promoted_piece(&self) -> ColoredPiece {
-        ColoredPiece::unsafe_from(*self as usize)
+    pub unsafe fn promoted_piece(&self) -> Piece {
+        Piece::unsafe_from(*self as usize)
+    }
+
+    pub fn is_promotion(&self) -> bool {
+        matches!(
+            self,
+            MoveFlag::NPromotion
+                | MoveFlag::BPromotion
+                | MoveFlag::RPromotion
+                | MoveFlag::QPromotion
+        )
     }
 }
 

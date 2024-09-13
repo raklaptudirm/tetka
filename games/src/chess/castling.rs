@@ -59,6 +59,12 @@ impl ops::Sub for Rights {
     }
 }
 
+impl ops::SubAssign for Rights {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 &= !rhs.0
+    }
+}
+
 impl ops::Add<SideColor> for Rights {
     type Output = Rights;
 

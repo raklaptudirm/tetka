@@ -33,6 +33,8 @@ use crate::chess::{
 };
 use crate::interface::MoveStore;
 
+use super::MoveFlag;
+
 /// Position represents the snapshot of an Ataxx Board, the state of the an
 /// ataxx game at a single point in time. It also provides all of the methods
 /// necessary to manipulate such a snapshot.
@@ -108,8 +110,57 @@ impl PositionType for Position {
         None
     }
 
-    fn after_move<const UPDATE_HASH: bool>(&self, _m: Move) -> Position {
-        self.clone()
+    fn after_move<const UPDATE_HASH: bool>(&self, m: Move) -> Position {
+        let mut board = self.clone();
+
+        let source_pc = board.remove(m.source());
+        let target_pc = board.remove(m.target());
+
+        let source_pc = unsafe { source_pc.unwrap_unchecked() };
+
+        if !m.flag().is_promotion() {
+            board.insert(m.target(), source_pc);
+        }
+
+        board.castling_square_info.rights -=
+            board.castling_square_info.get_updates(m.source())
+                + board.castling_square_info.get_updates(m.target());
+
+        if source_pc.piece() == Piece::Pawn || target_pc.is_some() {
+            board.half_move_clock = 0;
+        }
+
+        match m.flag() {
+            MoveFlag::Normal => {}
+            MoveFlag::NPromotion
+            | MoveFlag::BPromotion
+            | MoveFlag::RPromotion
+            | MoveFlag::QPromotion => board.insert(
+                m.target(),
+                ColoredPiece::new(
+                    unsafe { m.flag().promoted_piece() },
+                    board.side_to_move,
+                ),
+            ),
+            MoveFlag::EnPassant => {
+                board.remove(unsafe {
+                    m.target().down(board.side_to_move).unwrap_unchecked()
+                });
+            }
+            MoveFlag::DoublePush => {
+                board.en_passant_target = Some(unsafe {
+                    m.target().down(board.side_to_move).unwrap_unchecked()
+                })
+            }
+            MoveFlag::CastleASide => {}
+            MoveFlag::CastleHSide => {}
+        }
+
+        board.half_move_clock += 1;
+        board.side_to_move = !board.side_to_move;
+        board.en_passant_target = None;
+
+        board
     }
 
     fn generate_moves_into<
