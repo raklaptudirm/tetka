@@ -35,6 +35,16 @@ impl SquareType for Square {
     type Rank = Rank;
 }
 
+impl Square {
+    pub fn diagonal(self) -> usize {
+        14 - self.rank() as usize - self.file() as usize
+    }
+
+    pub fn anti_diagonal(self) -> usize {
+        7 - self.rank() as usize + self.file() as usize
+    }
+}
+
 representable_type!(
     /// File represents a file on the Chess Board. Each vertical column of Squares
     /// on an Chess Board is known as a File. There are 7 of them in total.

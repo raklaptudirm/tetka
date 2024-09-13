@@ -13,7 +13,7 @@
 
 use crate::chess::{BitBoard, Color, Square};
 
-use crate::interface::RepresentableType;
+use crate::interface::{BitBoardType, RepresentableType, SquareType};
 
 pub fn pawn_attacks(square: Square, color: Color) -> BitBoard {
     BitBoard::new(PAWN_ATTACKS_TABLE[color as usize][square as usize])
@@ -23,24 +23,24 @@ pub fn knight(square: Square) -> BitBoard {
     BitBoard::new(KNIGHT_MOVES_TABLE[square as usize])
 }
 
-// #[rustfmt::skip]
-// #[inline(always)]
-// pub fn bishop(square: Square, blockers: BitBoard) -> BitBoard {
-//     hyperbola(square, blockers, BitBoard::diagonal(square.diagonal())) |
-// 	hyperbola(square, blockers, BitBoard::anti_diagonal(square.anti_diagonal()))
-// }
+#[rustfmt::skip]
+#[inline(always)]
+pub fn bishop(square: Square, blockers: BitBoard) -> BitBoard {
+    hyperbola(square, blockers, BitBoard::diagonal(square.diagonal())) |
+	hyperbola(square, blockers, BitBoard::anti_diagonal(square.anti_diagonal()))
+}
 
-// #[rustfmt::skip]
-// #[inline(always)]
-// pub fn rook(square: Square, blockers: BitBoard) -> BitBoard {
-//     hyperbola(square, blockers, BitBoard::file(square.file())) |
-// 	hyperbola(square, blockers, BitBoard::rank(square.rank()))
-// }
+#[rustfmt::skip]
+#[inline(always)]
+pub fn rook(square: Square, blockers: BitBoard) -> BitBoard {
+    hyperbola(square, blockers, BitBoard::file(square.file())) |
+	hyperbola(square, blockers, BitBoard::rank(square.rank()))
+}
 
-// #[inline(always)]
-// pub fn queen(square: Square, blockers: BitBoard) -> BitBoard {
-//     bishop(square, blockers) | rook(square, blockers)
-// }
+#[inline(always)]
+pub fn queen(square: Square, blockers: BitBoard) -> BitBoard {
+    bishop(square, blockers) | rook(square, blockers)
+}
 
 pub fn king(square: Square) -> BitBoard {
     BitBoard::new(KING_MOVES_TABLE[square as usize])
