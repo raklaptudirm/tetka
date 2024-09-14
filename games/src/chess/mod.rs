@@ -3,6 +3,8 @@ pub mod castling;
 pub mod moves;
 pub mod zobrist;
 
+mod movegen;
+
 // Non-namespaced modules.
 mod bitboard;
 mod color;

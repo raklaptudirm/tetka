@@ -86,6 +86,18 @@ impl PositionType for Position {
         self.bitboards[piece as usize]
     }
 
+    fn side_to_move(&self) -> interface::Color<Self> {
+        self.side_to_move
+    }
+
+    fn half_move_clock(&self) -> usize {
+        self.half_move_clock as usize
+    }
+
+    fn ply_count(&self) -> usize {
+        self.ply_count as usize
+    }
+
     fn hash(&self) -> Hash {
         self.checksum
     }

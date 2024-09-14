@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
+use std::{fmt, ops};
 
 use crate::interface::{representable_type, RepresentableType, SquareType};
 
@@ -52,6 +52,10 @@ impl Square {
         }
     }
 
+    pub fn shift(self, dir: Direction) -> Square {
+        unsafe { Square::unsafe_from((self as i8 + dir as i8) as u8) }
+    }
+
     pub fn diagonal(self) -> usize {
         14 - self.rank() as usize - self.file() as usize
     }
@@ -75,3 +79,50 @@ representable_type!(
         Fifth "5", Sixth "6", Seventh "7", Eighth "8",
     }
 );
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    North = 8,
+    South = -8,
+
+    East = 1,
+    West = -1,
+
+    NorthEast = 8 + 1,
+    NorthWest = 8 - 1,
+    SouthEast = -8 + 1,
+    SouthWest = -8 - 1,
+}
+
+impl Direction {
+    pub fn up(stm: Color) -> Direction {
+        match stm {
+            Color::White => Direction::North,
+            Color::Black => Direction::South,
+        }
+    }
+}
+
+impl ops::Add for Direction {
+    type Output = Direction;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        unsafe { std::mem::transmute_copy(&(self as i8 + rhs as i8)) }
+    }
+}
+
+impl ops::Sub for Direction {
+    type Output = Direction;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        unsafe { std::mem::transmute_copy(&(self as i8 - rhs as i8)) }
+    }
+}
+
+impl ops::Neg for Direction {
+    type Output = Direction;
+
+    fn neg(self) -> Self::Output {
+        unsafe { std::mem::transmute_copy(&(-(self as i8))) }
+    }
+}

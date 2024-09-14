@@ -13,7 +13,7 @@
 
 use crate::interface::{bitboard_type, BitBoardType, RepresentableType};
 
-use super::Square;
+use super::{Direction, Square};
 
 bitboard_type! {
     /// A set of Squares implemented as a bitset where the `1 << sq.into()` bit
@@ -28,13 +28,26 @@ bitboard_type! {
 
         // BitBoards containing the squares of the first file and the first rank.
         FirstFile = Self(0x0101010101010101);
-        FirstRank = Self(0xff00000000000000);
+        FirstRank = Self(0x00000000000000ff);
     }
 }
 
 impl BitBoard {
     pub fn new(raw: u64) -> BitBoard {
         BitBoard(raw)
+    }
+
+    pub fn shift(&self, dir: Direction) -> BitBoard {
+        match dir {
+            Direction::North => self.north(),
+            Direction::South => self.south(),
+            Direction::East => self.east(),
+            Direction::West => self.west(),
+            Direction::NorthEast => self.north().east(),
+            Direction::NorthWest => self.north().west(),
+            Direction::SouthEast => self.south().east(),
+            Direction::SouthWest => self.south().west(),
+        }
     }
 }
 
@@ -85,6 +98,11 @@ impl BitBoard {
 
     pub fn between(sq_1: Square, sq_2: Square) -> BitBoard {
         BitBoard(BitBoard::BETWEEN[sq_1 as usize][sq_2 as usize])
+    }
+
+    pub fn between2(sq_1: Square, sq_2: Square) -> BitBoard {
+        BitBoard(BitBoard::BETWEEN[sq_1 as usize][sq_2 as usize])
+            | BitBoard::from(sq_2)
     }
 
     #[rustfmt::skip]

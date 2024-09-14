@@ -33,6 +33,7 @@ use crate::chess::{
 };
 use crate::interface::MoveStore;
 
+use super::movegen;
 use super::MoveFlag;
 
 /// Position represents the snapshot of an Ataxx Board, the state of the an
@@ -96,6 +97,18 @@ impl PositionType for Position {
 
     fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
         self.piece_bb(piece.piece()) & self.color_bb(piece.color())
+    }
+
+    fn side_to_move(&self) -> interface::Color<Self> {
+        self.side_to_move
+    }
+
+    fn half_move_clock(&self) -> usize {
+        self.half_move_clock as usize
+    }
+
+    fn ply_count(&self) -> usize {
+        self.ply_count as usize
     }
 
     fn hash(&self) -> Hash {
@@ -170,8 +183,10 @@ impl PositionType for Position {
         T: MoveStore<Move>,
     >(
         &self,
-        _movelist: &mut T,
+        movelist: &mut T,
     ) {
+        let info = movegen::MoveGenerationInfo::new(self);
+        info.generate_moves_into(movelist);
     }
 }
 
@@ -198,14 +213,14 @@ impl FromStr for Position {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts = s.split(' ').collect::<Vec<&str>>();
 
-        if parts.len() != 4 {
+        if parts.len() != 6 {
             return Err(PositionParseError::TooManyFields(parts.len()));
         }
 
         let pos = parts[0];
         let stm = parts[1];
-        let hmc = parts[2];
-        let fmc = parts[3];
+        let hmc = parts[4];
+        let fmc = parts[5];
 
         let mut position = Position {
             color_bbs: [BitBoard::EMPTY; Color::N],
