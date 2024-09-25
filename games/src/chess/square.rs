@@ -57,11 +57,11 @@ impl Square {
     }
 
     pub fn diagonal(self) -> usize {
-        14 - self.rank() as usize - self.file() as usize
+        7 + self.rank() as usize - self.file() as usize
     }
 
     pub fn anti_diagonal(self) -> usize {
-        7 - self.rank() as usize + self.file() as usize
+        self.rank() as usize + self.file() as usize
     }
 }
 

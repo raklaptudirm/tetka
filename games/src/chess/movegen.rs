@@ -173,6 +173,21 @@ impl<'a> MoveGenerationInfo<'a> {
             ),
         )
     }
+
+    fn attacked(&self, sq: Square) -> bool {
+        let stm = self.position.side_to_move();
+
+        let p = self.friends & self.position.piece_bb(Piece::Pawn);
+        let n = self.friends & self.position.piece_bb(Piece::Knight);
+        let b = self.friends & self.position.piece_bb(Piece::Bishop);
+        let r = self.friends & self.position.piece_bb(Piece::Rook);
+        let q = self.friends & self.position.piece_bb(Piece::Queen);
+
+        !(p.is_disjoint(moves::pawn_attacks(sq, !stm))
+            && n.is_disjoint(moves::knight(sq))
+            && (b | q).is_disjoint(moves::bishop(sq, self.blocker))
+            && (r | q).is_disjoint(moves::rook(sq, self.blocker)))
+    }
 }
 
 impl<'a> MoveGenerationInfo<'a> {
@@ -288,6 +303,16 @@ impl<'a> MoveGenerationInfo<'a> {
             self.serialize(rook, moves::rook(rook, self.blocker), movelist)
         }
     }
+
+    fn king_moves<ML: MoveStore<Move>>(&self, movelist: &mut ML) {
+        let targets = moves::king(self.king) & self.territory;
+
+        for target in targets {
+            if !self.attacked(target) {
+                movelist.push(Move::new(self.king, target, MoveFlag::Normal))
+            }
+        }
+    }
 }
 
 impl<'a> MoveGenerationInfo<'a> {
@@ -299,7 +324,7 @@ impl<'a> MoveGenerationInfo<'a> {
                     position.side_to_move(),
                 ))
                 .next()
-                .unwrap_unchecked()
+                .unwrap_or_else(|| panic!("{}", position))
         };
         let checkers = Self::generate_checkers(position, king);
         let checkmask = Self::generate_checkmask(position, checkers, king);
@@ -309,7 +334,7 @@ impl<'a> MoveGenerationInfo<'a> {
         let enemies = position.color_bb(position.side_to_move());
         let blocker = friends | enemies;
 
-        let territory = !position.color_bb(position.side_to_move());
+        let territory = !friends;
 
         Self {
             position,
@@ -326,9 +351,15 @@ impl<'a> MoveGenerationInfo<'a> {
     }
 
     pub fn generate_moves_into<ML: MoveStore<Move>>(&self, movelist: &mut ML) {
-        self.pawn_moves(movelist);
-        self.knight_moves(movelist);
-        self.bishop_moves(movelist);
-        self.rook_moves(movelist);
+        let checker_num = self.checkers.len();
+
+        self.king_moves(movelist);
+
+        if checker_num < 2 {
+            self.pawn_moves(movelist);
+            self.knight_moves(movelist);
+            self.bishop_moves(movelist);
+            self.rook_moves(movelist);
+        }
     }
 }

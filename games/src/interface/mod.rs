@@ -244,7 +244,7 @@ macro_rules! bitboard_type {
         impl From<$sq> for $name {
             #[must_use]
             fn from(square: $sq) -> Self {
-                Self(1 << square as u64)
+                Self($typ::from(1u8) << $typ::from(u8::from(square)))
             }
         }
 
