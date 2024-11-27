@@ -352,7 +352,7 @@ impl<'a> MoveGenerationInfo<'a> {
                     position.side_to_move(),
                 ))
                 .next()
-                .unwrap_or_else(|| panic!("{}", position))
+                .unwrap_unchecked()
         };
         let checkers = Self::generate_checkers(position, king);
         let checkmask = Self::generate_checkmask(position, checkers, king);
