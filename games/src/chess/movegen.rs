@@ -177,16 +177,22 @@ impl<'a> MoveGenerationInfo<'a> {
     fn attacked(&self, sq: Square) -> bool {
         let stm = self.position.side_to_move();
 
-        let p = self.friends & self.position.piece_bb(Piece::Pawn);
-        let n = self.friends & self.position.piece_bb(Piece::Knight);
-        let b = self.friends & self.position.piece_bb(Piece::Bishop);
-        let r = self.friends & self.position.piece_bb(Piece::Rook);
-        let q = self.friends & self.position.piece_bb(Piece::Queen);
+        let p = self.enemies & self.position.piece_bb(Piece::Pawn);
+        let n = self.enemies & self.position.piece_bb(Piece::Knight);
+        let b = self.enemies & self.position.piece_bb(Piece::Bishop);
+        let r = self.enemies & self.position.piece_bb(Piece::Rook);
+        let q = self.enemies & self.position.piece_bb(Piece::Queen);
 
-        !(p.is_disjoint(moves::pawn_attacks(sq, !stm))
+        !(p.is_disjoint(moves::pawn_attacks(sq, stm))
             && n.is_disjoint(moves::knight(sq))
-            && (b | q).is_disjoint(moves::bishop(sq, self.blocker))
-            && (r | q).is_disjoint(moves::rook(sq, self.blocker)))
+            && (b | q).is_disjoint(moves::bishop(
+                sq,
+                self.blocker ^ BitBoard::from(self.king),
+            ))
+            && (r | q).is_disjoint(moves::rook(
+                sq,
+                self.blocker ^ BitBoard::from(self.king),
+            )))
     }
 }
 
@@ -275,6 +281,8 @@ impl<'a> MoveGenerationInfo<'a> {
 
         let unpinned = bishops ^ pinned;
         for bishop in unpinned {
+            // println!("{}", self.blocker);
+            // println!("{}\n{}", bishop, moves::bishop(bishop, self.blocker));
             self.serialize(
                 bishop,
                 moves::bishop(bishop, self.blocker),
@@ -331,7 +339,7 @@ impl<'a> MoveGenerationInfo<'a> {
         let pinmasks = Self::generate_pinmasks(position, king);
 
         let friends = position.color_bb(position.side_to_move());
-        let enemies = position.color_bb(position.side_to_move());
+        let enemies = position.color_bb(!position.side_to_move());
         let blocker = friends | enemies;
 
         let territory = !friends;
