@@ -85,6 +85,9 @@ pub enum Direction {
     North = 8,
     South = -8,
 
+    NorthNorth = 8 + 8,
+    SouthSouth = -8 - 8,
+
     East = 1,
     West = -1,
 

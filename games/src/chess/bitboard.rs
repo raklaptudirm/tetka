@@ -41,6 +41,8 @@ impl BitBoard {
         match dir {
             Direction::North => self.north(),
             Direction::South => self.south(),
+            Direction::NorthNorth => self.north().north(),
+            Direction::SouthSouth => self.south().south(),
             Direction::East => self.east(),
             Direction::West => self.west(),
             Direction::NorthEast => self.north().east(),

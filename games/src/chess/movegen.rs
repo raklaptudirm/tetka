@@ -1,10 +1,10 @@
 use crate::interface::{
-    BitBoardType, ColoredPieceType, MoveStore, PositionType,
+    BitBoardType, Color, ColoredPieceType, MoveStore, PositionType,
 };
 
 use super::{
     moves, BitBoard, ColoredPiece, Direction, Move, MoveFlag, Piece, Position,
-    Square,
+    Rank, Square,
 };
 
 pub struct MoveGenerationInfo<'a> {
@@ -202,6 +202,11 @@ impl<'a> MoveGenerationInfo<'a> {
         let ue = up + Direction::East;
         let uw = up + Direction::West;
 
+        let third_rank = match self.position.side_to_move() {
+            Color::<Position>::White => BitBoard::rank(Rank::Third),
+            Color::<Position>::Black => BitBoard::rank(Rank::Sixth),
+        };
+
         let pawns = self.position.piece_bb(Piece::Pawn) & self.friends;
 
         {
@@ -246,11 +251,20 @@ impl<'a> MoveGenerationInfo<'a> {
 
             let single_pushes =
                 (pinned_single_push & self.pinmask_l) | unpinned_single_push;
+            let double_pushes =
+                (single_pushes & third_rank).shift(up) - self.blocker;
 
             self.serialize_towards(
                 up,
                 MoveFlag::Normal,
                 single_pushes,
+                movelist,
+            );
+
+            self.serialize_towards(
+                up + up,
+                MoveFlag::DoublePush,
+                double_pushes,
                 movelist,
             );
         }
@@ -281,8 +295,6 @@ impl<'a> MoveGenerationInfo<'a> {
 
         let unpinned = bishops ^ pinned;
         for bishop in unpinned {
-            // println!("{}", self.blocker);
-            // println!("{}\n{}", bishop, moves::bishop(bishop, self.blocker));
             self.serialize(
                 bishop,
                 moves::bishop(bishop, self.blocker),
