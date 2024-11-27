@@ -52,14 +52,29 @@ impl<'a> MoveGenerationInfo<'a> {
         }
     }
 
-    fn serialize_promotions<ML: MoveStore<Move>>(
+    fn serialize_pawn_moves<ML: MoveStore<Move>>(
         &self,
         offset: Direction,
         targets: BitBoard,
         movelist: &mut ML,
     ) {
+        let last_rank = match self.position.side_to_move() {
+            Color::<Position>::White => BitBoard::rank(Rank::Eighth),
+            Color::<Position>::Black => BitBoard::rank(Rank::First),
+        };
+
         let targets = targets & self.checkmask & self.territory;
-        for target in targets {
+
+        let non_promotions = targets - last_rank;
+        self.serialize_towards(
+            offset,
+            MoveFlag::Normal,
+            non_promotions,
+            movelist,
+        );
+
+        let promotions = targets & last_rank;
+        for target in promotions {
             movelist.push(Move::new(
                 target.shift(-offset),
                 target,
@@ -225,15 +240,13 @@ impl<'a> MoveGenerationInfo<'a> {
             let attacks_west =
                 (pinned_attacks_west & self.pinmask_d) | unpinned_attacks_west;
 
-            self.serialize_towards(
+            self.serialize_pawn_moves(
                 ue,
-                MoveFlag::Normal,
                 attacks_east & self.enemies,
                 movelist,
             );
-            self.serialize_towards(
+            self.serialize_pawn_moves(
                 uw,
-                MoveFlag::Normal,
                 attacks_west & self.enemies,
                 movelist,
             );
@@ -254,12 +267,7 @@ impl<'a> MoveGenerationInfo<'a> {
             let double_pushes =
                 (single_pushes & third_rank).shift(up) - self.blocker;
 
-            self.serialize_towards(
-                up,
-                MoveFlag::Normal,
-                single_pushes,
-                movelist,
-            );
+            self.serialize_pawn_moves(up, single_pushes, movelist);
 
             self.serialize_towards(
                 up + up,
