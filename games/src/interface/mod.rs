@@ -181,7 +181,7 @@ macro_rules! set_type {
         impl crate::interface::SetType<$typ, $sq> for $name {
             const EMPTY: Self = Self(0);
             const UNIVERSE: Self = Self(match (1 as $typ).checked_shl(<$sq as $crate::interface::RepresentableType<_>>::N as u32) {
-                Some(universe) => universe,
+                Some(universe) => universe.wrapping_sub(1),
                 None => (-1i8) as $typ,
             });
         }
