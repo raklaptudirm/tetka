@@ -121,7 +121,7 @@ impl Info {
         b_king: Square, b_rook_h: File, b_rook_a: File,
     ) -> Info {
         let mut info = Info {
-            rights: Rights::WH,
+            rights: Rights::UNIVERSE,
             rooks: [Square::A1; Dimension::N],
             attacks_mask: [BitBoard::EMPTY; Dimension::N],
             blocker_mask: [BitBoard::EMPTY; Dimension::N],
