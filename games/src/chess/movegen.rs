@@ -26,7 +26,7 @@ pub struct MoveGenerationInfo<'a> {
     pinmask_d: BitBoard,
 }
 
-impl<'a> MoveGenerationInfo<'a> {
+impl MoveGenerationInfo<'_> {
     fn serialize<ML: MoveStore<Move>>(
         &self,
         source: Square,
@@ -99,7 +99,7 @@ impl<'a> MoveGenerationInfo<'a> {
     }
 }
 
-impl<'a> MoveGenerationInfo<'a> {
+impl MoveGenerationInfo<'_> {
     fn generate_checkers(position: &Position, king: Square) -> BitBoard {
         let stm = position.side_to_move();
         let xtm = !stm;
@@ -221,7 +221,7 @@ impl<'a> MoveGenerationInfo<'a> {
     }
 }
 
-impl<'a> MoveGenerationInfo<'a> {
+impl MoveGenerationInfo<'_> {
     fn pawn_moves<ML: MoveStore<Move>>(&self, movelist: &mut ML) {
         let up = Direction::up(self.position.side_to_move());
         let ue = up + Direction::East;
