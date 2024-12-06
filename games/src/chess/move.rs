@@ -18,7 +18,7 @@ use crate::{
     interface::{representable_type, MoveType, RepresentableType},
 };
 
-use super::Piece;
+use super::{castling, Piece};
 
 #[derive(Copy, Clone, PartialEq, Default)]
 pub struct Move(u16);
@@ -73,6 +73,21 @@ impl Move {
             (mvflag as u16) << Move::MVFLAG_OFFSET
                 | (source as u16) << Move::SOURCE_OFFSET
                 | (target as u16) << Move::TARGET_OFFSET,
+        )
+    }
+
+    pub fn new_castling(
+        king: chess::Square,
+        rook: chess::Square,
+        side: castling::Side,
+    ) -> Move {
+        Self::new(
+            king,
+            rook,
+            match side {
+                castling::Side::H => MoveFlag::CastleHSide,
+                castling::Side::A => MoveFlag::CastleASide,
+            },
         )
     }
 

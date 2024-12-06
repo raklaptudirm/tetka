@@ -1,10 +1,10 @@
 use crate::interface::{
-    BitBoardType, Color, ColoredPieceType, MoveStore, PositionType,
+    BitBoardType, Color, ColoredPieceType, MoveStore, PositionType, SetType,
 };
 
 use super::{
-    moves, BitBoard, ColoredPiece, Direction, Move, MoveFlag, Piece, Position,
-    Rank, Square,
+    castling, moves, BitBoard, ColoredPiece, Direction, Move, MoveFlag, Piece,
+    Position, Rank, Square,
 };
 
 pub struct MoveGenerationInfo<'a> {
@@ -209,6 +209,16 @@ impl<'a> MoveGenerationInfo<'a> {
                 self.blocker ^ BitBoard::from(self.king),
             )))
     }
+
+    fn any_attacked(&self, bb: BitBoard) -> bool {
+        for target in bb {
+            if self.attacked(target) {
+                return true;
+            }
+        }
+
+        false
+    }
 }
 
 impl<'a> MoveGenerationInfo<'a> {
@@ -341,6 +351,33 @@ impl<'a> MoveGenerationInfo<'a> {
             }
         }
     }
+
+    fn castling_move<ML: MoveStore<Move>>(
+        &self,
+        side: castling::Side,
+        movelist: &mut ML,
+    ) {
+        let dimension =
+            castling::Dimension::from(self.position.side_to_move(), side);
+        println!(
+            "Has rights: {}",
+            self.position.castling.rights.contains(dimension)
+        );
+
+        let rook = self.position.castling.rook(dimension);
+
+        if self.position.castling.rights.contains(dimension)
+            &&!self.pinmask_l.contains(rook)
+            // Castling path blockers
+            && self
+                .blocker
+                .is_disjoint(self.position.castling.blocker_mask(dimension))
+            // Castling path attackers
+            && !self.any_attacked(self.position.castling.attack_mask(dimension))
+        {
+            movelist.push(Move::new_castling(self.king, rook, side))
+        }
+    }
 }
 
 impl<'a> MoveGenerationInfo<'a> {
@@ -388,6 +425,11 @@ impl<'a> MoveGenerationInfo<'a> {
             self.knight_moves(movelist);
             self.bishop_moves(movelist);
             self.rook_moves(movelist);
+
+            if checker_num == 0 {
+                self.castling_move(castling::Side::H, movelist);
+                self.castling_move(castling::Side::A, movelist);
+            }
         }
     }
 }

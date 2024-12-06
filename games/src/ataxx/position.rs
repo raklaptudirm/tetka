@@ -22,7 +22,7 @@ use crate::interface;
 use crate::interface::PiecePlacementParseError;
 use crate::interface::PositionType;
 use crate::interface::TypeParseError;
-use crate::interface::{BitBoardType, Hash, RepresentableType, SquareType};
+use crate::interface::{Hash, RepresentableType, SetType, SquareType};
 
 use thiserror::Error;
 

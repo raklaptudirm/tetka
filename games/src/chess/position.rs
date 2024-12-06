@@ -22,7 +22,7 @@ use crate::interface::ColoredPieceType;
 use crate::interface::PiecePlacementParseError;
 use crate::interface::PositionType;
 use crate::interface::TypeParseError;
-use crate::interface::{BitBoardType, Hash, RepresentableType, SquareType};
+use crate::interface::{Hash, RepresentableType, SetType, SquareType};
 
 use thiserror::Error;
 
@@ -57,7 +57,7 @@ pub struct Position {
     #[allow(dead_code)]
     is_fischer_random: bool,
     #[allow(dead_code)]
-    castling_square_info: castling::Info,
+    pub castling: castling::Info,
     checksum: Hash,
 }
 
@@ -135,9 +135,8 @@ impl PositionType for Position {
             board.insert(m.target(), source_pc);
         }
 
-        board.castling_square_info.rights -=
-            board.castling_square_info.get_updates(m.source())
-                + board.castling_square_info.get_updates(m.target());
+        board.castling.rights -= board.castling.get_updates(m.source())
+            | board.castling.get_updates(m.target());
 
         if source_pc.piece() == Piece::Pawn || target_pc.is_some() {
             board.half_move_clock = 0;
@@ -231,7 +230,7 @@ impl FromStr for Position {
             half_move_clock: 0,
             en_passant_target: None,
             is_fischer_random: false,
-            castling_square_info: castling::Info::from_squares(
+            castling: castling::Info::from_squares(
                 Square::E1,
                 File::H,
                 File::A,

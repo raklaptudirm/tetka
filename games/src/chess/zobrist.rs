@@ -63,7 +63,7 @@ const CASTLE_WA: u64 = 0xdfe34de8892603ad;
 const CASTLE_BH: u64 = 0x177ab8314c2b200e;
 const CASTLE_BA: u64 = 0xc07e0a697776ea93;
 
-const CASTLING_RIGHTS_KEYS: [u64; castling::Rights::N] = [
+const CASTLING_RIGHTS_KEYS: [u64; 1 << castling::Dimension::N] = [
     0,
     CASTLE_WH,
     CASTLE_WA,
