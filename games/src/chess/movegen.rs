@@ -359,21 +359,16 @@ impl MoveGenerationInfo<'_> {
     ) {
         let dimension =
             castling::Dimension::from(self.position.side_to_move(), side);
-        println!(
-            "Has rights: {}",
-            self.position.castling.rights.contains(dimension)
-        );
-
         let rook = self.position.castling.rook(dimension);
 
         if self.position.castling.rights.contains(dimension)
-            &&!self.pinmask_l.contains(rook)
             // Castling path blockers
             && self
                 .blocker
                 .is_disjoint(self.position.castling.blocker_mask(dimension))
             // Castling path attackers
             && !self.any_attacked(self.position.castling.attack_mask(dimension))
+            &&!self.pinmask_l.contains(rook)
         {
             movelist.push(Move::new_castling(self.king, rook, side))
         }
