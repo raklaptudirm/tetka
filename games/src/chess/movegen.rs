@@ -197,6 +197,7 @@ impl MoveGenerationInfo<'_> {
         let b = self.enemies & self.position.piece_bb(Piece::Bishop);
         let r = self.enemies & self.position.piece_bb(Piece::Rook);
         let q = self.enemies & self.position.piece_bb(Piece::Queen);
+        let k = self.enemies & self.position.piece_bb(Piece::King);
 
         !(p.is_disjoint(moves::pawn_attacks(sq, stm))
             && n.is_disjoint(moves::knight(sq))
@@ -207,7 +208,8 @@ impl MoveGenerationInfo<'_> {
             && (r | q).is_disjoint(moves::rook(
                 sq,
                 self.blocker ^ BitBoard::from(self.king),
-            )))
+            ))
+            && k.is_disjoint(moves::king(sq)))
     }
 
     fn any_attacked(&self, bb: BitBoard) -> bool {
