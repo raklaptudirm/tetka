@@ -260,6 +260,35 @@ impl MoveGenerationInfo<'_> {
                 attacks_west & self.enemies,
                 movelist,
             );
+
+            if let Some(target) = self.position.en_passant_target {
+                let mut passanters = attackers
+                    & moves::pawn_attacks(
+                        target,
+                        !self.position.side_to_move(),
+                    );
+
+                match passanters.len() {
+                    0 => {}
+                    1 => {
+                        movelist.push(Move::new(
+                            unsafe { passanters.next().unwrap_unchecked() },
+                            target,
+                            MoveFlag::EnPassant,
+                        ));
+                    }
+                    2 => {
+                        for passanter in passanters {
+                            movelist.push(Move::new(
+                                passanter,
+                                target,
+                                MoveFlag::EnPassant,
+                            ));
+                        }
+                    }
+                    _ => unreachable!(),
+                }
+            }
         }
 
         {

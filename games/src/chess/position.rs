@@ -51,7 +51,7 @@ pub struct Position {
     half_move_clock: u8,
 
     #[allow(dead_code)]
-    en_passant_target: Option<Square>,
+    pub en_passant_target: Option<Square>,
 
     // Game metadata.
     #[allow(dead_code)]
@@ -142,6 +142,8 @@ impl PositionType for Position {
             board.half_move_clock = 0;
         }
 
+        board.en_passant_target = None;
+
         match m.flag() {
             MoveFlag::Normal => {}
             MoveFlag::NPromotion
@@ -162,7 +164,7 @@ impl PositionType for Position {
             MoveFlag::DoublePush => {
                 board.en_passant_target = Some(unsafe {
                     m.target().down(board.side_to_move).unwrap_unchecked()
-                })
+                });
             }
             MoveFlag::CastleASide => {}
             MoveFlag::CastleHSide => {}
@@ -170,7 +172,6 @@ impl PositionType for Position {
 
         board.half_move_clock += 1;
         board.side_to_move = !board.side_to_move;
-        board.en_passant_target = None;
 
         board
     }
@@ -218,6 +219,7 @@ impl FromStr for Position {
 
         let pos = parts[0];
         let stm = parts[1];
+        let ept = parts[3];
         let hmc = parts[4];
         let fmc = parts[5];
 
@@ -243,6 +245,11 @@ impl FromStr for Position {
         interface::parse_piece_placement(&mut position, pos)?;
 
         position.side_to_move = Color::from_str(stm)?;
+        position.en_passant_target = if ept == "-" {
+            None
+        } else {
+            Some(Square::from_str(ept)?)
+        };
         position.half_move_clock = hmc.parse::<u8>()?;
         position.ply_count = fmc.parse::<u16>()? * 2 - 1;
         if position.side_to_move == Color::Black {
