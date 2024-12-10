@@ -1,5 +1,6 @@
 use crate::interface::{
     BitBoardType, Color, ColoredPieceType, MoveStore, PositionType, SetType,
+    SquareType,
 };
 
 use super::{
@@ -189,7 +190,7 @@ impl MoveGenerationInfo<'_> {
         )
     }
 
-    fn attacked(&self, sq: Square) -> bool {
+    fn attacked(&self, sq: Square, blockers: BitBoard) -> bool {
         let stm = self.position.side_to_move();
 
         let p = self.enemies & self.position.piece_bb(Piece::Pawn);
@@ -201,20 +202,14 @@ impl MoveGenerationInfo<'_> {
 
         !(p.is_disjoint(moves::pawn_attacks(sq, stm))
             && n.is_disjoint(moves::knight(sq))
-            && (b | q).is_disjoint(moves::bishop(
-                sq,
-                self.blocker ^ BitBoard::from(self.king),
-            ))
-            && (r | q).is_disjoint(moves::rook(
-                sq,
-                self.blocker ^ BitBoard::from(self.king),
-            ))
+            && (b | q).is_disjoint(moves::bishop(sq, blockers))
+            && (r | q).is_disjoint(moves::rook(sq, blockers))
             && k.is_disjoint(moves::king(sq)))
     }
 
-    fn any_attacked(&self, bb: BitBoard) -> bool {
+    fn any_attacked(&self, bb: BitBoard, blockers: BitBoard) -> bool {
         for target in bb {
-            if self.attacked(target) {
+            if self.attacked(target, blockers) {
                 return true;
             }
         }
@@ -270,25 +265,53 @@ impl MoveGenerationInfo<'_> {
                         !self.position.side_to_move(),
                     );
 
-                match passanters.len() {
-                    0 => {}
-                    1 => {
-                        movelist.push(Move::new(
-                            unsafe { passanters.next().unwrap_unchecked() },
-                            target,
-                            MoveFlag::EnPassant,
-                        ));
-                    }
-                    2 => {
-                        for passanter in passanters {
-                            movelist.push(Move::new(
-                                passanter,
-                                target,
-                                MoveFlag::EnPassant,
-                            ));
+                let passanted = unsafe {
+                    target.down(self.position.side_to_move()).unwrap_unchecked()
+                };
+
+                let target_bb = BitBoard::from(target);
+                let passanted_bb = BitBoard::from(passanted);
+
+                if !self.checkmask.is_disjoint(target_bb | passanted_bb) {
+                    match passanters.len() {
+                        0 => {}
+                        1 => {
+                            let passanter =
+                                unsafe { passanters.next().unwrap_unchecked() };
+                            let passanter_bb = BitBoard::from(passanter);
+
+                            if (!self.pinmask_d.contains(passanter)
+                                || self.pinmask_d.contains(target))
+                                && (self.king.rank() != passanter.rank()
+                                    || !self.attacked(
+                                        self.king,
+                                        self.blocker
+                                            ^ passanter_bb
+                                            ^ passanted_bb,
+                                    ))
+                            {
+                                movelist.push(Move::new(
+                                    passanter,
+                                    target,
+                                    MoveFlag::EnPassant,
+                                ));
+                            }
                         }
+                        2 => {
+                            for passanter in passanters {
+                                if !self.pinmask_d.contains(passanter)
+                                    || self.pinmask_d.contains(target)
+                                {
+                                    movelist.push(Move::new(
+                                        passanter,
+                                        target,
+                                        MoveFlag::EnPassant,
+                                    ));
+                                }
+                            }
+                        }
+                        _ => unreachable!(),
                     }
-                    _ => unreachable!(),
                 }
             }
         }
@@ -375,9 +398,10 @@ impl MoveGenerationInfo<'_> {
 
     fn king_moves<ML: MoveStore<Move>>(&self, movelist: &mut ML) {
         let targets = moves::king(self.king) & self.territory;
+        let blockers = self.blocker ^ BitBoard::from(self.king);
 
         for target in targets {
-            if !self.attacked(target) {
+            if !self.attacked(target, blockers) {
                 movelist.push(Move::new(self.king, target, MoveFlag::Normal))
             }
         }
@@ -398,7 +422,7 @@ impl MoveGenerationInfo<'_> {
                 .blocker
                 .is_disjoint(self.position.castling.blocker_mask(dimension))
             // Castling path attackers
-            && !self.any_attacked(self.position.castling.attack_mask(dimension))
+            && !self.any_attacked(self.position.castling.attack_mask(dimension), self.blocker)
             &&!self.pinmask_l.contains(rook)
         {
             movelist.push(Move::new_castling(self.king, rook, side))

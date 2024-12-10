@@ -6,17 +6,8 @@ macro_rules! perft_test {
     ($name:ident $pos:literal $depth:literal $nodes:literal) => {
         #[test]
         fn $name() {
-            println!("cargo run -r {} {}", $depth, $pos);
-            match Position::from_str($pos) {
-                Ok(position) => {
-                    println!("{}", u8::from(position.castling.rights));
-                    assert_eq!(perft::<true, true, _>(position, $depth), $nodes)
-                }
-                Err(err) => {
-                    println!("{}", err);
-                    assert_eq!(true, false);
-                }
-            }
+            let position = Position::from_str($pos).unwrap();
+            assert_eq!(perft::<true, true, _>(position, $depth), $nodes)
         }
     };
 }
@@ -148,8 +139,7 @@ perft_test!(position_123 "8/Pk6/8/8/8/8/6Kp/8 b - - 0 1" 5 90606);
 perft_test!(position_124 "n1n5/1Pk5/8/8/8/8/5Kp1/5N1N b - - 0 1" 5 2193768);
 perft_test!(position_125 "8/PPPk4/8/8/8/8/4Kppp/8 b - - 0 1" 5 1533145);
 perft_test!(position_126 "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1" 5 3605103);
-// TODO: en passant double pin
-// perft_test!(position_127 "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1" 5 674624);
+perft_test!(position_127 "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1" 5 674624);
 perft_test!(position_128 "rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3" 5 11139762);
 
 perft_test!(position_frc_1 "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w HFhf - 2 9" 5 8146062);
