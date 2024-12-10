@@ -10,20 +10,19 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+use std::str::FromStr;
+
 use crate::interface::{
     representable_type, set_type, RepresentableType, SetType, SquareType,
+    TypeParseError,
 };
+
+use thiserror::Error;
 
 use super::{BitBoard, Color, File, Rank, Square};
 
 set_type!(Rights<Dimension>: u8);
-
-impl Rights {
-    pub const WH: Rights = Rights(Dimension::WhiteH as u8);
-    pub const WA: Rights = Rights(Dimension::WhiteA as u8);
-    pub const BH: Rights = Rights(Dimension::BlackH as u8);
-    pub const BA: Rights = Rights(Dimension::BlackA as u8);
-}
 
 representable_type!(
     enum Dimension: u8 {
@@ -114,14 +113,98 @@ mod ends {
     pub const BLACK_ROOK_A: Square = Square::D8;
 }
 
+#[derive(Error, Debug)]
+pub enum CastlingRightsParseError {
+    #[error("error parsing file string \"{0}\"")]
+    FileParseError(#[from] TypeParseError),
+    #[error("found invalid castling rights \"{0}\"")]
+    Invalid(String),
+}
+
 impl Info {
+    pub fn from_str(
+        s: &str,
+        white_king: Square,
+        black_king: Square,
+    ) -> Result<Self, CastlingRightsParseError> {
+        if s == "-" {
+            return Ok(Info::from_squares(
+                Square::E1,
+                File::H,
+                File::A,
+                Square::E8,
+                File::H,
+                File::A,
+                Rights::new(),
+            ));
+        }
+
+        if s.is_empty() || s.len() > 4 {
+            return Err(CastlingRightsParseError::Invalid(s.to_string()));
+        }
+
+        let frc = !matches!(
+            unsafe { s.chars().next().unwrap_unchecked() },
+            'K' | 'Q' | 'k' | 'q'
+        );
+
+        let mut rights = Rights::new();
+
+        let mut white_h = File::H;
+        let mut white_a = File::A;
+        let mut black_h = File::H;
+        let mut black_a = File::A;
+
+        for right in s.chars() {
+            if frc {
+                if right.is_uppercase() {
+                    let file =
+                        File::from_str(&right.to_lowercase().to_string())?;
+                    if file as usize > white_king.file() as usize {
+                        white_h = file;
+                        rights = rights | Dimension::WhiteH;
+                    } else {
+                        white_a = file;
+                        rights = rights | Dimension::WhiteA;
+                    }
+                } else {
+                    let file = File::from_str(&right.to_string())?;
+                    if file as usize > black_king.file() as usize {
+                        black_h = file;
+                        rights = rights | Dimension::BlackH;
+                    } else {
+                        black_a = file;
+                        rights = rights | Dimension::BlackA;
+                    }
+                }
+            } else {
+                match right {
+                    'K' => rights = rights | Dimension::WhiteH,
+                    'Q' => rights = rights | Dimension::WhiteA,
+                    'k' => rights = rights | Dimension::BlackH,
+                    'q' => rights = rights | Dimension::BlackA,
+                    _ => {
+                        return Err(CastlingRightsParseError::Invalid(
+                            right.to_string(),
+                        ))
+                    }
+                }
+            }
+        }
+
+        Ok(Info::from_squares(
+            white_king, white_h, white_a, black_king, black_h, black_a, rights,
+        ))
+    }
+
     #[rustfmt::skip]
     pub fn from_squares(
         w_king: Square, w_rook_h: File, w_rook_a: File,
         b_king: Square, b_rook_h: File, b_rook_a: File,
+        rights: Rights,
     ) -> Info {
         let mut info = Info {
-            rights: Rights::UNIVERSE,
+            rights,
             rooks: [Square::A1; Dimension::N],
             attacks_mask: [BitBoard::EMPTY; Dimension::N],
             blocker_mask: [BitBoard::EMPTY; Dimension::N],
@@ -141,29 +224,29 @@ impl Info {
         info.rooks[ba] = Square::new(b_rook_a, Rank::Eighth);
 
         // Initialize the castling path table.
-        info.attacks_mask[wh] = blocker_mask(w_king, info.rooks[wh], ends::WHITE_KING_H, ends::WHITE_ROOK_H);
-        info.attacks_mask[wa] = blocker_mask(w_king, info.rooks[wa], ends::WHITE_KING_A, ends::WHITE_ROOK_A);
-        info.attacks_mask[bh] = blocker_mask(b_king, info.rooks[bh], ends::BLACK_KING_H, ends::BLACK_ROOK_H);
-        info.attacks_mask[ba] = blocker_mask(b_king, info.rooks[ba], ends::BLACK_KING_A, ends::BLACK_ROOK_A);
+        info.blocker_mask[wh] = blocker_mask(w_king, info.rooks[wh], ends::WHITE_KING_H, ends::WHITE_ROOK_H);
+        info.blocker_mask[wa] = blocker_mask(w_king, info.rooks[wa], ends::WHITE_KING_A, ends::WHITE_ROOK_A);
+        info.blocker_mask[bh] = blocker_mask(b_king, info.rooks[bh], ends::BLACK_KING_H, ends::BLACK_ROOK_H);
+        info.blocker_mask[ba] = blocker_mask(b_king, info.rooks[ba], ends::BLACK_KING_A, ends::BLACK_ROOK_A);
 
-        info.blocker_mask[wh] = BitBoard::between2(w_king, ends::WHITE_KING_H);
-        info.blocker_mask[wa] = BitBoard::between2(w_king, ends::WHITE_KING_A);
-        info.blocker_mask[bh] = BitBoard::between2(b_king, ends::BLACK_KING_H);
-        info.blocker_mask[ba] = BitBoard::between2(b_king, ends::BLACK_KING_A);
+        info.attacks_mask[wh] = BitBoard::between2(w_king, ends::WHITE_KING_H);
+        info.attacks_mask[wa] = BitBoard::between2(w_king, ends::WHITE_KING_A);
+        info.attacks_mask[bh] = BitBoard::between2(b_king, ends::BLACK_KING_H);
+        info.attacks_mask[ba] = BitBoard::between2(b_king, ends::BLACK_KING_A);
 
         fn blocker_mask(king: Square, rook: Square, king_end: Square, rook_end: Square) -> BitBoard {
             (BitBoard::between2(king, king_end) | BitBoard::between2(rook, rook_end)) - (BitBoard::from(king) | BitBoard::from(rook))
         }
 
         // Initialize the rights update for the king's squares.
-        info.rights_masks[w_king as usize] = Rights::WH | Rights::WA;
-        info.rights_masks[b_king as usize] = Rights::BH | Rights::BA;
+        info.rights_masks[w_king as usize] = Rights::new() | Dimension::WhiteH | Dimension::WhiteA;
+        info.rights_masks[b_king as usize] = Rights::new() | Dimension::BlackH | Dimension::BlackA;
 
         // Initialize the rights update for the rook's squares.
-        info.rights_masks[w_rook_h as usize] = Rights::WH;
-        info.rights_masks[w_rook_a as usize] = Rights::WA;
-        info.rights_masks[b_rook_h as usize] = Rights::BH;
-        info.rights_masks[b_rook_a as usize] = Rights::BA;
+        info.rights_masks[info.rooks[wh] as usize] = Rights::new() | Dimension::WhiteH;
+        info.rights_masks[info.rooks[wa] as usize] = Rights::new() | Dimension::WhiteA;
+        info.rights_masks[info.rooks[bh] as usize] = Rights::new() | Dimension::BlackH;
+        info.rights_masks[info.rooks[ba] as usize] = Rights::new() | Dimension::BlackA;
 
         info
     }

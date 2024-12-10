@@ -20,3 +20,6 @@ pub use self::color::*;
 pub use self::position::*;
 pub use self::r#move::*;
 pub use self::square::*;
+
+#[cfg(test)]
+mod tests;

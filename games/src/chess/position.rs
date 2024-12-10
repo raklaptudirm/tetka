@@ -33,6 +33,9 @@ use crate::chess::{
 };
 use crate::interface::MoveStore;
 
+use super::castling::CastlingRightsParseError;
+use super::castling::Dimension;
+use super::castling::Rights;
 use super::movegen;
 use super::MoveFlag;
 
@@ -131,7 +134,7 @@ impl PositionType for Position {
 
         let source_pc = unsafe { source_pc.unwrap_unchecked() };
 
-        if !m.flag().is_promotion() {
+        if !m.flag().is_promotion() && !m.flag().is_castling() {
             board.insert(m.target(), source_pc);
         }
 
@@ -166,8 +169,32 @@ impl PositionType for Position {
                     m.target().down(board.side_to_move).unwrap_unchecked()
                 });
             }
-            MoveFlag::CastleASide => {}
-            MoveFlag::CastleHSide => {}
+            MoveFlag::CastleASide => {
+                let (king, rook) =
+                    Dimension::from(board.side_to_move, castling::Side::A)
+                        .get_targets();
+                board.insert(
+                    king,
+                    ColoredPiece::new(Piece::King, board.side_to_move),
+                );
+                board.insert(
+                    rook,
+                    ColoredPiece::new(Piece::Rook, board.side_to_move),
+                );
+            }
+            MoveFlag::CastleHSide => {
+                let (king, rook) =
+                    Dimension::from(board.side_to_move, castling::Side::H)
+                        .get_targets();
+                board.insert(
+                    king,
+                    ColoredPiece::new(Piece::King, board.side_to_move),
+                );
+                board.insert(
+                    rook,
+                    ColoredPiece::new(Piece::Rook, board.side_to_move),
+                );
+            }
         }
 
         board.half_move_clock += 1;
@@ -200,8 +227,13 @@ pub enum PositionParseError {
     #[error("parsing piece placement: {0}")]
     BadPiecePlacement(#[from] PiecePlacementParseError),
 
+    #[error("position missing a king")]
+    MissingKing,
+
     #[error("parsing side to move: {0}")]
     BadSideToMove(#[from] TypeParseError),
+    #[error("parsing castling rights: {0}")]
+    BadCastlingRights(#[from] CastlingRightsParseError),
     #[error("parsing half-move clock: {0}")]
     BadHalfMoveClock(#[from] ParseIntError),
 }
@@ -219,6 +251,7 @@ impl FromStr for Position {
 
         let pos = parts[0];
         let stm = parts[1];
+        let rig = parts[2];
         let ept = parts[3];
         let hmc = parts[4];
         let fmc = parts[5];
@@ -239,10 +272,22 @@ impl FromStr for Position {
                 Square::E8,
                 File::H,
                 File::A,
+                Rights::new(),
             ),
         };
 
         interface::parse_piece_placement(&mut position, pos)?;
+
+        let kings = position.piece_bb(Piece::King);
+        let white_king = (kings & position.color_bb(Color::White)).next();
+        let black_king = (kings & position.color_bb(Color::Black)).next();
+
+        if let (Some(white_king), Some(black_king)) = (white_king, black_king) {
+            position.castling =
+                castling::Info::from_str(rig, white_king, black_king)?;
+        } else {
+            return Err(PositionParseError::MissingKing);
+        }
 
         position.side_to_move = Color::from_str(stm)?;
         position.en_passant_target = if ept == "-" {

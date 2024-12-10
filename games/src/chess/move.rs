@@ -154,6 +154,10 @@ impl MoveFlag {
                 | MoveFlag::QPromotion
         )
     }
+
+    pub fn is_castling(&self) -> bool {
+        matches!(self, MoveFlag::CastleHSide | MoveFlag::CastleASide)
+    }
 }
 
 impl fmt::Display for Move {

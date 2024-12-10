@@ -174,7 +174,6 @@ macro_rules! set_type {
             derive_more::BitXorAssign,
             derive_more::ShlAssign,
             derive_more::ShrAssign,
-            derive_more::SubAssign,
         )]
         pub struct $name(pub $typ);
 
@@ -262,6 +261,14 @@ macro_rules! set_type {
             #[must_use]
             fn sub(self, rhs: Self) -> Self::Output {
                 self & !rhs
+            }
+        }
+
+        #[allow(clippy::suspicious_arithmetic_impl)]
+        impl std::ops::SubAssign for $name {
+            /// Returns the difference of `self` and `rhs` as a new BitBoard.
+            fn sub_assign(&mut self, rhs: Self) {
+                *self &= !rhs
             }
         }
 
