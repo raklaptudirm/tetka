@@ -10,9 +10,16 @@ description = "A game engine Swiss-army knife"
 repository = "https://github.com/raklaptudirm/tetka"
 
 [dependencies]
+strum = "0.26"
 tetka-uxi = { package = "uxi", path = "./uxi" }
 tetka-games = { path = "./games" }
 
 [workspace]
 resolver = "2"
 members = [ "uxi", "games" ]
+
+[profile.release]
+debug = true
+opt-level = 3
+codegen-units = 1
+lto = true
