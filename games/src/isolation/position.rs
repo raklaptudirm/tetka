@@ -188,7 +188,7 @@ impl PositionType for Position {
         let tiles = self.colored_piece_bb(ColoredPiece::Tile);
 
         // Pieces can only move to unoccupied Squares.
-        let allowed = tiles ^ xtm;
+        let allowed = tiles - xtm;
 
         for target in BitBoard::singles(stm) & allowed {
             for tile in allowed ^ BitBoard::from(target) {
@@ -204,7 +204,7 @@ impl PositionType for Position {
         let tiles = self.colored_piece_bb(ColoredPiece::Tile);
 
         // Pieces can only move to unoccupied Squares.
-        let allowed = tiles ^ xtm;
+        let allowed = tiles - xtm;
 
         (BitBoard::singles(stm) & allowed).count() * (allowed.count() - 1)
     }
