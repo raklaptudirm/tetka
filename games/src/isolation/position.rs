@@ -153,21 +153,15 @@ impl PositionType for Position {
             };
         }
 
-        let xtm_pawn = self.pawns[!stm as usize];
-        let stm_pawn = m.pawn();
+        let mut pawns = self.pawns;
+        pawns[stm as usize] = m.pawn();
         let tiles = self.colored_piece_bb(ColoredPiece::Tile)
             ^ BitBoard::from(m.tile());
 
-        let (white, black) = if stm == Color::White {
-            (stm_pawn, xtm_pawn)
-        } else {
-            (xtm_pawn, stm_pawn)
-        };
-
         Position {
-            pawns: [white, black],
+            pawns,
             tiles,
-            checksum: update_hash!(Self::get_hash(white, black, tiles, !stm)),
+            checksum: update_hash!(Self::get_hash(pawns, tiles, !stm)),
             side_to_move: !stm,
             ply_count: self.ply_count + 1,
         }
@@ -212,12 +206,11 @@ impl PositionType for Position {
 
 impl Position {
     fn get_hash(
-        white: Square,
-        black: Square,
+        pawns: [Square; Color::N],
         tiles: BitBoard,
         stm: Color,
     ) -> Hash {
-        let a = white as u64 * black as u64;
+        let a = pawns[0] as u64 * pawns[1] as u64;
         let b = tiles.into();
 
         // Currently, an 2^-63-almost delta universal hash function, based on
@@ -301,20 +294,11 @@ impl FromStr for Position {
         }
 
         // Calculate the Hash value for the Position.
-        unsafe {
-            position.checksum = Self::get_hash(
-                position
-                    .colored_piece_bb(ColoredPiece::WhitePawn)
-                    .next()
-                    .unwrap_unchecked(),
-                position
-                    .colored_piece_bb(ColoredPiece::BlackPawn)
-                    .next()
-                    .unwrap_unchecked(),
-                position.colored_piece_bb(ColoredPiece::Tile),
-                position.side_to_move,
-            );
-        }
+        position.checksum = Self::get_hash(
+            position.pawns,
+            position.colored_piece_bb(ColoredPiece::Tile),
+            position.side_to_move,
+        );
 
         Ok(position)
     }
