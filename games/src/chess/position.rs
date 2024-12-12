@@ -36,6 +36,7 @@ use crate::interface::MoveStore;
 use super::castling::CastlingRightsParseError;
 use super::castling::Dimension;
 use super::castling::Rights;
+use super::castling::Side;
 use super::movegen;
 use super::MoveFlag;
 
@@ -134,21 +135,13 @@ impl PositionType for Position {
 
         let source_pc = unsafe { source_pc.unwrap_unchecked() };
 
-        if !m.flag().is_promotion() && !m.flag().is_castling() {
-            board.insert(m.target(), source_pc);
-        }
-
         board.castling.rights -= board.castling.get_updates(m.source())
             | board.castling.get_updates(m.target());
-
-        if source_pc.piece() == Piece::Pawn || target_pc.is_some() {
-            board.half_move_clock = 0;
-        }
 
         board.en_passant_target = None;
 
         match m.flag() {
-            MoveFlag::Normal => {}
+            MoveFlag::Normal => board.insert(m.target(), source_pc),
             MoveFlag::NPromotion
             | MoveFlag::BPromotion
             | MoveFlag::RPromotion
@@ -160,32 +153,27 @@ impl PositionType for Position {
                 ),
             ),
             MoveFlag::EnPassant => {
+                board.insert(m.target(), source_pc);
                 board.remove(unsafe {
                     m.target().down(board.side_to_move).unwrap_unchecked()
                 });
             }
             MoveFlag::DoublePush => {
+                board.insert(m.target(), source_pc);
                 board.en_passant_target = Some(unsafe {
                     m.target().down(board.side_to_move).unwrap_unchecked()
                 });
             }
-            MoveFlag::CastleASide => {
-                let (king, rook) =
-                    Dimension::from(board.side_to_move, castling::Side::A)
-                        .get_targets();
-                board.insert(
-                    king,
-                    ColoredPiece::new(Piece::King, board.side_to_move),
-                );
-                board.insert(
-                    rook,
-                    ColoredPiece::new(Piece::Rook, board.side_to_move),
-                );
-            }
-            MoveFlag::CastleHSide => {
-                let (king, rook) =
-                    Dimension::from(board.side_to_move, castling::Side::H)
-                        .get_targets();
+            MoveFlag::CastleHSide | MoveFlag::CastleASide => {
+                let (king, rook) = Dimension::from(
+                    board.side_to_move,
+                    if m.flag() == MoveFlag::CastleHSide {
+                        Side::H
+                    } else {
+                        Side::A
+                    },
+                )
+                .get_targets();
                 board.insert(
                     king,
                     ColoredPiece::new(Piece::King, board.side_to_move),
@@ -198,6 +186,9 @@ impl PositionType for Position {
         }
 
         board.half_move_clock += 1;
+        if source_pc.piece() == Piece::Pawn || target_pc.is_some() {
+            board.half_move_clock = 0;
+        }
         board.side_to_move = !board.side_to_move;
 
         board
