@@ -19,6 +19,7 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 
 use crate::interface;
+use crate::interface::ColoredPieceType;
 use crate::interface::PiecePlacementParseError;
 use crate::interface::PositionType;
 use crate::interface::TypeParseError;
@@ -38,8 +39,8 @@ use crate::interface::MoveStore;
 /// necessary to manipulate such a snapshot.
 #[derive(Copy, Clone)]
 pub struct Position {
-    /// bitboards stores [BitBoard]s for the piece configuration of each piece.
-    pub bitboards: [BitBoard; ColoredPiece::N],
+    pub pawns: [Square; Color::N],
+    pub tiles: BitBoard,
     /// checksum stores the semi-unique [struct@Hash] of the current Position.
     pub checksum: Hash,
     /// side_to_move stores the piece whose turn to move it currently is.
@@ -53,16 +54,22 @@ impl PositionType for Position {
     type Move = Move;
 
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
-        self.bitboards[piece as usize].insert(sq);
+        match piece.piece() {
+            Piece::Pawn => self.pawns[piece as usize] = sq,
+            Piece::Tile => self.tiles.insert(sq),
+        }
     }
 
     fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
-        match self.at(sq) {
-            Some(piece) => {
-                self.bitboards[piece as usize].remove(sq);
-                Some(piece)
-            }
-            None => None,
+        if self.pawns[Color::White as usize] == sq {
+            Some(ColoredPiece::WhitePawn)
+        } else if self.pawns[Color::Black as usize] == sq {
+            Some(ColoredPiece::BlackPawn)
+        } else if self.tiles.contains(sq) {
+            self.tiles ^= BitBoard::from(sq);
+            Some(ColoredPiece::Tile)
+        } else {
+            None
         }
     }
 
@@ -72,15 +79,21 @@ impl PositionType for Position {
     }
 
     fn piece_bb(&self, piece: Piece) -> BitBoard {
-        self.bitboards[piece as usize]
+        match piece {
+            Piece::Pawn => BitBoard::from(self.pawns[0]) | self.pawns[1],
+            Piece::Tile => self.tiles,
+        }
     }
 
     fn color_bb(&self, color: Color) -> BitBoard {
-        self.bitboards[color as usize]
+        BitBoard::from(self.pawns[color as usize])
     }
 
     fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
-        self.bitboards[piece as usize]
+        match piece.piece() {
+            Piece::Pawn => BitBoard::from(self.pawns[piece as usize]),
+            Piece::Tile => self.tiles,
+        }
     }
 
     fn hash(&self) -> Hash {
@@ -140,20 +153,21 @@ impl PositionType for Position {
             };
         }
 
-        let xtm_pieces = self.color_bb(!stm);
-        let new_stm = BitBoard::from(m.pawn());
-        let new_tiles = self.colored_piece_bb(ColoredPiece::Tile)
+        let xtm_pawn = self.pawns[!stm as usize];
+        let stm_pawn = m.pawn();
+        let tiles = self.colored_piece_bb(ColoredPiece::Tile)
             ^ BitBoard::from(m.tile());
 
         let (white, black) = if stm == Color::White {
-            (new_stm, xtm_pieces)
+            (stm_pawn, xtm_pawn)
         } else {
-            (xtm_pieces, new_stm)
+            (xtm_pawn, stm_pawn)
         };
 
         Position {
-            bitboards: [white, black, new_tiles],
-            checksum: update_hash!(Self::get_hash(black, white, !stm)),
+            pawns: [white, black],
+            tiles,
+            checksum: update_hash!(Self::get_hash(white, black, tiles, !stm)),
             side_to_move: !stm,
             ply_count: self.ply_count + 1,
         }
@@ -197,9 +211,14 @@ impl PositionType for Position {
 }
 
 impl Position {
-    fn get_hash(black: BitBoard, white: BitBoard, stm: Color) -> Hash {
-        let a = black.into();
-        let b = white.into();
+    fn get_hash(
+        white: Square,
+        black: Square,
+        tiles: BitBoard,
+        stm: Color,
+    ) -> Hash {
+        let a = white as u64 * black as u64;
+        let b = tiles.into();
 
         // Currently, an 2^-63-almost delta universal hash function, based on
         // https://eprint.iacr.org/2011/116.pdf by Long Hoang Nguyen and Andrew
@@ -266,7 +285,8 @@ impl FromStr for Position {
         let fmc = parts[2];
 
         let mut position = Position {
-            bitboards: [BitBoard::EMPTY; ColoredPiece::N],
+            pawns: [Square::A1, Square::A1],
+            tiles: BitBoard::EMPTY,
             checksum: Default::default(),
             side_to_move: Color::Black,
             ply_count: 0,
@@ -281,11 +301,20 @@ impl FromStr for Position {
         }
 
         // Calculate the Hash value for the Position.
-        position.checksum = Self::get_hash(
-            position.colored_piece_bb(ColoredPiece::WhitePawn),
-            position.colored_piece_bb(ColoredPiece::BlackPawn),
-            position.side_to_move,
-        );
+        unsafe {
+            position.checksum = Self::get_hash(
+                position
+                    .colored_piece_bb(ColoredPiece::WhitePawn)
+                    .next()
+                    .unwrap_unchecked(),
+                position
+                    .colored_piece_bb(ColoredPiece::BlackPawn)
+                    .next()
+                    .unwrap_unchecked(),
+                position.colored_piece_bb(ColoredPiece::Tile),
+                position.side_to_move,
+            );
+        }
 
         Ok(position)
     }
