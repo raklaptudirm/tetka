@@ -13,3 +13,6 @@ mod r#move;
 mod piece;
 mod position;
 mod square;
+
+#[cfg(test)]
+mod tests;
