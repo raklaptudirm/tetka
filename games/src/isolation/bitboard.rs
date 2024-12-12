@@ -24,11 +24,11 @@ bitboard_type! {
 
         // BitBoards representing the null and the universe sets.
         Empty = Self(0);
-        Universe = Self(0x1ffffffffffff);
+        Universe = Self(0xffffffffffff);
 
         // BitBoards containing the squares of the first file and the first rank.
-        FirstFile = Self(0x0040810204081);
-        FirstRank = Self(0x000000000007f);
+        FirstFile = Self(0x0041041041041);
+        FirstRank = Self(0x000000000003f);
     }
 }
 
