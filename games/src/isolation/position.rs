@@ -11,7 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cmp;
 use std::fmt;
 use std::num::ParseIntError;
 use std::str::FromStr;
@@ -34,8 +33,8 @@ use super::{
 };
 use crate::interface::MoveStore;
 
-/// Position represents the snapshot of an Ataxx Board, the state of the an
-/// ataxx game at a single point in time. It also provides all of the methods
+/// Position represents the snapshot of an Isolation Board, the state of the an
+/// Isolation game at a single point in time. It also provides all of the methods
 /// necessary to manipulate such a snapshot.
 #[derive(Copy, Clone)]
 pub struct Position {
@@ -55,15 +54,15 @@ impl PositionType for Position {
 
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
         match piece.piece() {
-            Piece::Pawn => self.pawns[piece as usize] = sq,
+            Piece::Pawn => self.set_pawn(piece.color(), sq),
             Piece::Tile => self.tiles.insert(sq),
         }
     }
 
     fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
-        if self.pawns[Color::White as usize] == sq {
+        if self.pawn(Color::White) == sq {
             Some(ColoredPiece::WhitePawn)
-        } else if self.pawns[Color::Black as usize] == sq {
+        } else if self.pawn(Color::Black) == sq {
             Some(ColoredPiece::BlackPawn)
         } else if self.tiles.contains(sq) {
             self.tiles ^= BitBoard::from(sq);
@@ -86,12 +85,12 @@ impl PositionType for Position {
     }
 
     fn color_bb(&self, color: Color) -> BitBoard {
-        BitBoard::from(self.pawns[color as usize])
+        BitBoard::from(self.pawn(color))
     }
 
     fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
         match piece.piece() {
-            Piece::Pawn => BitBoard::from(self.pawns[piece as usize]),
+            Piece::Pawn => BitBoard::from(self.pawn(piece.color())),
             Piece::Tile => self.tiles,
         }
     }
@@ -101,67 +100,40 @@ impl PositionType for Position {
     }
 
     fn is_game_over(&self) -> bool {
-        let black = self.colored_piece_bb(ColoredPiece::WhitePawn);
-        let white = self.colored_piece_bb(ColoredPiece::BlackPawn);
-        let block = self.colored_piece_bb(ColoredPiece::Tile);
-
-        white | black | block == BitBoard::UNIVERSE ||       // All squares occupied
-			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
+        self.count_moves::<true, true>() == 0
     }
 
     fn winner(&self) -> Option<Color> {
-        let black = self.colored_piece_bb(ColoredPiece::WhitePawn);
-        let white = self.colored_piece_bb(ColoredPiece::BlackPawn);
-        let block = self.colored_piece_bb(ColoredPiece::Tile);
-
-        if black == BitBoard::EMPTY {
-            // Black lost all its pieces, White won.
-            return Some(Color::White);
-        } else if white == BitBoard::EMPTY {
-            // White lost all its pieces, Black won.
-            return Some(Color::Black);
-        }
-
-        debug_assert!(black | white | block == BitBoard::UNIVERSE);
-
-        // All the squares are occupied by pieces. Victory is decided by
-        // which Piece has the most number of pieces on the Board.
-
-        let black_n = black.len();
-        let white_n = white.len();
-
-        match black_n.cmp(&white_n) {
-            cmp::Ordering::Less => Some(Color::White),
-            cmp::Ordering::Greater => Some(Color::Black),
-            // Though there can't be an equal number of black and white pieces
-            // on an empty ataxx board, it is possible with an odd number of
-            // blocker pieces.
-            cmp::Ordering::Equal => None,
+        if self.is_game_over() {
+            Some(!self.side_to_move)
+        } else {
+            None
         }
     }
 
     fn after_move<const UPDATE_HASH: bool>(&self, m: Move) -> Position {
         let stm = self.side_to_move;
 
-        macro_rules! update_hash {
-            ($e:expr) => {
-                if UPDATE_HASH {
-                    $e
-                } else {
-                    Default::default()
-                }
-            };
-        }
-
         let mut pawns = self.pawns;
+
+        // Move our pawn to the new square.
         pawns[stm as usize] = m.pawn();
+
+        // Remove the selected tile from the board.
         let tiles = self.colored_piece_bb(ColoredPiece::Tile)
             ^ BitBoard::from(m.tile());
+
+        // Update the position checksum.
+        let checksum = if UPDATE_HASH {
+            Self::get_hash(pawns, tiles, !stm)
+        } else {
+            Default::default()
+        };
 
         Position {
             pawns,
             tiles,
-            checksum: update_hash!(Self::get_hash(pawns, tiles, !stm)),
+            checksum,
             side_to_move: !stm,
             ply_count: self.ply_count + 1,
         }
@@ -205,12 +177,20 @@ impl PositionType for Position {
 }
 
 impl Position {
+    fn pawn(&self, color: Color) -> Square {
+        self.pawns[color as usize]
+    }
+
+    fn set_pawn(&mut self, color: Color, square: Square) {
+        self.pawns[color as usize] = square
+    }
+
     fn get_hash(
         pawns: [Square; Color::N],
         tiles: BitBoard,
         stm: Color,
     ) -> Hash {
-        let a = pawns[0] as u64 * pawns[1] as u64;
+        let a = pawns[0] as u64 * Square::N as u64 + pawns[1] as u64;
         let b = tiles.into();
 
         // Currently, an 2^-63-almost delta universal hash function, based on
@@ -258,8 +238,8 @@ pub enum PositionParseError {
 
     #[error("parsing side to move: {0}")]
     BadSideToMove(#[from] TypeParseError),
-    #[error("parsing half-move clock: {0}")]
-    BadHalfMoveClock(#[from] ParseIntError),
+    #[error("parsing full move count: {0}")]
+    BadFullMoveCount(#[from] ParseIntError),
 }
 
 // FromStr implements parsing of the position field in a FEN.
@@ -289,7 +269,7 @@ impl FromStr for Position {
 
         position.side_to_move = Color::from_str(stm)?;
         position.ply_count = fmc.parse::<u16>()? * 2 - 1;
-        if position.side_to_move == Color::Black {
+        if position.side_to_move == Color::White {
             position.ply_count -= 1;
         }
 
