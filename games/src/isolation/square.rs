@@ -20,12 +20,12 @@ representable_type!(
     /// Square represents all the squares present on an Isolation Board.
     /// The index of each Square is equal to `rank-index * 8 + file-index`.
     enum Square: u8 {
-        A1 "a1", B1 "b1", C1 "c1", D1 "d1", E1 "e1", F1 "f1", G1 "G1", H1 "H1",
-        A2 "a2", B2 "b2", C2 "c2", D2 "d2", E2 "e2", F2 "f2", G2 "G2", H2 "H2",
-        A3 "a3", B3 "b3", C3 "c3", D3 "d3", E3 "e3", F3 "f3", G3 "G3", H3 "H3",
-        A4 "a4", B4 "b4", C4 "c4", D4 "d4", E4 "e4", F4 "f4", G4 "G4", H4 "H4",
-        A5 "a5", B5 "b5", C5 "c5", D5 "d5", E5 "e5", F5 "f5", G5 "G5", H5 "H5",
-        A6 "a6", B6 "b6", C6 "c6", D6 "d6", E6 "e6", F6 "f6", G6 "G6", H6 "H6",
+        A1 "a1", B1 "b1", C1 "c1", D1 "d1", E1 "e1", F1 "f1", G1 "g1", H1 "h1",
+        A2 "a2", B2 "b2", C2 "c2", D2 "d2", E2 "e2", F2 "f2", G2 "g2", H2 "h2",
+        A3 "a3", B3 "b3", C3 "c3", D3 "d3", E3 "e3", F3 "f3", G3 "g3", H3 "h3",
+        A4 "a4", B4 "b4", C4 "c4", D4 "d4", E4 "e4", F4 "f4", G4 "g4", H4 "h4",
+        A5 "a5", B5 "b5", C5 "c5", D5 "d5", E5 "e5", F5 "f5", G5 "g5", H5 "h5",
+        A6 "a6", B6 "b6", C6 "c6", D6 "d6", E6 "e6", F6 "f6", G6 "g6", H6 "h6",
     }
 );
 
