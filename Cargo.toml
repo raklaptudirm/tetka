@@ -10,6 +10,7 @@ description = "A game engine Swiss-army knife"
 repository = "https://github.com/raklaptudirm/tetka"
 
 [dependencies]
+strum = "0.26"
 tetka-uxi = { package = "uxi", path = "./uxi" }
 tetka-games = { path = "./games" }
 

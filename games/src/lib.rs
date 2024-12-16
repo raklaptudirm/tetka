@@ -1,5 +1,6 @@
 pub mod ataxx;
 pub mod interface;
+pub mod isolation;
 
 use interface::PositionType;
 
