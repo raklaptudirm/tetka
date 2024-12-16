@@ -27,8 +27,8 @@ bitboard_type! {
         Universe = Self(0xffffffffffff);
 
         // BitBoards containing the squares of the first file and the first rank.
-        FirstFile = Self(0x0041041041041);
-        FirstRank = Self(0x000000000003f);
+        FirstFile = Self(0x0000010101010101);
+        FirstRank = Self(0x00000000000000ff);
     }
 }
 
