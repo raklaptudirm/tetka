@@ -140,20 +140,15 @@ impl FromStr for Move {
 
 impl fmt::Display for Move {
     /// Display formats the given Move in a human-readable manner. The format used
-    /// for displaying jump moves is `<pawn><tile>`, while a singular Move is
-    /// formatted as `<tile>`. For the formatting of `<pawn>` and `<tile>`,
-    /// refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`.
+    /// for displaying moves is `<pawn><tile>`. For the formatting of `<pawn>` and
+    /// `<tile>`, refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`.
     /// ```
     /// use tetka_games::isolation::*;
     ///
     /// let null = Move::NULL;
-    /// let pass = Move::PASS;
-    /// let sing = Move::new_single(Square::A1);
     /// let jump = Move::new(Square::A1, Square::A3);
     ///
     /// assert_eq!(null.to_string(), "null");
-    /// assert_eq!(pass.to_string(), "0000");
-    /// assert_eq!(sing.to_string(), "a1");
     /// assert_eq!(jump.to_string(), "a1a3");
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
