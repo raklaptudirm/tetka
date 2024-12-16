@@ -1,0 +1,15 @@
+[package]
+name = "friendhaver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tetka = { path = ".." }
+rand = "0.8.5"
+derive-new = "0.5"
+derive_more = "0.99.18"
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+lto = true
