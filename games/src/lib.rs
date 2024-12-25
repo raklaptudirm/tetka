@@ -1,4 +1,6 @@
 pub mod ataxx;
+pub mod chess;
+
 pub mod interface;
 pub mod isolation;
 
@@ -22,7 +24,7 @@ pub fn perft<const SPLIT: bool, const BULK: bool, T: PositionType>(
 ) -> u64 {
     // Bulk counting if enabled. Instead of calling make move and perft for each
     // move at depth 1, just return the number of legal moves, which is equivalent.
-    if BULK && depth == 1 {
+    if BULK && !SPLIT && depth == 1 {
         return position.count_moves::<true, true>() as u64;
     }
 

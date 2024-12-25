@@ -22,7 +22,7 @@ use crate::interface;
 use crate::interface::PiecePlacementParseError;
 use crate::interface::PositionType;
 use crate::interface::TypeParseError;
-use crate::interface::{BitBoardType, Hash, RepresentableType, SquareType};
+use crate::interface::{Hash, RepresentableType, SetType, SquareType};
 
 use thiserror::Error;
 
@@ -84,6 +84,18 @@ impl PositionType for Position {
 
     fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
         self.bitboards[piece as usize]
+    }
+
+    fn side_to_move(&self) -> interface::Color<Self> {
+        self.side_to_move
+    }
+
+    fn half_move_clock(&self) -> usize {
+        self.half_move_clock as usize
+    }
+
+    fn ply_count(&self) -> usize {
+        self.ply_count as usize
     }
 
     fn hash(&self) -> Hash {

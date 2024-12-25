@@ -49,6 +49,9 @@ where
     #[must_use]
     fn colored_piece_bb(&self, piece: Self::ColoredPiece) -> Self::BitBoard;
 
+    fn side_to_move(&self) -> Color<Self>;
+    fn half_move_clock(&self) -> usize;
+    fn ply_count(&self) -> usize;
     /// Returns a semi-unique checksum of the current Position.
     #[must_use]
     fn hash(&self) -> Hash;

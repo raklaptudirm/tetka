@@ -16,6 +16,7 @@ mod hash;
 mod r#move;
 mod piece;
 mod position;
+mod set;
 mod square;
 
 pub use bitboard::*;
@@ -23,6 +24,7 @@ pub use hash::*;
 pub use piece::*;
 pub use position::*;
 pub use r#move::*;
+pub use set::*;
 pub use square::*;
 
 pub type BitBoard<P> = <P as PositionType>::BitBoard;
@@ -107,7 +109,7 @@ macro_rules! representable_type {
             }
         }
 
-        impl FromStr for $type {
+        impl std::str::FromStr for $type {
             type Err = $crate::interface::TypeParseError;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -122,8 +124,8 @@ macro_rules! representable_type {
             }
         }
 
-        impl fmt::Display for $type {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        impl std::fmt::Display for $type {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match *self {
                     $(Self::$variant => write!(f, "{}", $repr),)*
                 }
@@ -153,14 +155,8 @@ pub(crate) use representable_type;
 ///     }
 /// }
 /// ```
-macro_rules! bitboard_type {
-    ($(#[doc = $doc:expr])* struct $name:tt : $typ:tt {
-        Square = $sq:tt;
-        Empty = $empty:expr;
-        Universe = $universe:expr;
-        FirstFile = $first_file:expr;
-        FirstRank = $first_rank:expr;
-    } ) => {
+macro_rules! set_type {
+    ($(#[doc = $doc:expr])* $name:tt<$sq:tt>: $typ:tt) => {
         $(#[doc = $doc])*
         #[derive(
             Copy,
@@ -178,18 +174,15 @@ macro_rules! bitboard_type {
             derive_more::BitXorAssign,
             derive_more::ShlAssign,
             derive_more::ShrAssign,
-            derive_more::SubAssign,
         )]
         pub struct $name(pub $typ);
 
-        impl crate::interface::BitBoardType for $name {
-            type Base = $typ;
-            type Square = $sq;
-
-            const EMPTY: Self = $empty;
-            const UNIVERSE: Self = $universe;
-            const FIRST_FILE: Self = $first_file;
-            const FIRST_RANK: Self = $first_rank;
+        impl crate::interface::SetType<$typ, $sq> for $name {
+            const EMPTY: Self = Self(0);
+            const UNIVERSE: Self = Self(match (1 as $typ).checked_shl(<$sq as $crate::interface::RepresentableType<_>>::N as u32) {
+                Some(universe) => universe.wrapping_sub(1),
+                None => (-1i8) as $typ,
+            });
         }
 
         impl Iterator for $name {
@@ -197,19 +190,19 @@ macro_rules! bitboard_type {
 
             /// next pops the next Square from the BitBoard and returns it.
             fn next(&mut self) -> Option<Self::Item> {
-                let lsb = if self.is_empty() {
+                let lsb = if crate::interface::SetType::<$typ, $sq>::is_empty(*self) {
                     None
                 } else {
-                    let sq = <Self as Into<<Self as BitBoardType>::Base>>::into(
+                    let sq = <Self as Into<$typ>>::into(
                         *self,
                     )
                     .trailing_zeros() as usize;
                     Some(unsafe {
-                        <Self as BitBoardType>::Square::unsafe_from(sq)
+                        $sq::unsafe_from(sq)
                     })
                 };
 
-                if !self.is_empty() {
+                if !crate::interface::SetType::<$typ, $sq>::is_empty(*self) {
                     let copy = *self;
                     *self = copy & (copy - 1);
                 }
@@ -223,7 +216,7 @@ macro_rules! bitboard_type {
 
             #[must_use]
             fn sub(self, rhs: usize) -> Self::Output {
-                Self(self.0 - rhs as u64)
+                Self(self.0 - rhs as $typ)
             }
         }
 
@@ -244,7 +237,7 @@ macro_rules! bitboard_type {
         impl From<$sq> for $name {
             #[must_use]
             fn from(square: $sq) -> Self {
-                Self(1 << square as u64)
+                Self($typ::from(1u8) << $typ::from(u8::from(square)))
             }
         }
 
@@ -256,7 +249,7 @@ macro_rules! bitboard_type {
             fn not(self) -> Self::Output {
                 // ! will set the unused bits so remove them with an &.
                 Self(!self.0)
-                    & <Self as crate::interface::BitBoardType>::UNIVERSE
+                    & <Self as crate::interface::SetType<$typ, $sq>>::UNIVERSE
             }
         }
 
@@ -268,6 +261,14 @@ macro_rules! bitboard_type {
             #[must_use]
             fn sub(self, rhs: Self) -> Self::Output {
                 self & !rhs
+            }
+        }
+
+        #[allow(clippy::suspicious_arithmetic_impl)]
+        impl std::ops::SubAssign for $name {
+            /// Returns the difference of `self` and `rhs` as a new BitBoard.
+            fn sub_assign(&mut self, rhs: Self) {
+                *self &= !rhs
             }
         }
 
@@ -291,6 +292,28 @@ macro_rules! bitboard_type {
                 self & !Self::from(rhs)
             }
         }
+    };
+}
+
+pub(crate) use set_type;
+
+macro_rules! bitboard_type {
+    ($(#[doc = $doc:expr])* struct $name:tt : $typ:tt {
+        Square = $sq:tt;
+        Empty = $empty:expr;
+        Universe = $universe:expr;
+        FirstFile = $first_file:expr;
+        FirstRank = $first_rank:expr;
+    }) => {
+        crate::interface::set_type!($name<$sq>: $typ);
+
+        impl crate::interface::BitBoardType for $name {
+            type Base = $typ;
+            type Square = $sq;
+
+            const FIRST_FILE: Self = $first_file;
+            const FIRST_RANK: Self = $first_rank;
+        }
 
         // Display a bitboard as ASCII art with 0s and 1s.
         impl std::fmt::Display for $name {
@@ -310,8 +333,7 @@ macro_rules! bitboard_type {
                     {
                         let square = <$sq as crate::interface::SquareType>
                             ::new(file, rank);
-                        string_rep += if crate::interface::BitBoardType
-                            ::contains(*self, square) {
+                        string_rep += if crate::interface::SetType::<$typ, $sq>::contains(*self, square) {
                             "1 "
                         } else {
                             "0 "
@@ -332,7 +354,6 @@ macro_rules! bitboard_type {
         }
     };
 }
-
 pub(crate) use bitboard_type;
 
 /// PositionParseErr represents an error encountered while parsing
