@@ -2,6 +2,7 @@ pub mod ataxx;
 pub mod chess;
 
 pub mod interface;
+pub mod isolation;
 
 use interface::PositionType;
 

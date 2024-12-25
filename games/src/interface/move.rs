@@ -42,7 +42,7 @@ pub trait MoveStore<M>: Default {
 /// current limitations in the Rust type system, the current max capacity is
 /// capped at 256, which can be problematic for games which can have more moves
 /// in a position and might require a custom type.
-pub type MoveList<M> = ArrayVec<M, 256>;
+pub type MoveList<M> = ArrayVec<M, 500>;
 
 // MoveStore implementation for MoveList.
 impl<M> MoveStore<M> for MoveList<M> {
