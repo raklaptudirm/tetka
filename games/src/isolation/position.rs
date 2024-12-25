@@ -22,7 +22,7 @@ use crate::interface::ColoredPieceType;
 use crate::interface::PiecePlacementParseError;
 use crate::interface::PositionType;
 use crate::interface::TypeParseError;
-use crate::interface::{BitBoardType, Hash, RepresentableType, SquareType};
+use crate::interface::{Hash, RepresentableType, SetType, SquareType};
 
 use thiserror::Error;
 
@@ -173,6 +173,18 @@ impl PositionType for Position {
         let allowed = tiles - xtm;
 
         (BitBoard::singles(stm) & allowed).count() * (allowed.count() - 1)
+    }
+
+    fn side_to_move(&self) -> interface::Color<Self> {
+        self.side_to_move
+    }
+
+    fn half_move_clock(&self) -> usize {
+        0
+    }
+
+    fn ply_count(&self) -> usize {
+        self.ply_count as usize
     }
 }
 
