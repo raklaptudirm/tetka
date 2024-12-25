@@ -6,6 +6,7 @@
 //! [`PositionType`] trait, see its documentation for more information.
 
 use std::fmt::{Debug, Display};
+use std::num::ParseIntError;
 use std::str::FromStr;
 
 use strum::IntoEnumIterator;
@@ -479,4 +480,15 @@ pub(crate) fn parse_piece_placement<T: PositionType>(
     }
 
     Ok(())
+}
+
+pub(crate) fn parse_ply_count<C: ColorType>(
+    fmc: &str,
+    stm: C,
+) -> Result<u16, ParseIntError> {
+    if stm == C::first() {
+        Ok(fmc.parse::<u16>()? * 2 - 1)
+    } else {
+        Ok(fmc.parse::<u16>()? * 2 - 2)
+    }
 }

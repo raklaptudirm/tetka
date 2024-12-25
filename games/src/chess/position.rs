@@ -287,10 +287,8 @@ impl FromStr for Position {
             Some(Square::from_str(ept)?)
         };
         position.half_move_clock = hmc.parse::<u8>()?;
-        position.ply_count = fmc.parse::<u16>()? * 2 - 1;
-        if position.side_to_move == Color::Black {
-            position.ply_count -= 1;
-        }
+        position.ply_count =
+            interface::parse_ply_count(fmc, position.side_to_move)?;
 
         Ok(position)
     }

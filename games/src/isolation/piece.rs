@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops;
-
 use crate::interface::ColoredPieceType;
 use crate::interface::RepresentableType;
 use crate::interface::{color_type, representable_type};

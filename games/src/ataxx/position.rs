@@ -363,10 +363,8 @@ impl FromStr for Position {
 
         position.side_to_move = Color::from_str(stm)?;
         position.half_move_clock = hmc.parse::<u8>()?;
-        position.ply_count = fmc.parse::<u16>()? * 2 - 1;
-        if position.side_to_move == Color::Black {
-            position.ply_count -= 1;
-        }
+        position.ply_count =
+            interface::parse_ply_count(fmc, position.side_to_move)?;
 
         // Calculate the Hash value for the Position.
         position.checksum = Self::get_hash(
