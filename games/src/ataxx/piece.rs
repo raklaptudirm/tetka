@@ -11,27 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops;
-
-use crate::interface::representable_type;
 use crate::interface::ColoredPieceType;
 use crate::interface::RepresentableType;
+use crate::interface::{color_type, representable_type};
 
-representable_type!(
+color_type!(
     /// Color represents all the possible colors that an ataxx piece can have,
     /// specifically, Black and White.
-    enum Color: u8 { Black "x", White "o", }
+    enum Color { Black "x", White "o", }
 );
-
-impl ops::Not for Color {
-    type Output = Color;
-
-    /// not implements the not unary operator (!) which switches the current Color
-    /// to its opposite, i.e. [`Color::Black`] to [`Color::White`] and vice versa.
-    fn not(self) -> Self::Output {
-        unsafe { Color::unsafe_from(self as usize ^ 1) }
-    }
-}
 
 representable_type!(
     /// Piece represents the types of pieces in ataxx, namely Piece and Block.

@@ -7,7 +7,7 @@ use super::RepresentableType;
 pub trait ColoredPieceType: RepresentableType<u8>
 where
     Self::Piece: RepresentableType<u8>,
-    Self::Color: RepresentableType<u8> + Not,
+    Self::Color: ColorType,
 {
     /// The type for the Piece of the ColoredPiece.
     type Piece;
@@ -30,4 +30,8 @@ where
     /// Returns the Color of the given ColoredPiece.
     #[must_use]
     fn color(self) -> Self::Color;
+}
+
+pub trait ColorType: RepresentableType<u8> + Not {
+    fn first() -> Self;
 }

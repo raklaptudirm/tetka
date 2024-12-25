@@ -73,6 +73,37 @@ pub enum TypeParseError {
     RangeError(String),
 }
 
+macro_rules! color_type {
+    ($(#[doc = $doc:expr])* enum $type:tt {
+        $first:tt $first_repr:expr,
+        $second:tt $second_repr:expr,
+    }) => {
+
+
+        crate::interface::representable_type! {
+            $(#[doc = $doc])*
+            enum $type: u8 {
+                $first $first_repr, $second $second_repr,
+            }
+        }
+
+        impl std::ops::Not for $type {
+            type Output = Self;
+
+            fn not(self) -> Self::Output {
+                unsafe { Self::unsafe_from(self as usize ^ 1) }
+            }
+        }
+
+        impl crate::interface::ColorType for $type {
+            fn first() -> Self {
+                Self::$first
+            }
+        }
+    }
+}
+pub(crate) use color_type;
+
 macro_rules! representable_type {
     ($(#[doc = $doc:expr])* enum $type:tt: $base:tt {
         $($variant:tt $repr:expr,)*
