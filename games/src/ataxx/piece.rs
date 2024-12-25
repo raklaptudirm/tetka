@@ -40,7 +40,7 @@ representable_type!(
 
 representable_type!(
     /// Piece represents all the possible ataxx pieces.
-    enum ColoredPiece: u8 { Black "x", White "o", Block "■", }
+    enum ColoredPiece: u8 { Black "x", White "o", Block "-", }
 );
 
 impl ColoredPieceType for ColoredPiece {
