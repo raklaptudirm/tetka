@@ -107,14 +107,14 @@ macro_rules! game_details {
                 $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
     ) => {
         // Square types.
-        game_details!(
+        $crate::interface::game_details!(
             @squares
             Files: $($file_variant),* ;
             Ranks: $($rank_number $rank_variant),* ;
         );
 
         // Piece types.
-        game_details!(
+        $crate::interface::game_details!(
             @pieces
             Pieces: $($piece_variant $piece_repr),*;
                     $($other_variant $other_repr),*;
@@ -133,7 +133,7 @@ macro_rules! game_details {
         Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
                 $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
     ) => {
-        game_details!(
+        $crate::interface::game_details!(
             @color $color_1 $color_1_repr; $color_2 $color_2_repr;
         );
 
@@ -235,7 +235,7 @@ macro_rules! game_details {
     ) => {
         // The Square type's variants are the cartesian product of the variants
         // of its File and Rank types.
-        game_details!(
+        $crate::interface::game_details!(
             @file_rank_product $($rank_number),*;$($file_variant),*
         );
 

@@ -13,9 +13,7 @@ mod position;
 #[cfg(test)]
 mod tests;
 
-use crate::interface::game_details;
-
-game_details!(
+crate::interface::game_details!(
     @bitboard_less
     Files: A, B, C, D, E, F, G, H;
     Ranks: 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth;
