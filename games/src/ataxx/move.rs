@@ -58,9 +58,9 @@ impl Move {
     pub const NULL: Move = Move(1 << 15);
     /// PASS Move represents a no move, where only the side to move changes.
     /// ```
-    /// use tetka_games::ataxx::*;
-    /// use tetka_games::interface::PositionType;
-    /// use std::str::FromStr;
+    /// # use tetka_games::ataxx::*;
+    /// # use tetka_games::interface::PositionType;
+    /// # use std::str::FromStr;
     ///
     /// let old_pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     /// let new_pos = old_pos.after_move::<true>(Move::PASS);
@@ -75,7 +75,7 @@ impl Move {
     /// target Square. For a singular Move, [`Move::source`] and [`Move::target`]
     /// are equal since the source Square is irrelevant to the Move.
     /// ```
-    /// use tetka_games::ataxx::*;
+    /// # use tetka_games::ataxx::*;
     ///
     /// let mov = Move::new_single(Square::A1);
     ///
@@ -91,7 +91,7 @@ impl Move {
     /// target Square. These Squares can be recovered with the [`Move::source`] and
     /// [`Move::target`] methods respectively.
     /// ```
-    /// use tetka_games::ataxx::*;
+    /// # use tetka_games::ataxx::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
@@ -110,7 +110,7 @@ impl Move {
     /// Source returns the source Square of the moving piece. This is equal to the
     /// target Square if the given Move is of singular type.
     /// ```
-    /// use tetka_games::ataxx::*;
+    /// # use tetka_games::ataxx::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
@@ -126,7 +126,7 @@ impl Move {
 
     /// Target returns the target Square of the moving piece.
     /// ```
-    /// use tetka_games::ataxx::*;
+    /// # use tetka_games::ataxx::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
@@ -143,7 +143,7 @@ impl Move {
     /// is_single checks if the given Move is singular in nature. The result of this
     /// function for [`Move::NULL`] and [`Move::PASS`] is undefined.
     /// ```
-    /// use tetka_games::ataxx::*;
+    /// # use tetka_games::ataxx::*;
     ///
     /// let sing = Move::new_single(Square::A1);
     /// let jump = Move::new(Square::A1, Square::A3);
@@ -175,8 +175,8 @@ impl FromStr for Move {
     /// [`Square::FromStr`](Square::from_str). This function can be treated as the
     /// inverse of the [`fmt::Display`] trait for [Move].
     /// ```
-    /// use tetka_games::ataxx::*;
-    /// use std::str::FromStr;
+    /// # use tetka_games::ataxx::*;
+    /// # use std::str::FromStr;
     ///
     /// let pass = Move::PASS;
     /// let sing = Move::new_single(Square::A1);
@@ -216,7 +216,7 @@ impl fmt::Display for Move {
     /// refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`, while
     /// [`Move::PASS`] is formatted as `0000`.
     /// ```
-    /// use tetka_games::ataxx::*;
+    /// # use tetka_games::ataxx::*;
     ///
     /// let null = Move::NULL;
     /// let pass = Move::PASS;
