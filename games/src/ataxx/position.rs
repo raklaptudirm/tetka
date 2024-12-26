@@ -103,8 +103,8 @@ impl PositionType for Position {
     }
 
     fn is_game_over(&self) -> bool {
-        let black = self.colored_piece_bb(ColoredPiece::Black);
-        let white = self.colored_piece_bb(ColoredPiece::White);
+        let black = self.colored_piece_bb(ColoredPiece::BlackPiece);
+        let white = self.colored_piece_bb(ColoredPiece::WhitePiece);
         let block = self.colored_piece_bb(ColoredPiece::Block);
 
         self.half_move_clock >= 100 ||                           // Fifty-move rule
@@ -118,8 +118,8 @@ impl PositionType for Position {
             return None;
         }
 
-        let black = self.colored_piece_bb(ColoredPiece::Black);
-        let white = self.colored_piece_bb(ColoredPiece::White);
+        let black = self.colored_piece_bb(ColoredPiece::BlackPiece);
+        let white = self.colored_piece_bb(ColoredPiece::WhitePiece);
         let block = self.colored_piece_bb(ColoredPiece::Block);
 
         if black == BitBoard::EMPTY {
@@ -368,8 +368,8 @@ impl FromStr for Position {
 
         // Calculate the Hash value for the Position.
         position.checksum = Self::get_hash(
-            position.colored_piece_bb(ColoredPiece::Black),
-            position.colored_piece_bb(ColoredPiece::White),
+            position.colored_piece_bb(ColoredPiece::BlackPiece),
+            position.colored_piece_bb(ColoredPiece::WhitePiece),
             position.side_to_move,
         );
 

@@ -11,66 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::interface::ColoredPieceType;
 use crate::interface::RepresentableType;
-use crate::interface::{color_type, representable_type};
+use crate::interface::{piece_type, representable_type};
 
-color_type!(
-    /// Color represents all the possible colors that an ataxx piece can have,
-    /// specifically, Black and White.
-    enum Color { White "w", Black "b", }
+piece_type!(
+    Pieces: Pawn "p", Knight "n", Bishop "b", Rook "r", Queen "q", King "k";;
+    Colors: White "x" ("P", "N", "B", "R", "Q", "K"),
+            Black "o" ("p", "n", "b", "r", "q", "k");
 );
-
-representable_type!(
-    /// Piece represents the types of pieces in ataxx, namely Piece and Block.
-    enum Piece: u8 {
-        Pawn "p", Knight "n", Bishop "b", Rook "r", Queen "q", King "k",
-    }
-);
-
-representable_type!(
-    /// Piece represents all the possible ataxx pieces.
-    enum ColoredPiece: u8 {
-        WhitePawn "P", WhiteKnight "N", WhiteBishop "B",
-        WhiteRook "R", WhiteQueen "Q", WhiteKing "K",
-        BlackPawn "p", BlackKnight "n", BlackBishop "b",
-        BlackRook "r", BlackQueen "q", BlackKing "k",
-    }
-);
-
-impl ColoredPieceType for ColoredPiece {
-    type Piece = Piece;
-    type Color = Color;
-
-    fn piece(self) -> Piece {
-        match self {
-            ColoredPiece::BlackPawn | ColoredPiece::WhitePawn => Piece::Pawn,
-            ColoredPiece::BlackKnight | ColoredPiece::WhiteKnight => {
-                Piece::Knight
-            }
-            ColoredPiece::BlackBishop | ColoredPiece::WhiteBishop => {
-                Piece::Bishop
-            }
-            ColoredPiece::BlackRook | ColoredPiece::WhiteRook => Piece::Rook,
-            ColoredPiece::BlackQueen | ColoredPiece::WhiteQueen => Piece::Queen,
-            ColoredPiece::BlackKing | ColoredPiece::WhiteKing => Piece::King,
-        }
-    }
-
-    fn color(self) -> Color {
-        match self {
-            ColoredPiece::WhitePawn
-            | ColoredPiece::WhiteKnight
-            | ColoredPiece::WhiteBishop
-            | ColoredPiece::WhiteRook
-            | ColoredPiece::WhiteQueen
-            | ColoredPiece::WhiteKing => Color::White,
-            ColoredPiece::BlackPawn
-            | ColoredPiece::BlackKnight
-            | ColoredPiece::BlackBishop
-            | ColoredPiece::BlackRook
-            | ColoredPiece::BlackQueen
-            | ColoredPiece::BlackKing => Color::Black,
-        }
-    }
-}

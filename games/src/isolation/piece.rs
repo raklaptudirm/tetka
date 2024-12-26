@@ -11,42 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::interface::ColoredPieceType;
 use crate::interface::RepresentableType;
-use crate::interface::{color_type, representable_type};
+use crate::interface::{piece_type, representable_type};
 
-color_type!(
-    /// Color represents all the possible colors that an ataxx piece can have,
-    /// specifically, Black and White.
-    enum Color { White "w", Black "b", }
+piece_type!(
+    Pieces: Pawn "p"; Tile "-";
+    Colors: White "w" ("P"),
+            Black "b" ("p");
 );
-
-representable_type!(
-    /// Piece represents the types of pieces in ataxx, namely Piece and Block.
-    enum Piece: u8 { Pawn "p", Tile "-", }
-);
-
-representable_type!(
-    /// Piece represents all the possible ataxx pieces.
-    enum ColoredPiece: u8 { WhitePawn "P", BlackPawn "p", Tile "-", }
-);
-
-impl ColoredPieceType for ColoredPiece {
-    type Piece = Piece;
-    type Color = Color;
-
-    fn piece(self) -> Piece {
-        match self {
-            ColoredPiece::WhitePawn | ColoredPiece::BlackPawn => Piece::Pawn,
-            ColoredPiece::Tile => Piece::Tile,
-        }
-    }
-
-    fn color(self) -> Color {
-        match self {
-            ColoredPiece::WhitePawn => Color::White,
-            ColoredPiece::BlackPawn => Color::Black,
-            _ => panic!("Piece::color() called on Piece::Tile"),
-        }
-    }
-}

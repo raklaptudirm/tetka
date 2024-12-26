@@ -74,6 +74,67 @@ pub enum TypeParseError {
     RangeError(String),
 }
 
+macro_rules! piece_type {
+    (
+        Pieces: $($piece_variant:ident $piece_repr:literal),*;
+                $($other_variant:ident $other_repr:literal),*;
+        Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
+                $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
+    ) => {
+        $crate::interface::color_type!(
+            enum Color { $color_1 $color_1_repr, $color_2 $color_2_repr, }
+        );
+
+        $crate::interface::representable_type!(
+            enum Piece: u8 {
+                $($piece_variant $piece_repr,)*
+                $($other_variant $other_repr,)*
+            }
+        );
+
+        paste::paste!(
+            $crate::interface::representable_type!(
+                enum ColoredPiece: u8 {
+                    $([< $color_1 $piece_variant >] $piece_1_repr,)*
+                    $([< $color_2 $piece_variant >] $piece_2_repr,)*
+                    $($other_variant $other_repr,)*
+                }
+            );
+        );
+
+        impl $crate::interface::ColoredPieceType for ColoredPiece {
+            type Piece = Piece;
+            type Color = Color;
+
+            fn piece(self) -> Self::Piece {
+                paste::paste!(
+                    match self {
+                        $(
+                            Self:: [< $color_1 $piece_variant >] |
+                            Self:: [< $color_2 $piece_variant >]
+                                => Self::Piece::$piece_variant,
+                        )*
+
+                        $(Self:: $other_variant => Self::Piece::$other_variant)*
+                    }
+                )
+            }
+
+            #[allow(unreachable_patterns)]
+            fn color(self) -> Self::Color {
+                paste::paste!(
+                    match self {
+                        $(Self:: [< $color_1 $piece_variant >])|* => Self::Color::$color_1,
+                        $(Self:: [< $color_2 $piece_variant >])|* => Self::Color::$color_2,
+                        _ => panic!("ColoredPiece::color() called on uncolored piece")
+                    }
+                )
+            }
+        }
+    };
+}
+pub(crate) use piece_type;
+
 macro_rules! square_type {
     (enum $square:ident {
         for $file:tt => $($file_variant:ident),* ;
