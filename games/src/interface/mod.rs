@@ -74,13 +74,137 @@ pub enum TypeParseError {
     RangeError(String),
 }
 
+macro_rules! square_type {
+    (enum $square:ident {
+        for $file:tt => $($file_variant:ident),* ;
+        for $rank:tt => $($rank_number:literal $rank_variant:ident),* ;
+    }) => {
+        square_type!(
+            @product $square; $($rank_number),*;$($file_variant),*
+        );
+
+        impl $crate::interface::SquareType for $square {
+            type File = File;
+            type Rank = Rank;
+        }
+
+        representable_type!(
+            @no_display [[File] [u8]] [$([$file_variant])*]
+        );
+
+        impl std::str::FromStr for File {
+            type Err = $crate::interface::TypeParseError;
+
+            #[allow(clippy::char_lit_as_u8)]
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                if s.len() != 1 {
+                    Err($crate::interface::TypeParseError::StrError(
+                        stringify!(File).to_string()
+                    ))
+                } else {
+                    unsafe {
+                        let file_idx = s.chars().next().unwrap_unchecked() as u8 - 'a' as u8;
+                        if file_idx < File::N as u8 {
+                                Ok(File::unsafe_from(file_idx))
+                        } else {
+                            Err($crate::interface::TypeParseError::StrError(
+                                stringify!(File).to_string()
+                            ))
+                        }
+                    }
+                }
+            }
+        }
+
+        impl std::fmt::Display for File {
+            #[allow(clippy::char_lit_as_u8)]
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", (*self as u8 + 'a' as u8) as char)
+            }
+        }
+
+        representable_type!(
+            @no_display [[Rank] [u8]] [$([$rank_variant])*]
+        );
+
+        impl std::str::FromStr for Rank {
+            type Err = $crate::interface::TypeParseError;
+
+            #[allow(clippy::char_lit_as_u8)]
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                if s.len() != 1 {
+                    Err($crate::interface::TypeParseError::StrError(
+                        stringify!(Rank).to_string()
+                    ))
+                } else {
+                    unsafe {
+                        let rank_idx = s.chars().next().unwrap_unchecked() as u8 - '1' as u8;
+                        if rank_idx < Rank::N as u8 {
+                                Ok(Rank::unsafe_from(rank_idx))
+                        } else {
+                            Err($crate::interface::TypeParseError::StrError(
+                                stringify!(Rank).to_string()
+                            ))
+                        }
+                    }
+                }
+            }
+        }
+
+        impl std::fmt::Display for Rank {
+            #[allow(clippy::char_lit_as_u8)]
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", (*self as u8 + '1' as u8) as char)
+            }
+        }
+    };
+
+    (@product $square:ident; $($e1:expr),* ; $($e2:expr),*) => {
+        representable_type!(@cartesian $square, u8; [$([$e1])*][$([$e2])*]);
+
+        impl std::str::FromStr for Square {
+            type Err = $crate::interface::TypeParseError;
+
+            #[allow(clippy::char_lit_as_u8)]
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                if s.len() != 2 {
+                    Err($crate::interface::TypeParseError::StrError(
+                        stringify!(File).to_string()
+                    ))
+                } else {
+                    let file = File::from_str(&s[..1]);
+                    let rank = Rank::from_str(&s[1..]);
+
+                    if let (Ok(file), Ok(rank)) = (file, rank) {
+                        Ok($crate::interface::SquareType::new(file, rank))
+                    } else {
+                        Err($crate::interface::TypeParseError::StrError(
+                            stringify!(File).to_string()
+                        ))
+                    }
+                }
+            }
+        }
+
+        impl std::fmt::Display for Square {
+            #[allow(clippy::char_lit_as_u8)]
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}{}",
+                    $crate::interface::SquareType::file(*self),
+                    $crate::interface::SquareType::rank(*self),
+                )
+            }
+        }
+    };
+}
+
+pub(crate) use square_type;
+
 macro_rules! color_type {
     ($(#[doc = $doc:expr])* enum $type:tt {
         $first:tt $first_repr:expr,
         $second:tt $second_repr:expr,
     }) => {
-
-
         crate::interface::representable_type! {
             $(#[doc = $doc])*
             enum $type: u8 {
@@ -109,36 +233,8 @@ macro_rules! representable_type {
     ($(#[doc = $doc:expr])* enum $type:tt: $base:tt {
         $($variant:tt $repr:expr,)*
     }) => {
-        $(#[doc = $doc])*
-        #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
-        #[repr($base)]
-        pub enum $type { $($variant,)* }
-
-        impl RepresentableType<$base> for $type {
-            const N: usize = 0 $(+ representable_type!(@__puke_1 $variant))*;
-        }
-
-        impl From<$type> for $base {
-            #[must_use]
-            fn from(value: $type) -> Self {
-                value as $base
-            }
-        }
-
-        impl TryFrom<$base> for $type {
-            type Error = $crate::interface::TypeParseError;
-
-            fn try_from(value: $base) -> Result<Self, Self::Error> {
-                if value as usize >= Self::N {
-                    Err(
-                        $crate::interface::TypeParseError::RangeError(
-                            stringify!($type).to_string()
-                        )
-                    )
-                } else {
-                    Ok(unsafe { Self::unsafe_from(value) })
-                }
-            }
+        $crate::interface::representable_type! {
+            @no_display [[$type] [$base]] [$([$variant])*]
         }
 
         impl std::str::FromStr for $type {
@@ -165,7 +261,64 @@ macro_rules! representable_type {
         }
     };
 
-    (@__puke_1 $t:tt) => { 1 };
+    (@no_display [[$type:tt] [$base:tt]] [$([$variant:tt])*]) => {
+        #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
+        #[repr($base)]
+        pub enum $type { $($variant,)* }
+
+        impl RepresentableType<$base> for $type {
+            const N: usize = 0 $(+ representable_type!(@puke_1 $variant))*;
+        }
+
+        representable_type!(@impl $type $base);
+    };
+
+    (@cartesian $type:ident, $base:tt; [$([$e1:expr])*]$e2:tt) => {
+        representable_type!(@cartesian_helper $type, $base; $([[$e1]$e2])*);
+        representable_type!(@impl $type $base);
+    };
+
+    // [[1] [[A] [B] [C]]] [[2] [[A] [B] [C]]] -> [A1, B1, ...]
+    (@cartesian_helper $type:ident, $base:tt; $([[$e1:expr][$([$e2:expr])*]])*) => {
+        paste! {
+            #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
+            #[repr($base)]
+            pub enum $type {
+                $($([<$e2 $e1>]),*),*
+            }
+        }
+
+        impl RepresentableType<$base> for $type {
+            const N: usize = 0 $($(+ representable_type!(@puke_1 $e1 $e2))*)*;
+        }
+    };
+
+    (@impl $type:ident $base:tt) => {
+        impl From<$type> for $base {
+            #[must_use]
+            fn from(value: $type) -> Self {
+                value as $base
+            }
+        }
+
+        impl TryFrom<$base> for $type {
+            type Error = $crate::interface::TypeParseError;
+
+            fn try_from(value: $base) -> Result<Self, Self::Error> {
+                if value as usize >= Self::N {
+                    Err(
+                        $crate::interface::TypeParseError::RangeError(
+                            "stringify!($type).to_string()".to_string()
+                        )
+                    )
+                } else {
+                    Ok(unsafe { Self::unsafe_from(value) })
+                }
+            }
+        }
+    };
+
+    (@puke_1 $($t:tt)*) => { 1 };
 }
 
 pub(crate) use representable_type;
