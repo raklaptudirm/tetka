@@ -215,7 +215,8 @@ macro_rules! game_details {
             type Output = Self;
 
             fn not(self) -> Self::Output {
-                unsafe { <Self as $crate::interface::RepresentableType<u8>>::unsafe_from(self as usize ^ 1) }
+                use $crate::interface::RepresentableType;
+                unsafe { Self::unsafe_from(self as usize ^ 1) }
             }
         }
 
@@ -261,11 +262,12 @@ macro_rules! game_details {
                     ))
                 } else {
                     unsafe {
+                        use $crate::interface::RepresentableType;
                         // Files are represented by small letters from the
                         // English alphabet, starting from 'a'.
                         let file_idx = s.chars().next().unwrap_unchecked() as u8 - 'a' as u8;
-                        if file_idx < <File as $crate::interface::RepresentableType<u8>>::N as u8 {
-                                Ok(<File as $crate::interface::RepresentableType<u8>>::unsafe_from(file_idx))
+                        if file_idx < File::N as u8 {
+                                Ok(File::unsafe_from(file_idx))
                         } else {
                             Err($crate::interface::TypeParseError::StrError(
                                 stringify!(File).to_string()
@@ -300,10 +302,11 @@ macro_rules! game_details {
                     ))
                 } else {
                     unsafe {
+                        use $crate::interface::RepresentableType;
                         // Ranks are represented by the positive integers.
                         let rank_idx = s.chars().next().unwrap_unchecked() as u8 - '1' as u8;
-                        if rank_idx < <Rank as $crate::interface::RepresentableType<u8>>::N as u8 {
-                                Ok(<Rank as $crate::interface::RepresentableType<u8>>::unsafe_from(rank_idx))
+                        if rank_idx < Rank::N as u8 {
+                                Ok(Rank::unsafe_from(rank_idx))
                         } else {
                             Err($crate::interface::TypeParseError::StrError(
                                 stringify!(Rank).to_string()
@@ -455,14 +458,15 @@ macro_rules! representable_type {
             type Error = $crate::interface::TypeParseError;
 
             fn try_from(value: $base) -> Result<Self, Self::Error> {
-                if value as usize >= <Self as $crate::interface::RepresentableType<$base>>::N {
+                use $crate::interface::RepresentableType;
+                if value as usize >= Self::N {
                     Err(
                         $crate::interface::TypeParseError::RangeError(
                             "stringify!($type).to_string()".to_string()
                         )
                     )
                 } else {
-                    Ok(unsafe { <Self as $crate::interface::RepresentableType<$base>>::unsafe_from(value) })
+                    Ok(unsafe { Self::unsafe_from(value) })
                 }
             }
         }
@@ -511,7 +515,8 @@ macro_rules! set_type {
 
             /// next pops the next Square from the BitBoard and returns it.
             fn next(&mut self) -> Option<Self::Item> {
-                let lsb = if crate::interface::SetType::<$typ, $sq>::is_empty(*self) {
+                use $crate::interface::{RepresentableType, SetType};
+                let lsb = if $name::is_empty(*self) {
                     None
                 } else {
                     let sq = <Self as Into<$typ>>::into(
@@ -519,11 +524,11 @@ macro_rules! set_type {
                     )
                     .trailing_zeros() as usize;
                     Some(unsafe {
-                        <$sq as $crate::interface::RepresentableType<u8>>::unsafe_from(sq)
+                        $sq::unsafe_from(sq)
                     })
                 };
 
-                if !crate::interface::SetType::<$typ, $sq>::is_empty(*self) {
+                if !$name::is_empty(*self) {
                     let copy = *self;
                     *self = copy & (copy - 1);
                 }
@@ -568,9 +573,9 @@ macro_rules! set_type {
             /// Returns the complementary BitBoard of `self`.
             #[must_use]
             fn not(self) -> Self::Output {
+                use $crate::interface::SetType;
                 // ! will set the unused bits so remove them with an &.
-                Self(!self.0)
-                    & <Self as crate::interface::SetType<$typ, $sq>>::UNIVERSE
+                Self(!self.0) & Self::UNIVERSE
             }
         }
 
@@ -639,23 +644,15 @@ macro_rules! bitboard_type {
         // Display a bitboard as ASCII art with 0s and 1s.
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                for rank in
-                    <
-                        <$sq as crate::interface::SquareType>::Rank
-                            as strum::IntoEnumIterator
-                    // Iterate over the Ranks in reversed order since we are
-                    // printing top to bottom and the top rank is the last Rank.
-                    >::iter().rev()
-                {
-                    for file in
-                        <
-                            <$sq as crate::interface::SquareType>::File
-                                as strum::IntoEnumIterator
-                        >::iter()
-                    {
-                        let square = <$sq as crate::interface::SquareType>
-                            ::new(file, rank);
-                        write!(f, "{}", if crate::interface::SetType::<$typ, $sq>::contains(*self, square) {
+                use $crate::interface::{SquareType, SetType};
+                use strum::IntoEnumIterator;
+
+                // Iterate over the Ranks in reversed order since we are
+                // printing top to bottom and the top rank is the last Rank.
+                for rank in <$sq as SquareType>::Rank::iter().rev() {
+                    for file in <$sq as SquareType>::File::iter() {
+                        let square = $sq::new(file, rank);
+                        write!(f, "{}", if self.contains(square) {
                             "1 " // 1 if the BitBoard contains the Square
                         } else {
                             "0 " // 0 if the BitBoard doesn't contain the Square
@@ -697,9 +694,7 @@ pub(crate) fn parse_piece_placement<T: PositionType>(
     position: &mut T,
     fen_fragment: &str,
 ) -> Result<(), PiecePlacementParseError> {
-    for sq in <<<T as PositionType>::BitBoard as BitBoardType>::Square
-        as IntoEnumIterator>::iter()
-    {
+    for sq in Square::<T>::iter() {
         position.remove(sq);
     }
 
@@ -716,8 +711,7 @@ pub(crate) fn parse_piece_placement<T: PositionType>(
         // Rank pointer ran out, but data carried on.
         if rank.is_err() {
             return Err(PiecePlacementParseError::TooManyRanks(
-                <<<T as PositionType>::BitBoard as BitBoardType>::Square
-                    as SquareType>::Rank::iter().len()
+                Rank::<T>::iter().len(),
             ));
         }
 
@@ -730,11 +724,11 @@ pub(crate) fn parse_piece_placement<T: PositionType>(
 
             let file_value = *file.as_ref().unwrap();
             let rank_value = *rank.as_ref().unwrap();
-            let square = <Square<T>>::new(file_value, rank_value);
+            let square = Square::<T>::new(file_value, rank_value);
             match data {
                 // Numbers represent jump specs to jump over empty squares.
                 '1'..='8' => {
-                    file = <File<T>>::try_from(
+                    file = File::<T>::try_from(
                         file_value.into() + data as u8 - b'1',
                     );
                     if file.is_err() {
@@ -742,7 +736,7 @@ pub(crate) fn parse_piece_placement<T: PositionType>(
                     }
                 }
 
-                _ => match <ColoredPiece<T>>::from_str(&data.to_string()) {
+                _ => match ColoredPiece::<T>::from_str(&data.to_string()) {
                     Ok(piece) => position.insert(square, piece),
                     Err(_) => {
                         return Err(
@@ -765,7 +759,7 @@ pub(crate) fn parse_piece_placement<T: PositionType>(
         }
 
         // Switch rank pointer and reset file pointer.
-        rank = <Rank<T>>::try_from((rank.unwrap().into()).wrapping_sub(1));
+        rank = Rank::<T>::try_from((rank.unwrap().into()).wrapping_sub(1));
         file = Ok(first_file);
     }
 
