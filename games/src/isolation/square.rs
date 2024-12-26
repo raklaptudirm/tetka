@@ -11,11 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::interface::{representable_type, square_type, RepresentableType};
+use crate::interface::{game_details, representable_type, RepresentableType};
 
-square_type!(
-    enum Square {
-        for File => A, B, C, D, E, F, G, H;
-        for Rank => 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth;
-    }
+game_details!(
+    @squares
+    Files: A, B, C, D, E, F, G, H;
+    Ranks: 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth;
 );

@@ -14,14 +14,13 @@
 use std::ops;
 
 use crate::interface::{
-    representable_type, square_type, RepresentableType, SquareType,
+    game_details, representable_type, RepresentableType, SquareType,
 };
 
-square_type!(
-    enum Square {
-        for File => A, B, C, D, E, F, G, H;
-        for Rank => 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth, 7 Seventh, 8 Eighth;
-    }
+game_details!(
+    @squares
+    Files: A, B, C, D, E, F, G, H;
+    Ranks: 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth, 7 Seventh, 8 Eighth;
 );
 
 use super::Color;

@@ -12,9 +12,10 @@
 // limitations under the License.
 
 use crate::interface::RepresentableType;
-use crate::interface::{piece_type, representable_type};
+use crate::interface::{game_details, representable_type};
 
-piece_type!(
+game_details!(
+    @pieces
     Pieces: Pawn "p", Knight "n", Bishop "b", Rook "r", Queen "q", King "k";;
     Colors: White "x" ("P", "N", "B", "R", "Q", "K"),
             Black "o" ("p", "n", "b", "r", "q", "k");

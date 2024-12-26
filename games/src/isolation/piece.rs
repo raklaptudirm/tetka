@@ -12,9 +12,10 @@
 // limitations under the License.
 
 use crate::interface::RepresentableType;
-use crate::interface::{piece_type, representable_type};
+use crate::interface::{game_details, representable_type};
 
-piece_type!(
+game_details!(
+    @pieces
     Pieces: Pawn "p"; Tile "-";
     Colors: White "w" ("P"),
             Black "b" ("p");

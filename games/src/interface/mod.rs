@@ -74,15 +74,39 @@ pub enum TypeParseError {
     RangeError(String),
 }
 
-macro_rules! piece_type {
+macro_rules! game_details {
     (
+        Files: $($file_variant:ident),* ;
+        Ranks: $($rank_number:literal $rank_variant:ident),* ;
+
+        Pieces: $($piece_variant:ident $piece_repr:literal),*;
+                $($other_variant:ident $other_repr:literal),*;
+        Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
+                $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
+    ) => {};
+
+    (
+        @bitboard_less
+        Files: $($file_variant:ident),* ;
+        Ranks: $($rank_number:literal $rank_variant:ident),* ;
+
         Pieces: $($piece_variant:ident $piece_repr:literal),*;
                 $($other_variant:ident $other_repr:literal),*;
         Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
                 $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
     ) => {
-        $crate::interface::color_type!(
-            enum Color { $color_1 $color_1_repr, $color_2 $color_2_repr, }
+
+    };
+
+    (
+        @pieces
+        Pieces: $($piece_variant:ident $piece_repr:literal),*;
+                $($other_variant:ident $other_repr:literal),*;
+        Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
+                $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
+    ) => {
+        game_details!(
+            @color $color_1 $color_1_repr; $color_2 $color_2_repr;
         );
 
         $crate::interface::representable_type!(
@@ -132,19 +156,43 @@ macro_rules! piece_type {
             }
         }
     };
-}
-pub(crate) use piece_type;
 
-macro_rules! square_type {
-    (enum $square:ident {
-        for $file:tt => $($file_variant:ident),* ;
-        for $rank:tt => $($rank_number:literal $rank_variant:ident),* ;
-    }) => {
-        square_type!(
-            @product $square; $($rank_number),*;$($file_variant),*
+    (
+        @color
+        $first:tt $first_repr:expr;
+        $second:tt $second_repr:expr;
+    ) => {
+        crate::interface::representable_type! {
+            enum Color: u8 {
+                $first $first_repr, $second $second_repr,
+            }
+        }
+
+        impl std::ops::Not for Color {
+            type Output = Self;
+
+            fn not(self) -> Self::Output {
+                unsafe { Self::unsafe_from(self as usize ^ 1) }
+            }
+        }
+
+        impl crate::interface::ColorType for Color {
+            fn first() -> Self {
+                Self::$first
+            }
+        }
+    };
+
+    (
+        @squares
+        Files: $($file_variant:ident),* ;
+        Ranks: $($rank_number:literal $rank_variant:ident),* ;
+    ) => {
+        game_details!(
+            @file_rank_product $($rank_number),*;$($file_variant),*
         );
 
-        impl $crate::interface::SquareType for $square {
+        impl $crate::interface::SquareType for Square {
             type File = File;
             type Rank = Rank;
         }
@@ -220,8 +268,8 @@ macro_rules! square_type {
         }
     };
 
-    (@product $square:ident; $($e1:expr),* ; $($e2:expr),*) => {
-        representable_type!(@cartesian $square, u8; [$([$e1])*][$([$e2])*]);
+    (@file_rank_product $($e1:expr),* ; $($e2:expr),*) => {
+        representable_type!(@cartesian Square, u8; [$([$e1])*][$([$e2])*]);
 
         impl std::str::FromStr for Square {
             type Err = $crate::interface::TypeParseError;
@@ -258,37 +306,7 @@ macro_rules! square_type {
         }
     };
 }
-
-pub(crate) use square_type;
-
-macro_rules! color_type {
-    ($(#[doc = $doc:expr])* enum $type:tt {
-        $first:tt $first_repr:expr,
-        $second:tt $second_repr:expr,
-    }) => {
-        crate::interface::representable_type! {
-            $(#[doc = $doc])*
-            enum $type: u8 {
-                $first $first_repr, $second $second_repr,
-            }
-        }
-
-        impl std::ops::Not for $type {
-            type Output = Self;
-
-            fn not(self) -> Self::Output {
-                unsafe { Self::unsafe_from(self as usize ^ 1) }
-            }
-        }
-
-        impl crate::interface::ColorType for $type {
-            fn first() -> Self {
-                Self::$first
-            }
-        }
-    }
-}
-pub(crate) use color_type;
+pub(crate) use game_details;
 
 macro_rules! representable_type {
     ($(#[doc = $doc:expr])* enum $type:tt: $base:tt {

@@ -11,11 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::interface::piece_type;
+use crate::interface::game_details;
 use crate::interface::representable_type;
 use crate::interface::RepresentableType;
 
-piece_type!(
+game_details!(
+    @pieces
     Pieces: Piece "x"; Block "-";
     Colors: Black "x" ("x"),
             White "o" ("o");
