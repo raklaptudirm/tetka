@@ -29,8 +29,8 @@ game_details!(
     Files: A, B, C, D, E, F, G, H;
     Ranks: 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth, 7 Seventh, 8 Eighth;
     Pieces: Pawn "p", Knight "n", Bishop "b", Rook "r", Queen "q", King "k";;
-    Colors: White "x" ("P", "N", "B", "R", "Q", "K"),
-            Black "o" ("p", "n", "b", "r", "q", "k");
+    Colors: White "w" ("P", "N", "B", "R", "Q", "K"),
+            Black "b" ("p", "n", "b", "r", "q", "k");
 );
 
 impl Square {
