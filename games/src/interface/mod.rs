@@ -221,9 +221,7 @@ macro_rules! game_details {
 
         // Other methods needed for ColorType conformance.
         impl crate::interface::ColorType for Color {
-            fn first() -> Self {
-                Self::$first
-            }
+            const FIRST: Self = Self::$first;
         }
     };
 
@@ -792,7 +790,7 @@ pub(crate) fn parse_ply_count<C: ColorType>(
     fmc: &str,
     stm: C,
 ) -> Result<u16, ParseIntError> {
-    if stm == C::first() {
+    if stm == C::FIRST {
         Ok(fmc.parse::<u16>()? * 2 - 1)
     } else {
         Ok(fmc.parse::<u16>()? * 2 - 2)

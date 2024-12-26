@@ -33,5 +33,5 @@ where
 }
 
 pub trait ColorType: RepresentableType<u8> + Not {
-    fn first() -> Self;
+    const FIRST: Self;
 }
