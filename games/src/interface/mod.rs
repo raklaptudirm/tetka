@@ -280,7 +280,7 @@ macro_rules! representable_type {
 
     // [[1] [[A] [B] [C]]] [[2] [[A] [B] [C]]] -> [A1, B1, ...]
     (@cartesian_helper $type:ident, $base:tt; $([[$e1:expr][$([$e2:expr])*]])*) => {
-        paste! {
+        paste::paste! {
             #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
             #[repr($base)]
             pub enum $type {
