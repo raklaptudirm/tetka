@@ -22,10 +22,6 @@ bitboard_type! {
         // The BitBoard's Square type.
         Square = Square;
 
-        // BitBoards representing the null and the universe sets.
-        Empty = Self(0);
-        Universe = Self(0xffffffffffff);
-
         // BitBoards containing the squares of the first file and the first rank.
         FirstFile = Self(0x0000010101010101);
         FirstRank = Self(0x00000000000000ff);

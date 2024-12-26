@@ -626,8 +626,6 @@ pub(crate) use set_type;
 macro_rules! bitboard_type {
     ($(#[doc = $doc:expr])* struct $name:tt : $typ:tt {
         Square = $sq:tt;
-        Empty = $empty:expr;
-        Universe = $universe:expr;
         FirstFile = $first_file:expr;
         FirstRank = $first_rank:expr;
     }) => {
