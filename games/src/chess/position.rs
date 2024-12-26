@@ -18,8 +18,8 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 
 use crate::interface;
+use crate::interface::parse::PiecePlacementParseError;
 use crate::interface::ColoredPieceType;
-use crate::interface::PiecePlacementParseError;
 use crate::interface::PositionType;
 use crate::interface::TypeParseError;
 use crate::interface::{Hash, RepresentableType, SetType, SquareType};
@@ -267,7 +267,7 @@ impl FromStr for Position {
             ),
         };
 
-        interface::parse_piece_placement(&mut position, pos)?;
+        interface::parse::piece_placement(&mut position, pos)?;
 
         let kings = position.piece_bb(Piece::King);
         let white_king = (kings & position.color_bb(Color::White)).next();
@@ -288,7 +288,7 @@ impl FromStr for Position {
         };
         position.half_move_clock = hmc.parse::<u8>()?;
         position.ply_count =
-            interface::parse_ply_count(fmc, position.side_to_move)?;
+            interface::parse::ply_count(fmc, position.side_to_move)?;
 
         Ok(position)
     }

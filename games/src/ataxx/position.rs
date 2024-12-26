@@ -19,7 +19,7 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 
 use crate::interface;
-use crate::interface::PiecePlacementParseError;
+use crate::interface::parse::PiecePlacementParseError;
 use crate::interface::PositionType;
 use crate::interface::TypeParseError;
 use crate::interface::{Hash, RepresentableType, SetType, SquareType};
@@ -359,12 +359,12 @@ impl FromStr for Position {
             half_move_clock: 0,
         };
 
-        interface::parse_piece_placement(&mut position, pos)?;
+        interface::parse::piece_placement(&mut position, pos)?;
 
         position.side_to_move = Color::from_str(stm)?;
         position.half_move_clock = hmc.parse::<u8>()?;
         position.ply_count =
-            interface::parse_ply_count(fmc, position.side_to_move)?;
+            interface::parse::ply_count(fmc, position.side_to_move)?;
 
         // Calculate the Hash value for the Position.
         position.checksum = Self::get_hash(
