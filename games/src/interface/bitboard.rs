@@ -35,13 +35,7 @@ where
     /// east returns a new Self with all the squares shifted to the east.
     #[must_use]
     fn east(self) -> Self {
-        (self << 1)
-            & (Self::UNIVERSE
-                ^ unsafe {
-                    Self::file(<Self::Square as SquareType>::File::unsafe_from(
-                        0u8,
-                    ))
-                })
+        (self << 1) & (Self::UNIVERSE ^ Self::FIRST_FILE)
     }
 
     /// west returns a new Self with all the squares shifted to the west.
@@ -49,11 +43,8 @@ where
     fn west(self) -> Self {
         (self >> 1)
             & (Self::UNIVERSE
-                ^ unsafe {
-                    Self::file(<Self::Square as SquareType>::File::unsafe_from(
-                        <Self::Square as SquareType>::File::N as u8 - 1,
-                    ))
-                })
+                ^ (Self::FIRST_FILE
+                    << (<Self::Square as SquareType>::File::N - 1)))
     }
 
     /// Returns a BitBoard containing all the squares from the given `File`.
