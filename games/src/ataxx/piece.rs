@@ -12,8 +12,6 @@
 // limitations under the License.
 
 use crate::interface::game_details;
-use crate::interface::representable_type;
-use crate::interface::RepresentableType;
 
 game_details!(
     @pieces

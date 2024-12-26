@@ -95,7 +95,19 @@ macro_rules! game_details {
         Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
                 $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
     ) => {
+        game_details!(
+            @squares
+            Files: $($file_variant),* ;
+            Ranks: $($rank_number $rank_variant),* ;
+        );
 
+        game_details!(
+            @pieces
+            Pieces: $($piece_variant $piece_repr),*;
+                    $($other_variant $other_repr),*;
+            Colors: $color_1 $color_1_repr ($($piece_1_repr),*),
+                    $color_2 $color_2_repr ($($piece_2_repr),*);
+        )
     };
 
     (
@@ -172,7 +184,7 @@ macro_rules! game_details {
             type Output = Self;
 
             fn not(self) -> Self::Output {
-                unsafe { Self::unsafe_from(self as usize ^ 1) }
+                unsafe { <Self as $crate::interface::RepresentableType<u8>>::unsafe_from(self as usize ^ 1) }
             }
         }
 
@@ -197,7 +209,7 @@ macro_rules! game_details {
             type Rank = Rank;
         }
 
-        representable_type!(
+        $crate::interface::representable_type!(
             @no_display [[File] [u8]] [$([$file_variant])*]
         );
 
@@ -213,8 +225,8 @@ macro_rules! game_details {
                 } else {
                     unsafe {
                         let file_idx = s.chars().next().unwrap_unchecked() as u8 - 'a' as u8;
-                        if file_idx < File::N as u8 {
-                                Ok(File::unsafe_from(file_idx))
+                        if file_idx < <File as $crate::interface::RepresentableType<u8>>::N as u8 {
+                                Ok(<File as $crate::interface::RepresentableType<u8>>::unsafe_from(file_idx))
                         } else {
                             Err($crate::interface::TypeParseError::StrError(
                                 stringify!(File).to_string()
@@ -232,7 +244,7 @@ macro_rules! game_details {
             }
         }
 
-        representable_type!(
+        $crate::interface::representable_type!(
             @no_display [[Rank] [u8]] [$([$rank_variant])*]
         );
 
@@ -248,8 +260,8 @@ macro_rules! game_details {
                 } else {
                     unsafe {
                         let rank_idx = s.chars().next().unwrap_unchecked() as u8 - '1' as u8;
-                        if rank_idx < Rank::N as u8 {
-                                Ok(Rank::unsafe_from(rank_idx))
+                        if rank_idx < <Rank as $crate::interface::RepresentableType<u8>>::N as u8 {
+                                Ok(<Rank as $crate::interface::RepresentableType<u8>>::unsafe_from(rank_idx))
                         } else {
                             Err($crate::interface::TypeParseError::StrError(
                                 stringify!(Rank).to_string()
@@ -269,7 +281,7 @@ macro_rules! game_details {
     };
 
     (@file_rank_product $($e1:expr),* ; $($e2:expr),*) => {
-        representable_type!(@cartesian Square, u8; [$([$e1])*][$([$e2])*]);
+        $crate::interface::representable_type!(@cartesian Square, u8; [$([$e1])*][$([$e2])*]);
 
         impl std::str::FromStr for Square {
             type Err = $crate::interface::TypeParseError;
@@ -345,16 +357,16 @@ macro_rules! representable_type {
         #[repr($base)]
         pub enum $type { $($variant,)* }
 
-        impl RepresentableType<$base> for $type {
-            const N: usize = 0 $(+ representable_type!(@puke_1 $variant))*;
+        impl $crate::interface::RepresentableType<$base> for $type {
+            const N: usize = 0 $(+ $crate::interface::representable_type!(@puke_1 $variant))*;
         }
 
-        representable_type!(@impl $type $base);
+        $crate::interface::representable_type!(@impl $type $base);
     };
 
     (@cartesian $type:ident, $base:tt; [$([$e1:expr])*]$e2:tt) => {
-        representable_type!(@cartesian_helper $type, $base; $([[$e1]$e2])*);
-        representable_type!(@impl $type $base);
+        $crate::interface::representable_type!(@cartesian_helper $type, $base; $([[$e1]$e2])*);
+        $crate::interface::representable_type!(@impl $type $base);
     };
 
     // [[1] [[A] [B] [C]]] [[2] [[A] [B] [C]]] -> [A1, B1, ...]
@@ -367,8 +379,8 @@ macro_rules! representable_type {
             }
         }
 
-        impl RepresentableType<$base> for $type {
-            const N: usize = 0 $($(+ representable_type!(@puke_1 $e1 $e2))*)*;
+        impl $crate::interface::RepresentableType<$base> for $type {
+            const N: usize = 0 $($(+ $crate::interface::representable_type!(@puke_1 $e1 $e2))*)*;
         }
     };
 
@@ -384,14 +396,14 @@ macro_rules! representable_type {
             type Error = $crate::interface::TypeParseError;
 
             fn try_from(value: $base) -> Result<Self, Self::Error> {
-                if value as usize >= Self::N {
+                if value as usize >= <Self as $crate::interface::RepresentableType<$base>>::N {
                     Err(
                         $crate::interface::TypeParseError::RangeError(
                             "stringify!($type).to_string()".to_string()
                         )
                     )
                 } else {
-                    Ok(unsafe { Self::unsafe_from(value) })
+                    Ok(unsafe { <Self as $crate::interface::RepresentableType<$base>>::unsafe_from(value) })
                 }
             }
         }

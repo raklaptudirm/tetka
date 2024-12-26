@@ -13,9 +13,7 @@
 
 use std::ops;
 
-use crate::interface::{
-    game_details, representable_type, RepresentableType, SquareType,
-};
+use crate::interface::{game_details, RepresentableType, SquareType};
 
 game_details!(
     @squares

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::interface::{game_details, representable_type, RepresentableType};
+use crate::interface::game_details;
 
 game_details!(
     @squares
