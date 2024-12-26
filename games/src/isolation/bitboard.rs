@@ -32,7 +32,7 @@ bitboard_type! {
     }
 }
 
-use crate::interface::{BitBoardType, RepresentableType};
+use crate::interface::BitBoardType;
 
 impl BitBoard {
     /// singles returns the targets of all singular moves from all the source

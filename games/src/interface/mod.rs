@@ -107,7 +107,7 @@ macro_rules! game_details {
                     $($other_variant $other_repr),*;
             Colors: $color_1 $color_1_repr ($($piece_1_repr),*),
                     $color_2 $color_2_repr ($($piece_2_repr),*);
-        )
+        );
     };
 
     (
@@ -474,7 +474,7 @@ macro_rules! set_type {
                     )
                     .trailing_zeros() as usize;
                     Some(unsafe {
-                        $sq::unsafe_from(sq)
+                        <$sq as $crate::interface::RepresentableType<u8>>::unsafe_from(sq)
                     })
                 };
 
