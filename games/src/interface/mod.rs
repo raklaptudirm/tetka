@@ -571,6 +571,8 @@ macro_rules! set_type {
             derive_more::BitXorAssign,
             derive_more::ShlAssign,
             derive_more::ShrAssign,
+            derive_more::From,
+            derive_more::Into,
         )]
         pub struct $name(pub $typ);
 
@@ -599,43 +601,22 @@ macro_rules! set_type {
 
                 if !$name::is_empty(*self) {
                     let copy = *self;
-                    *self = copy & (copy - 1);
+                    *self = copy & (copy - Self($typ::from(1u8)));
                 }
 
                 lsb
             }
         }
 
-        impl std::ops::Sub<usize> for $name {
-            type Output = Self;
-
-            #[must_use]
-            fn sub(self, rhs: usize) -> Self::Output {
-                Self(self.0 - rhs as $typ)
-            }
-        }
-
-        impl From<$typ> for $name {
-            #[must_use]
-            fn from(num: $typ) -> Self {
-                Self(num)
-            }
-        }
-
-        impl From<$name> for $typ {
-            #[must_use]
-            fn from(value: $name) -> Self {
-                value.0
-            }
-        }
-
+        // a -> {a}
         impl From<$sq> for $name {
             #[must_use]
             fn from(square: $sq) -> Self {
-                Self($typ::from(1u8) << $typ::from(u8::from(square)))
+                Self($typ::from(1u8) << u8::from(square))
             }
         }
 
+        // The set complement operator (!).
         impl std::ops::Not for $name {
             type Output = Self;
 
@@ -648,6 +629,7 @@ macro_rules! set_type {
             }
         }
 
+        // The set difference operator (-).
         #[allow(clippy::suspicious_arithmetic_impl)]
         impl std::ops::Sub for $name {
             type Output = Self;
@@ -659,6 +641,7 @@ macro_rules! set_type {
             }
         }
 
+        // Assignment version of the set difference operator.
         #[allow(clippy::suspicious_arithmetic_impl)]
         impl std::ops::SubAssign for $name {
             /// Returns the difference of `self` and `rhs` as a new BitBoard.
@@ -667,6 +650,7 @@ macro_rules! set_type {
             }
         }
 
+        // A | {a}
         #[allow(clippy::suspicious_arithmetic_impl)]
         impl std::ops::BitOr<$sq> for $name {
             type Output = Self;
@@ -678,6 +662,7 @@ macro_rules! set_type {
             }
         }
 
+        // A - {a}
         impl std::ops::Sub<$sq> for $name {
             type Output = Self;
 

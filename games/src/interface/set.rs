@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr, Sub};
+use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr};
 
 use super::RepresentableType;
 
@@ -11,7 +11,6 @@ pub trait SetType<B: PrimInt, E: RepresentableType<u8>>:
     + Into<B>
     + From<E>
     + Not<Output = Self>
-    + Sub<usize, Output = Self>
     + Shr<usize, Output = Self>
     + Shl<usize, Output = Self>
     + BitOr<Self, Output = Self>
