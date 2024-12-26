@@ -476,20 +476,6 @@ pub(crate) use representable_type;
 /// bitboard_type generates a new BitBoard with the given type as its base
 /// representation. The base type must implement num_traits::int::PrimInt so
 /// that the BitBoardType trait can be implemented.
-///
-/// # Examples
-///
-/// ```
-/// bitboard_type! {
-///     BitBoardTypeName: u64 {
-///         Square = OurSquareType;
-///         Empty = OurEmptyBitBoard;
-///         Universe = OurUniverseBitBoard;
-///         FirstFile = OurFirstFileBitBoard;
-///         FirstRank = OurFirstRankBitBoard;
-///     }
-/// }
-/// ```
 macro_rules! set_type {
     ($(#[doc = $doc:expr])* $name:tt<$sq:tt>: $typ:tt) => {
         $(#[doc = $doc])*
