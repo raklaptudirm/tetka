@@ -92,7 +92,28 @@ macro_rules! game_details {
                 $($other_variant:ident $other_repr:literal),*;
         Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
                 $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
-    ) => {};
+    ) => {
+        $crate::interface::game_details!(
+            @bitboard
+            u64 {
+                Square = Square;
+
+                FirstFile = $crate::interface::derive_set!(@first_file BitBoard);
+                FirstRank = $crate::interface::derive_set!(@first_rank BitBoard);
+            }
+        );
+
+        $crate::interface::game_details!(
+            @bitboard_less
+            Files: $($file_variant),* ;
+            Ranks: $($rank_number $rank_variant),* ;
+
+            Pieces: $($piece_variant $piece_repr),*;
+                    $($other_variant $other_repr),*;
+            Colors: $color_1 $color_1_repr ($($piece_1_repr),*),
+                    $color_2 $color_2_repr ($($piece_2_repr),*);
+        );
+    };
 
     // @bitboard_less generates all the board representation backing types
     // except BitBoard from the given game specific information.
@@ -121,6 +142,57 @@ macro_rules! game_details {
             Colors: $color_1 $color_1_repr ($($piece_1_repr),*),
                     $color_2 $color_2_repr ($($piece_2_repr),*);
         );
+    };
+
+    // @bitboard generates the BitBoard type from the given game details.
+    (@bitboard $typ:tt {
+        Square = $sq:tt;
+        FirstFile = $first_file:expr;
+        FirstRank = $first_rank:expr;
+    }) => {
+        // The BitBoard type. BitBoardType requires conformance to the SetType
+        // trait which is why the declaration uses the set_type macro.
+        crate::interface::set_type!(BitBoard<$sq>: $typ);
+
+        // Conformance to BitBoardType.
+        impl crate::interface::BitBoardType for BitBoard {
+            type Base = $typ;
+            type Square = $sq;
+
+            const FIRST_FILE: Self = $first_file;
+            const FIRST_RANK: Self = $first_rank;
+        }
+
+        // Display a bitboard as ASCII art with 0s and 1s.
+        impl std::fmt::Display for BitBoard {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                use $crate::interface::{SquareType, SetType};
+                use strum::IntoEnumIterator;
+
+                // Iterate over the Ranks in reversed order since we are
+                // printing top to bottom and the top rank is the last Rank.
+                for rank in <$sq as SquareType>::Rank::iter().rev() {
+                    for file in <$sq as SquareType>::File::iter() {
+                        let square = $sq::new(file, rank);
+                        write!(f, "{}", if self.contains(square) {
+                            "1 " // 1 if the BitBoard contains the Square
+                        } else {
+                            "0 " // 0 if the BitBoard doesn't contain the Square
+                        })?;
+                    }
+
+                    writeln!(f)?;
+                }
+
+                Ok(())
+            }
+        }
+
+        impl std::fmt::Debug for BitBoard {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self)
+            }
+        }
     };
 
     // @pieces generates the piece types, which include Piece, Color, and
@@ -504,10 +576,7 @@ macro_rules! set_type {
 
         impl crate::interface::SetType<$typ, $sq> for $name {
             const EMPTY: Self = Self(0);
-            const UNIVERSE: Self = Self(match (1 as $typ).checked_shl(<$sq as $crate::interface::RepresentableType<_>>::N as u32) {
-                Some(universe) => universe.wrapping_sub(1),
-                None => (-1i8) as $typ,
-            });
+            const UNIVERSE: Self = $crate::interface::derive_set!(@universe $typ $sq);
         }
 
         impl Iterator for $name {
@@ -623,55 +692,64 @@ macro_rules! set_type {
 
 pub(crate) use set_type;
 
-macro_rules! bitboard_type {
-    ($(#[doc = $doc:expr])* struct $name:tt : $typ:tt {
-        Square = $sq:tt;
-        FirstFile = $first_file:expr;
-        FirstRank = $first_rank:expr;
-    }) => {
-        crate::interface::set_type!($name<$sq>: $typ);
+// derive_set resolves into some of the fundamental sets for a SetType/BitBoard.
+macro_rules! derive_set {
+    // @universe resolves into the universal set.
+    (@universe $base:tt $elem:tt) => {{
+        use $crate::interface::RepresentableType;
+        Self(
+            // (1 << Square::N) - 1
+            match (1 as $base)
+                .checked_shl(<$elem as RepresentableType<u8>>::N as u32)
+            {
+                Some(universe) => universe.wrapping_sub(1),
+                None => (-1i8) as $base,
+            },
+        )
+    }};
 
-        impl crate::interface::BitBoardType for $name {
-            type Base = $typ;
-            type Square = $sq;
-
-            const FIRST_FILE: Self = $first_file;
-            const FIRST_RANK: Self = $first_rank;
-        }
-
-        // Display a bitboard as ASCII art with 0s and 1s.
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                use $crate::interface::{SquareType, SetType};
-                use strum::IntoEnumIterator;
-
-                // Iterate over the Ranks in reversed order since we are
-                // printing top to bottom and the top rank is the last Rank.
-                for rank in <$sq as SquareType>::Rank::iter().rev() {
-                    for file in <$sq as SquareType>::File::iter() {
-                        let square = $sq::new(file, rank);
-                        write!(f, "{}", if self.contains(square) {
-                            "1 " // 1 if the BitBoard contains the Square
-                        } else {
-                            "0 " // 0 if the BitBoard doesn't contain the Square
-                        })?;
-                    }
-
-                    writeln!(f)?;
+    // @first_rank resolves into the set containing the Squares in the first Rank.
+    (@first_rank $bb:tt) => {{
+        use $crate::interface::{RepresentableType, BitBoardType, SquareType};
+        Self(
+            // (1 << File::N) - 1
+            match (1 as <$bb as BitBoardType>::Base)
+                .checked_shl(<<<$bb as BitBoardType>::Square as SquareType>::File as RepresentableType<u8>>::N as u32) {
+                    Some(universe) => universe.wrapping_sub(1),
+                    None => 1,
                 }
+        )
+    }};
 
-                Ok(())
-            }
-        }
+    // @first_file resolves into the set containing the Squares in the first File.
+    (@first_file $bb:tt) => {{
+        use $crate::interface::{RepresentableType, BitBoardType, SquareType};
 
-        impl std::fmt::Debug for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", self)
+        let mut i = 0u32;
+        let mut file = 0 as <$bb as BitBoardType>::Base;
+        let file_n = <<
+            <$bb as BitBoardType>::Square as SquareType
+        >::File as RepresentableType<u8>>::N as u32;
+
+        loop {
+            // i < file_n
+            if i >= file_n {
+                break
             }
+
+            // file |= 1 << (File::N * i)
+            file |= match (1 as <$bb as BitBoardType>::Base).checked_shl(file_n * i) {
+                Some(file) => file,
+                None => 0,
+            };
+
+            // i++
+            i += 1;
         }
-    };
+        Self(file)
+    }};
 }
-pub(crate) use bitboard_type;
+pub(crate) use derive_set;
 
 /// PositionParseErr represents an error encountered while parsing
 /// the given FEN position field into a valid Position.
