@@ -74,6 +74,15 @@ pub enum TypeParseError {
     RangeError(String),
 }
 
+// The game_details macro in an internal macro which provides a bunch of
+// utility sub-macros which can be used to generate a ton of boilerplate code
+// while developing a game backend for tetka-games.
+//
+// Sub-macros can be called by prefixing the macro body with a valid decorator.
+// Accepted ones include @bitboard_less, @squares, @pieces, @color, etc.
+//
+// The undecorated macro essentially does the work of all the sub-macros put
+// together. Use the undecorated macro unless more precise control is needed.
 macro_rules! game_details {
     (
         Files: $($file_variant:ident),* ;
@@ -85,6 +94,8 @@ macro_rules! game_details {
                 $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
     ) => {};
 
+    // @bitboard_less generates all the board representation backing types
+    // except BitBoard from the given game specific information.
     (
         @bitboard_less
         Files: $($file_variant:ident),* ;
@@ -95,12 +106,14 @@ macro_rules! game_details {
         Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
                 $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
     ) => {
+        // Square types.
         game_details!(
             @squares
             Files: $($file_variant),* ;
             Ranks: $($rank_number $rank_variant),* ;
         );
 
+        // Piece types.
         game_details!(
             @pieces
             Pieces: $($piece_variant $piece_repr),*;
@@ -110,6 +123,9 @@ macro_rules! game_details {
         );
     };
 
+    // @pieces generates the piece types, which include Piece, Color, and
+    // ColoredPiece from the given game specific details like their string
+    // representations.
     (
         @pieces
         Pieces: $($piece_variant:ident $piece_repr:literal),*;
@@ -121,6 +137,7 @@ macro_rules! game_details {
             @color $color_1 $color_1_repr; $color_2 $color_2_repr;
         );
 
+        // The Piece type.
         $crate::interface::representable_type!(
             enum Piece: u8 {
                 $($piece_variant $piece_repr,)*
@@ -128,6 +145,7 @@ macro_rules! game_details {
             }
         );
 
+        // The ColoredPiece type.
         paste::paste!(
             $crate::interface::representable_type!(
                 enum ColoredPiece: u8 {
@@ -145,12 +163,17 @@ macro_rules! game_details {
             fn piece(self) -> Self::Piece {
                 paste::paste!(
                     match self {
+                        // For colored pieces, the ColoredPiece with the same
+                        // ::piece() but different ::color() should map to the
+                        // same Piece variant.
                         $(
-                            Self:: [< $color_1 $piece_variant >] |
-                            Self:: [< $color_2 $piece_variant >]
+                            Self:: [< $color_1 $piece_variant >] | // Color 1 Piece
+                            Self:: [< $color_2 $piece_variant >]   // Color 2 Piece
                                 => Self::Piece::$piece_variant,
                         )*
 
+                        // For uncolored pieces, each variant maps to a unique
+                        // Piece variant.
                         $(Self:: $other_variant => Self::Piece::$other_variant)*
                     }
                 )
@@ -160,8 +183,13 @@ macro_rules! game_details {
             fn color(self) -> Self::Color {
                 paste::paste!(
                     match self {
+                        // For colored pieces, all variants with a common color
+                        // map to that single Color variant.
                         $(Self:: [< $color_1 $piece_variant >])|* => Self::Color::$color_1,
                         $(Self:: [< $color_2 $piece_variant >])|* => Self::Color::$color_2,
+
+                        // Uncolored pieces don't have a Color, so panic if
+                        // ::color() is called on one. TODO: maybe return Option?
                         _ => panic!("ColoredPiece::color() called on uncolored piece")
                     }
                 )
@@ -169,17 +197,20 @@ macro_rules! game_details {
         }
     };
 
+    // @color generates a Color type conforming to the ColorType trait.
     (
         @color
         $first:tt $first_repr:expr;
         $second:tt $second_repr:expr;
     ) => {
+        // ColorType requires conformance to RepresentableType<u8>.
         crate::interface::representable_type! {
             enum Color: u8 {
                 $first $first_repr, $second $second_repr,
             }
         }
 
+        // ColorType requires conformance to ops::Not.
         impl std::ops::Not for Color {
             type Output = Self;
 
@@ -188,6 +219,7 @@ macro_rules! game_details {
             }
         }
 
+        // Other methods needed for ColorType conformance.
         impl crate::interface::ColorType for Color {
             fn first() -> Self {
                 Self::$first
@@ -195,20 +227,27 @@ macro_rules! game_details {
         }
     };
 
+    // @squares generates the square types, which include Square, File, and Rank
+    // from the given game specific details like the number of Files and Ranks.
     (
         @squares
         Files: $($file_variant:ident),* ;
         Ranks: $($rank_number:literal $rank_variant:ident),* ;
     ) => {
+        // The Square type's variants are the cartesian product of the variants
+        // of its File and Rank types.
         game_details!(
             @file_rank_product $($rank_number),*;$($file_variant),*
         );
 
+        // SquareType implementation for Square.
         impl $crate::interface::SquareType for Square {
             type File = File;
             type Rank = Rank;
         }
 
+        // The File type. A custom display method is implemented so the
+        // @no_display decorator for representable_type! is used.
         $crate::interface::representable_type!(
             @no_display [[File] [u8]] [$([$file_variant])*]
         );
@@ -224,6 +263,8 @@ macro_rules! game_details {
                     ))
                 } else {
                     unsafe {
+                        // Files are represented by small letters from the
+                        // English alphabet, starting from 'a'.
                         let file_idx = s.chars().next().unwrap_unchecked() as u8 - 'a' as u8;
                         if file_idx < <File as $crate::interface::RepresentableType<u8>>::N as u8 {
                                 Ok(<File as $crate::interface::RepresentableType<u8>>::unsafe_from(file_idx))
@@ -244,6 +285,8 @@ macro_rules! game_details {
             }
         }
 
+        // The Rank type. A custom display method is implemented so the
+        // @no_display decorator for representable_type! is used.
         $crate::interface::representable_type!(
             @no_display [[Rank] [u8]] [$([$rank_variant])*]
         );
@@ -259,6 +302,7 @@ macro_rules! game_details {
                     ))
                 } else {
                     unsafe {
+                        // Ranks are represented by the positive integers.
                         let rank_idx = s.chars().next().unwrap_unchecked() as u8 - '1' as u8;
                         if rank_idx < <Rank as $crate::interface::RepresentableType<u8>>::N as u8 {
                                 Ok(<Rank as $crate::interface::RepresentableType<u8>>::unsafe_from(rank_idx))
@@ -280,8 +324,15 @@ macro_rules! game_details {
         }
     };
 
+    // @file_rank_product generates the Square type, populating its variants
+    // with the cartesian product of the Rank and File variants.
     (@file_rank_product $($e1:expr),* ; $($e2:expr),*) => {
-        $crate::interface::representable_type!(@cartesian Square, u8; [$([$e1])*][$([$e2])*]);
+        // The Square type. The @cartesian decorator is used to instruct
+        // representable_type! to populate the variants with the cartesian
+        // product of the two provided sets of variants.
+        $crate::interface::representable_type!(
+            @cartesian Square, u8; [$([$e1])*][$([$e2])*]
+        );
 
         impl std::str::FromStr for Square {
             type Err = $crate::interface::TypeParseError;
@@ -293,6 +344,7 @@ macro_rules! game_details {
                         stringify!(File).to_string()
                     ))
                 } else {
+                    // A Square is represented by a Rank and a File.
                     let file = File::from_str(&s[..1]);
                     let rank = Rank::from_str(&s[1..]);
 
@@ -320,8 +372,10 @@ macro_rules! game_details {
 }
 pub(crate) use game_details;
 
+// The representable_type macro generates a type conforming to the
+// RepresentableType trait.
 macro_rules! representable_type {
-    ($(#[doc = $doc:expr])* enum $type:tt: $base:tt {
+    (enum $type:tt: $base:tt {
         $($variant:tt $repr:expr,)*
     }) => {
         $crate::interface::representable_type! {
@@ -352,25 +406,32 @@ macro_rules! representable_type {
         }
     };
 
+    // @no_display suppresses the generation of the FromStr and Display traits
+    // for the given RepresentableType. When @no_display is used, a manual
+    // implementation of the two traits need to be provided.
     (@no_display [[$type:tt] [$base:tt]] [$([$variant:tt])*]) => {
         #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
         #[repr($base)]
         pub enum $type { $($variant,)* }
 
         impl $crate::interface::RepresentableType<$base> for $type {
-            const N: usize = 0 $(+ $crate::interface::representable_type!(@puke_1 $variant))*;
+            const N: usize = 0 $(+ $crate::interface::representable_type!(@__puke_1 $variant))*;
         }
 
-        $crate::interface::representable_type!(@impl $type $base);
+        $crate::interface::representable_type!(@__impl $type $base);
     };
 
+    // @cartesian populates the variants of the given RepresentableType with the
+    // cartesian product of the two provided sets of variants.
     (@cartesian $type:ident, $base:tt; [$([$e1:expr])*]$e2:tt) => {
-        $crate::interface::representable_type!(@cartesian_helper $type, $base; $([[$e1]$e2])*);
-        $crate::interface::representable_type!(@impl $type $base);
+        $crate::interface::representable_type!(
+            @__cartesian_helper $type, $base; $([[$e1]$e2])*
+        );
+        $crate::interface::representable_type!(@__impl $type $base);
     };
 
     // [[1] [[A] [B] [C]]] [[2] [[A] [B] [C]]] -> [A1, B1, ...]
-    (@cartesian_helper $type:ident, $base:tt; $([[$e1:expr][$([$e2:expr])*]])*) => {
+    (@__cartesian_helper $type:ident, $base:tt; $([[$e1:expr][$([$e2:expr])*]])*) => {
         paste::paste! {
             #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
             #[repr($base)]
@@ -380,11 +441,11 @@ macro_rules! representable_type {
         }
 
         impl $crate::interface::RepresentableType<$base> for $type {
-            const N: usize = 0 $($(+ $crate::interface::representable_type!(@puke_1 $e1 $e2))*)*;
+            const N: usize = 0 $($(+ $crate::interface::representable_type!(@__puke_1 $e1 $e2))*)*;
         }
     };
 
-    (@impl $type:ident $base:tt) => {
+    (@__impl $type:ident $base:tt) => {
         impl From<$type> for $base {
             #[must_use]
             fn from(value: $type) -> Self {
@@ -409,7 +470,7 @@ macro_rules! representable_type {
         }
     };
 
-    (@puke_1 $($t:tt)*) => { 1 };
+    (@__puke_1 $($t:tt)*) => { 1 };
 }
 
 pub(crate) use representable_type;
@@ -594,11 +655,12 @@ macro_rules! bitboard_type {
         // Display a bitboard as ASCII art with 0s and 1s.
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let mut string_rep = String::from("");
                 for rank in
                     <
                         <$sq as crate::interface::SquareType>::Rank
                             as strum::IntoEnumIterator
+                    // Iterate over the Ranks in reversed order since we are
+                    // printing top to bottom and the top rank is the last Rank.
                     >::iter().rev()
                 {
                     for file in
@@ -609,17 +671,17 @@ macro_rules! bitboard_type {
                     {
                         let square = <$sq as crate::interface::SquareType>
                             ::new(file, rank);
-                        string_rep += if crate::interface::SetType::<$typ, $sq>::contains(*self, square) {
-                            "1 "
+                        write!(f, "{}", if crate::interface::SetType::<$typ, $sq>::contains(*self, square) {
+                            "1 " // 1 if the BitBoard contains the Square
                         } else {
-                            "0 "
-                        };
+                            "0 " // 0 if the BitBoard doesn't contain the Square
+                        })?;
                     }
 
-                    string_rep += "\n";
+                    writeln!(f)?;
                 }
 
-                write!(f, "{string_rep}")
+                Ok(())
             }
         }
 
