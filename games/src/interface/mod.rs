@@ -601,8 +601,8 @@ macro_rules! set_type {
                 };
 
                 if !$name::is_empty(*self) {
-                    let copy = *self;
-                    *self = copy & (copy - Self($typ::from(1u8)));
+                    let copy = $typ::from(*self);
+                    self.0 = copy & (copy - $typ::from(1u8));
                 }
 
                 lsb
