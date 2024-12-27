@@ -63,7 +63,7 @@ where
 
     /// Returns the side which has won in the current position, if any.
     #[must_use]
-    fn winner(&self) -> Option<Color<Self>>;
+    fn winner(&self) -> Option<Option<Color<Self>>>;
     /// Returns `true` if the game is over in the current position.
     #[must_use]
     fn is_game_over(&self) -> bool {

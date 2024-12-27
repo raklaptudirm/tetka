@@ -103,9 +103,9 @@ impl PositionType for Position {
         self.count_moves::<true, true>() == 0
     }
 
-    fn winner(&self) -> Option<Color> {
+    fn winner(&self) -> Option<Option<Color>> {
         if self.is_game_over() {
-            Some(!self.side_to_move)
+            Some(Some(!self.side_to_move))
         } else {
             None
         }

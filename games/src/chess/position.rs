@@ -123,7 +123,7 @@ impl PositionType for Position {
         false
     }
 
-    fn winner(&self) -> Option<Color> {
+    fn winner(&self) -> Option<Option<Color>> {
         None
     }
 

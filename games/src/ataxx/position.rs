@@ -112,7 +112,7 @@ impl PositionType for Position {
 			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
     }
 
-    fn winner(&self) -> Option<Color> {
+    fn winner(&self) -> Option<Option<Color>> {
         if self.half_move_clock >= 100 {
             // Draw by 50 move rule.
             return None;
@@ -124,10 +124,10 @@ impl PositionType for Position {
 
         if black == BitBoard::EMPTY {
             // Black lost all its pieces, White won.
-            return Some(Color::White);
+            return Some(Some(Color::White));
         } else if white == BitBoard::EMPTY {
             // White lost all its pieces, Black won.
-            return Some(Color::Black);
+            return Some(Some(Color::Black));
         }
 
         debug_assert!(black | white | block == BitBoard::UNIVERSE);
@@ -139,12 +139,12 @@ impl PositionType for Position {
         let white_n = white.len();
 
         match black_n.cmp(&white_n) {
-            cmp::Ordering::Less => Some(Color::White),
-            cmp::Ordering::Greater => Some(Color::Black),
+            cmp::Ordering::Less => Some(Some(Color::White)),
+            cmp::Ordering::Greater => Some(Some(Color::Black)),
             // Though there can't be an equal number of black and white pieces
             // on an empty ataxx board, it is possible with an odd number of
             // blocker pieces.
-            cmp::Ordering::Equal => None,
+            cmp::Ordering::Equal => Some(None),
         }
     }
 
