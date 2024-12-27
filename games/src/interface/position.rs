@@ -49,8 +49,11 @@ where
     #[must_use]
     fn colored_piece_bb(&self, piece: Self::ColoredPiece) -> Self::BitBoard;
 
+    /// Returns the current side to move.
     fn side_to_move(&self) -> Color<Self>;
+    /// Returns the value of half-move draw clock.
     fn half_move_clock(&self) -> usize;
+    /// Returns the number of plys played till now.
     fn ply_count(&self) -> usize;
     /// Returns a semi-unique checksum of the current Position.
     #[must_use]
