@@ -15,9 +15,6 @@ mod position;
 pub use self::position::*;
 pub use self::r#move::*;
 
-#[cfg(test)]
-mod tests;
-
 use std::ops;
 use std::sync::LazyLock;
 

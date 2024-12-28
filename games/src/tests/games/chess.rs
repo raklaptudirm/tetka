@@ -1,5 +1,5 @@
-use crate::chess::Position;
-use crate::perft;
+use crate::common::perft::perft;
+use crate::games::chess::Position;
 use std::str::FromStr;
 
 macro_rules! perft_test {

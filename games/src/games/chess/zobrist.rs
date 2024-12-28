@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::chess::{ColoredPiece, File, Square};
+use super::{ColoredPiece, File, Square};
 use crate::interface::{Hash, RepresentableType, SquareType};
 
 use super::castling;

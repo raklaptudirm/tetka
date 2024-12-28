@@ -1,2 +1,1 @@
-mod ataxx;
-mod isolation;
+mod games;

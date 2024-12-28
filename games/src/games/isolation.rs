@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{fmt, num::ParseIntError, str::FromStr};
+
 use crate::interface::{
     parse::{self, PiecePlacementParseError},
     BitBoardType, ColoredPieceType, Hash, MoveStore, MoveType, PositionType,
     RepresentableType, SetType, SquareType, TypeParseError,
 };
-
-use std::{fmt, num::ParseIntError, str::FromStr};
 
 use strum::IntoEnumIterator;
 use thiserror::Error;

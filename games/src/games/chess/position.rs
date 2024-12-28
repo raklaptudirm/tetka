@@ -27,7 +27,7 @@ use crate::interface::{Hash, RepresentableType, SetType, SquareType};
 use thiserror::Error;
 
 #[rustfmt::skip]
-use crate::chess::{
+use super::{
     BitBoard, ColoredPiece, File, Move,
     Rank, Square, Color, Piece, castling
 };

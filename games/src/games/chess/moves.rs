@@ -15,7 +15,7 @@ use std::sync::LazyLock;
 
 use strum::IntoEnumIterator;
 
-use crate::chess::{BitBoard, Color, Square};
+use super::{BitBoard, Color, Square};
 
 use crate::interface::{BitBoardType, RepresentableType, SetType, SquareType};
 
