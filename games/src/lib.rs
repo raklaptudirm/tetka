@@ -1,8 +1,13 @@
+// The common interface implemented by game backends.
+pub mod interface;
+
+// The various game backends.
 pub mod ataxx;
 pub mod chess;
-
-pub mod interface;
 pub mod isolation;
+
+#[cfg(test)]
+mod tests;
 
 use interface::PositionType;
 
