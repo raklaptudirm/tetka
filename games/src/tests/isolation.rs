@@ -1,4 +1,4 @@
-use super::Position;
+use crate::isolation::Position;
 use crate::perft;
 use std::str::FromStr;
 

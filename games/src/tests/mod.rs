@@ -1,1 +1,2 @@
 mod ataxx;
+mod isolation;
