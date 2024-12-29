@@ -448,7 +448,7 @@ impl Move {
     /// # use tetka_games::games::ataxx::*;
     /// # use tetka_games::interface::PositionType;
     /// # use std::str::FromStr;
-    ///
+    /// #
     /// let old_pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
     /// let new_pos = old_pos.after_move::<true>(Move::PASS);
     ///
@@ -463,7 +463,7 @@ impl Move {
     /// are equal since the source Square is irrelevant to the Move.
     /// ```
     /// # use tetka_games::games::ataxx::*;
-    ///
+    /// #
     /// let mov = Move::new_single(Square::A1);
     ///
     /// assert_eq!(mov.source(), mov.target());
@@ -478,7 +478,7 @@ impl Move {
     /// [`Move::target`] methods respectively.
     /// ```
     /// # use tetka_games::games::ataxx::*;
-    ///
+    /// #
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
     /// assert_eq!(mov.source(), Square::A1);
@@ -496,9 +496,8 @@ impl Move {
     /// target Square if the given Move is of singular type.
     /// ```
     /// # use tetka_games::games::ataxx::*;
-    ///
+    /// #
     /// let mov = Move::new(Square::A1, Square::A3);
-    ///
     /// assert_eq!(mov.source(), Square::A1);
     /// ```
     pub fn source(self) -> Square {
@@ -512,9 +511,8 @@ impl Move {
     /// Target returns the target Square of the moving piece.
     /// ```
     /// # use tetka_games::games::ataxx::*;
-    ///
+    /// #
     /// let mov = Move::new(Square::A1, Square::A3);
-    ///
     /// assert_eq!(mov.target(), Square::A3);
     /// ```
     pub fn target(self) -> Square {
@@ -529,7 +527,7 @@ impl Move {
     /// function for [`Move::NULL`] and [`Move::PASS`] is undefined.
     /// ```
     /// # use tetka_games::games::ataxx::*;
-    ///
+    /// #
     /// let sing = Move::new_single(Square::A1);
     /// let jump = Move::new(Square::A1, Square::A3);
     ///
@@ -562,7 +560,7 @@ impl FromStr for Move {
     /// ```
     /// # use tetka_games::games::ataxx::*;
     /// # use std::str::FromStr;
-    ///
+    /// #
     /// let pass = Move::PASS;
     /// let sing = Move::new_single(Square::A1);
     /// let jump = Move::new(Square::A1, Square::A3);
@@ -602,7 +600,7 @@ impl fmt::Display for Move {
     /// [`Move::PASS`] is formatted as `0000`.
     /// ```
     /// # use tetka_games::games::ataxx::*;
-    ///
+    /// #
     /// let null = Move::NULL;
     /// let pass = Move::PASS;
     /// let sing = Move::new_single(Square::A1);

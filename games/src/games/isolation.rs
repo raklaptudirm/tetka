@@ -362,7 +362,7 @@ impl Move {
     /// [`Move::tile`] methods respectively.
     /// ```
     /// # use tetka_games::games::isolation::*;
-    ///
+    /// #
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
     /// assert_eq!(mov.pawn(), Square::A1);
@@ -380,9 +380,8 @@ impl Move {
     /// tile Square if the given Move is of singular type.
     /// ```
     /// # use tetka_games::games::isolation::*;
-    ///
+    /// #
     /// let mov = Move::new(Square::A1, Square::A3);
-    ///
     /// assert_eq!(mov.pawn(), Square::A1);
     /// ```
     pub fn pawn(self) -> Square {
@@ -394,9 +393,8 @@ impl Move {
     /// Target returns the tile Square of the moving piece.
     /// ```
     /// # use tetka_games::games::isolation::*;
-    ///
+    /// #
     /// let mov = Move::new(Square::A1, Square::A3);
-    ///
     /// assert_eq!(mov.tile(), Square::A3);
     /// ```
     pub fn tile(self) -> Square {
@@ -424,7 +422,7 @@ impl FromStr for Move {
     /// ```
     /// # use tetka_games::games::isolation::*;
     /// # use std::str::FromStr;
-    ///
+    /// #
     /// let jump = Move::new(Square::A1, Square::A3);
     /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
     /// ```
@@ -447,7 +445,7 @@ impl fmt::Display for Move {
     /// ```
     /// # use tetka_games::games::isolation::*;
     /// # use tetka_games::interface::MoveType;
-    ///
+    /// #
     /// let null = Move::NULL;
     /// let jump = Move::new(Square::A1, Square::A3);
     ///
