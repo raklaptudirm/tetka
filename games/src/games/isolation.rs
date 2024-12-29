@@ -361,14 +361,13 @@ impl Move {
     /// tile Square. These Squares can be recovered with the [`Move::pawn`] and
     /// [`Move::tile`] methods respectively.
     /// ```
-    /// # use tetka_games::isolation::*;
+    /// # use tetka_games::games::isolation::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
     /// assert_eq!(mov.pawn(), Square::A1);
     /// assert_eq!(mov.tile(), Square::A3);
     /// ```
-    #[inline(always)]
     #[rustfmt::skip]
     pub fn new(pawn: Square, tile: Square) -> Move {
 		Move(
@@ -380,7 +379,7 @@ impl Move {
     /// Source returns the pawn Square of the moving piece. This is equal to the
     /// tile Square if the given Move is of singular type.
     /// ```
-    /// # use tetka_games::isolation::*;
+    /// # use tetka_games::games::isolation::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
@@ -394,7 +393,7 @@ impl Move {
 
     /// Target returns the tile Square of the moving piece.
     /// ```
-    /// # use tetka_games::isolation::*;
+    /// # use tetka_games::games::isolation::*;
     ///
     /// let mov = Move::new(Square::A1, Square::A3);
     ///
@@ -423,7 +422,7 @@ impl FromStr for Move {
     /// parsed, take a look at [`Square::FromStr`](Square::from_str). This function
     /// can be treated as the inverse of the [`fmt::Display`] trait for [Move].
     /// ```
-    /// # use tetka_games::isolation::*;
+    /// # use tetka_games::games::isolation::*;
     /// # use std::str::FromStr;
     ///
     /// let jump = Move::new(Square::A1, Square::A3);
@@ -446,7 +445,7 @@ impl fmt::Display for Move {
     /// for displaying moves is `<pawn><tile>`. For the formatting of `<pawn>` and
     /// `<tile>`, refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`.
     /// ```
-    /// # use tetka_games::isolation::*;
+    /// # use tetka_games::games::isolation::*;
     /// # use tetka_games::interface::MoveType;
     ///
     /// let null = Move::NULL;
