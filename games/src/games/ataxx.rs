@@ -57,6 +57,8 @@ impl PositionType for Position {
     type ColoredPiece = ColoredPiece;
     type Move = Move;
 
+    const STARTPOS: &str = "x5o/7/7/7/7/7/o5x x 0 1";
+
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
         self.bitboards[piece as usize].insert(sq);
     }

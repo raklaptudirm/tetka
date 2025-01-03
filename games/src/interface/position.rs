@@ -25,6 +25,9 @@ where
     /// Type for one move in this board representation.
     type Move;
 
+    /// FEN string for the starting position of the game.
+    const STARTPOS: &str;
+
     // Peeking, insertion, and removal of pieces from the board representation.
 
     /// Adds the given Piece to the given Square. If the target Square is

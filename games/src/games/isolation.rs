@@ -53,6 +53,9 @@ impl PositionType for Position {
     type ColoredPiece = ColoredPiece;
     type Move = Move;
 
+    const STARTPOS: &str =
+        "--------/--------/p-------/-------P/--------/-------- w 1";
+
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
         match piece.piece() {
             Piece::Pawn => self.set_pawn(piece.color(), sq),

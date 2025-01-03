@@ -70,6 +70,9 @@ impl PositionType for Position {
     type ColoredPiece = ColoredPiece;
     type Move = Move;
 
+    const STARTPOS: &str =
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
         self.piece_bbs[piece.piece() as usize].insert(sq);
         self.color_bbs[piece.color() as usize].insert(sq);
