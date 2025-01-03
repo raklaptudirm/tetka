@@ -371,7 +371,6 @@ macro_rules! game_details {
         impl std::str::FromStr for Rank {
             type Err = $crate::interface::TypeParseError;
 
-            #[allow(clippy::char_lit_as_u8)]
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 if let Ok(rank_idx) = s.parse::<u8>() {
                     if rank_idx < Rank::N as u8 {

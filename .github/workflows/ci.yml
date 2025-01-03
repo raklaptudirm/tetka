@@ -1,4 +1,4 @@
-name: Mexx - Continuous Integration
+name: tetka - Continuous Integration
 
 on:
   - push
