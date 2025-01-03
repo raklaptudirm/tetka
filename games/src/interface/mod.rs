@@ -375,7 +375,10 @@ macro_rules! game_details {
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 if let Ok(rank_idx) = s.parse::<u8>() {
                     if rank_idx < Rank::N as u8 {
-                        Ok(unsafe { Rank::unsafe_from(rank_idx) })
+                        Ok(unsafe {
+                            // The first rank is represented as 0 so subtract 1.
+                            Rank::unsafe_from(rank_idx - 1)
+                        })
                     } else {
                         Err($crate::interface::TypeParseError::StrError(
                             stringify!(Rank).to_string()
