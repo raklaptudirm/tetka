@@ -373,23 +373,18 @@ macro_rules! game_details {
 
             #[allow(clippy::char_lit_as_u8)]
             fn from_str(s: &str) -> Result<Self, Self::Err> {
-                if s.len() != 1 {
+                if let Ok(rank_idx) = s.parse::<u8>() {
+                    if rank_idx < Rank::N as u8 {
+                        Ok(unsafe { Rank::unsafe_from(rank_idx) })
+                    } else {
+                        Err($crate::interface::TypeParseError::StrError(
+                            stringify!(Rank).to_string()
+                        ))
+                    }
+                } else {
                     Err($crate::interface::TypeParseError::StrError(
                         stringify!(Rank).to_string()
                     ))
-                } else {
-                    unsafe {
-                        use $crate::interface::RepresentableType;
-                        // Ranks are represented by the positive integers.
-                        let rank_idx = s.chars().next().unwrap_unchecked() as u8 - '1' as u8;
-                        if rank_idx < Rank::N as u8 {
-                                Ok(Rank::unsafe_from(rank_idx))
-                        } else {
-                            Err($crate::interface::TypeParseError::StrError(
-                                stringify!(Rank).to_string()
-                            ))
-                        }
-                    }
                 }
             }
         }
@@ -397,7 +392,7 @@ macro_rules! game_details {
         impl std::fmt::Display for Rank {
             #[allow(clippy::char_lit_as_u8)]
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", (*self as u8 + '1' as u8) as char)
+                write!(f, "{}", *self as u8 + 1)
             }
         }
     };
@@ -417,7 +412,7 @@ macro_rules! game_details {
 
             #[allow(clippy::char_lit_as_u8)]
             fn from_str(s: &str) -> Result<Self, Self::Err> {
-                if s.len() != 2 {
+                if s.len() < 2 {
                     Err($crate::interface::TypeParseError::StrError(
                         stringify!(File).to_string()
                     ))
