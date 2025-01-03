@@ -69,7 +69,7 @@ pub trait RepresentableType<B: Into<usize>>:
 
 #[derive(Error, Debug)]
 pub enum TypeParseError {
-    #[error("invalid {0} identifier string")]
+    #[error("invalid string representation for {0}")]
     StrError(String),
     #[error("invalid integer representation for {0}")]
     RangeError(String),
@@ -544,7 +544,7 @@ macro_rules! representable_type {
                 if value as usize >= Self::N {
                     Err(
                         $crate::interface::TypeParseError::RangeError(
-                            "stringify!($type).to_string()".to_string()
+                            stringify!($type).to_string()
                         )
                     )
                 } else {
