@@ -30,11 +30,7 @@ pub fn perft<const SPLIT: bool, const BULK: bool, T: PositionType>(
     let mut nodes: u64 = 0;
     let movelist = position.generate_moves::<false, true, true>();
 
-    // MoveList implements IntoIterator, so it should be possible to use it
-    // directly in the for loop, but manual iterations seems to be faster.
-    for i in 0..movelist.len() {
-        let m = movelist[i];
-
+    for m in movelist {
         // Find the next position without updating the Hash, which is unnecessary
         // inside perft given uniquely identifying positions here is unnecessary.
         let new_position = position.after_move::<false>(m);
