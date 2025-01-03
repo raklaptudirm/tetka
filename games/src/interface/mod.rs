@@ -321,7 +321,9 @@ macro_rules! game_details {
         // The File type. A custom display method is implemented so the
         // @no_display decorator for representable_type! is used.
         $crate::interface::representable_type!(
-            @no_display [[File] [u8]] [$([$file_variant])*]
+            @no_display enum File: u8 {
+                $($file_variant,)*
+            }
         );
 
         impl std::str::FromStr for File {
@@ -361,7 +363,9 @@ macro_rules! game_details {
         // The Rank type. A custom display method is implemented so the
         // @no_display decorator for representable_type! is used.
         $crate::interface::representable_type!(
-            @no_display [[Rank] [u8]] [$([$rank_variant])*]
+            @no_display enum Rank: u8 {
+                $($rank_variant,)*
+            }
         );
 
         impl std::str::FromStr for Rank {
@@ -453,7 +457,9 @@ macro_rules! representable_type {
         $($variant:tt $repr:expr,)*
     }) => {
         $crate::interface::representable_type! {
-            @no_display [[$type] [$base]] [$([$variant])*]
+            @no_display enum $type: $base {
+                $($variant,)*
+            }
         }
 
         impl std::str::FromStr for $type {
@@ -483,7 +489,9 @@ macro_rules! representable_type {
     // @no_display suppresses the generation of the FromStr and Display traits
     // for the given RepresentableType. When @no_display is used, a manual
     // implementation of the two traits need to be provided.
-    (@no_display [[$type:tt] [$base:tt]] [$([$variant:tt])*]) => {
+    (@no_display enum $type:tt: $base:tt {
+        $($variant:tt,)*
+    }) => {
         #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
         #[repr($base)]
         pub enum $type { $($variant,)* }
@@ -497,6 +505,7 @@ macro_rules! representable_type {
 
     // @cartesian populates the variants of the given RepresentableType with the
     // cartesian product of the two provided sets of variants.
+    // Input format: [[1] [2] [3]] [[A] [B] [C]]
     (@cartesian $type:ident, $base:tt; [$([$e1:expr])*]$e2:tt) => {
         $crate::interface::representable_type!(
             @__cartesian_helper $type, $base; $([[$e1]$e2])*
@@ -504,7 +513,7 @@ macro_rules! representable_type {
         $crate::interface::representable_type!(@__impl $type $base);
     };
 
-    // [[1] [[A] [B] [C]]] [[2] [[A] [B] [C]]] -> [A1, B1, ...]
+    // Input format: [[1] [[A] [B] [C]]] [[2] [[A] [B] [C]]]
     (@__cartesian_helper $type:ident, $base:tt; $([[$e1:expr][$([$e2:expr])*]])*) => {
         paste::paste! {
             #[derive(Copy, Clone, PartialEq, Eq, Debug, strum_macros::EnumIter)]
