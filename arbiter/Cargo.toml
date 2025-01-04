@@ -1,0 +1,12 @@
+[package]
+name = "arbiter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[profile.release]
+debug = true
+opt-level = 3
+codegen-units = 1
+lto = true
