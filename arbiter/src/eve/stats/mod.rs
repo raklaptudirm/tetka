@@ -34,7 +34,7 @@ impl Model {
     /// to [BayesianElo] values and calls [Model::llr] on the results.
     pub fn llr_from_elo(&self, pairs: PairScore, elo0: f64, elo1: f64) -> f64 {
         // Calculate the draw elo for the current match score.
-        let dlo = BayesianElo::from(Wdl::new(pairs.w, pairs.l)).dlo;
+        let dlo = BayesianElo::from(pairs).dlo;
 
         // Figure out parameters representing the two hypotheses by combining
         // the elo bound with the draw elo for the sample and use them to
@@ -89,15 +89,15 @@ impl Model {
         match *self {
             Self::Pentanomial => 0.0,
             Self::Traditional => {
-                let wdl = Wdl::from(theta);
-
                 // The probability of the given result x = (w, d, l) occurring
                 // is p(w)^w + p(d)^d + p(l)^l. Taking the log, it can be
                 // simplified to the formula below.
                 //
                 // Calls to g! converts non-finite (infinite/NaN) floating point
                 // values to a finite value for proper behavior in all cases.
-                0.0 + x.ws * g!(wdl.w.ln()) + x.ds * g!(wdl.d.ln()) + x.ls * g!(wdl.l.ln())
+                0.0 + x.ws * g!(theta.w().ln())
+                    + x.ds * g!(theta.d().ln())
+                    + x.ls * g!(theta.l().ln())
             }
         }
     }
@@ -166,26 +166,6 @@ pub fn f(x: f64) -> f64 {
 }
 
 #[derive(Clone, Copy)]
-struct Wdl {
-    w: f64,
-    d: f64,
-    l: f64,
-}
-
-impl Wdl {
-    pub fn new(w: f64, l: f64) -> Wdl {
-        let d = 1.0 - w - l;
-        Wdl { w, d, l }
-    }
-}
-
-impl From<BayesianElo> for Wdl {
-    fn from(elo: BayesianElo) -> Self {
-        Wdl::new(f(-elo.dlo + elo.elo), f(-elo.dlo - elo.elo))
-    }
-}
-
-#[derive(Clone, Copy)]
 pub struct BayesianElo {
     elo: f64,
     dlo: f64,
@@ -195,10 +175,22 @@ impl BayesianElo {
     pub fn new(elo: f64, dlo: f64) -> BayesianElo {
         BayesianElo { elo, dlo }
     }
+
+    pub fn w(&self) -> f64 {
+        f(-self.dlo + self.elo)
+    }
+
+    pub fn d(&self) -> f64 {
+        1.0 - self.w() - self.l()
+    }
+
+    pub fn l(&self) -> f64 {
+        f(-self.dlo - self.elo)
+    }
 }
 
-impl From<Wdl> for BayesianElo {
-    fn from(wdl: Wdl) -> Self {
+impl From<PairScore> for BayesianElo {
+    fn from(wdl: PairScore) -> Self {
         BayesianElo::new(
             // Simplified form of (siginv(w) - siginv(l)) / 2, which can be
             // derived from the definition of wdl with respect to bayesian elo.
