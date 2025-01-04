@@ -34,15 +34,16 @@ impl Model {
     /// to [BayesianElo] values and calls [Model::llr] on the results.
     pub fn llr_from_elo(&self, pairs: PairScore, elo0: f64, elo1: f64) -> f64 {
         // Calculate the draw elo for the current match score.
-        let dlo = BayesianElo::from(Wdl(pairs.w(), pairs.l())).dlo();
+        let dlo = BayesianElo::from(Wdl::new(pairs.w, pairs.l)).dlo;
 
         // Figure out parameters representing the two hypotheses by combining
-        // the elo bound with the draw elo for the sample.
-        let theta0 = BayesianElo(elo0, dlo);
-        let theta1 = BayesianElo(elo1, dlo);
-
-        // Calculate the log-likelihood ratio.
-        self.llr(pairs, theta0, theta1)
+        // the elo bound with the draw elo for the sample and use them to
+        // calculate the log-likelihood ratio.
+        self.llr(
+            pairs,
+            BayesianElo::new(elo0, dlo),
+            BayesianElo::new(elo1, dlo),
+        )
     }
 
     /// llr calculates the log-likelihood ratio for the given sample data and
@@ -59,7 +60,7 @@ impl Model {
     /// https://en.wikipedia.org/wiki/Neyman%E2%80%93Pearson_lemma
     pub fn llr(&self, x: PairScore, theta0: BayesianElo, theta1: BayesianElo) -> f64 {
         // No data, so llr is 0.
-        if x.n() == 0.0 {
+        if x.n == 0.0 {
             return 0.0;
         }
 
@@ -96,16 +97,60 @@ impl Model {
                 //
                 // Calls to g! converts non-finite (infinite/NaN) floating point
                 // values to a finite value for proper behavior in all cases.
-                0.0 + x.ws() * g!(wdl.w().ln())
-                    + x.ds() * g!(wdl.d().ln())
-                    + x.ls() * g!(wdl.l().ln())
+                0.0 + x.ws * g!(wdl.w.ln()) + x.ds * g!(wdl.d.ln()) + x.ls * g!(wdl.l.ln())
             }
         }
     }
 }
 
 #[derive(Clone, Copy)]
-pub struct PairScore(f64, f64, f64, f64, f64, f64, f64);
+#[allow(dead_code)]
+pub struct PairScore {
+    ll: f64,
+    ld: f64,
+    dd: f64,
+    wl: f64,
+    wd: f64,
+    ww: f64,
+
+    w: f64,
+    d: f64,
+    l: f64,
+
+    ws: f64,
+    ds: f64,
+    ls: f64,
+
+    n: f64,
+}
+
+impl PairScore {
+    pub fn new(ll: usize, ld: usize, dd: usize, wl: usize, wd: usize, ww: usize) -> PairScore {
+        let n = (ll + ld + dd + wl + wd + ww) as f64;
+
+        let ws = (wd + wl + 2 * ww) as f64;
+        let ds = (wd + ld + 2 * dd) as f64;
+        let ls = (ld + ll + 2 * ll) as f64;
+
+        PairScore {
+            ll: ll as f64 / n,
+            ld: ld as f64 / n,
+            dd: dd as f64 / n,
+            wl: wl as f64 / n,
+            wd: wd as f64 / n,
+            ww: ww as f64 / n,
+
+            w: ws / n,
+            d: ds / n,
+            l: ls / n,
+
+            ws,
+            ds,
+            ls,
+            n,
+        }
+    }
+}
 
 /// sprt_stopping bounds returns the upper and lower bounds of the llr for
 /// determining the completion of a SPRT. `alpha` and `beta` are the desired
@@ -121,26 +166,46 @@ pub fn f(x: f64) -> f64 {
 }
 
 #[derive(Clone, Copy)]
-struct Wdl(f64, f64);
+struct Wdl {
+    w: f64,
+    d: f64,
+    l: f64,
+}
+
+impl Wdl {
+    pub fn new(w: f64, l: f64) -> Wdl {
+        let d = 1.0 - w - l;
+        Wdl { w, d, l }
+    }
+}
 
 impl From<BayesianElo> for Wdl {
     fn from(elo: BayesianElo) -> Self {
-        Wdl(f(-elo.dlo() + elo.elo()), f(-elo.dlo() - elo.elo()))
+        Wdl::new(f(-elo.dlo + elo.elo), f(-elo.dlo - elo.elo))
     }
 }
 
 #[derive(Clone, Copy)]
-pub struct BayesianElo(f64, f64);
+pub struct BayesianElo {
+    elo: f64,
+    dlo: f64,
+}
+
+impl BayesianElo {
+    pub fn new(elo: f64, dlo: f64) -> BayesianElo {
+        BayesianElo { elo, dlo }
+    }
+}
 
 impl From<Wdl> for BayesianElo {
     fn from(wdl: Wdl) -> Self {
-        BayesianElo(
+        BayesianElo::new(
             // Simplified form of (siginv(w) - siginv(l)) / 2, which can be
             // derived from the definition of wdl with respect to bayesian elo.
-            200.0 * f64::log10((wdl.w() / wdl.l()) * ((1.0 - wdl.l()) / (1.0 - wdl.w()))),
+            200.0 * f64::log10((wdl.w / wdl.l) * ((1.0 - wdl.l) / (1.0 - wdl.w))),
             // Simplified form of (siginv(w) + siginv(l)) / -2, which can be
             // derived from the definition of wdl with respect to bayesian elo.
-            200.0 * f64::log10(((1.0 - wdl.l()) / wdl.l()) * ((1.0 - wdl.w()) / wdl.w())),
+            200.0 * f64::log10(((1.0 - wdl.l) / wdl.l) * ((1.0 - wdl.w) / wdl.w)),
         )
     }
 }
@@ -152,94 +217,3 @@ impl From<Wdl> for BayesianElo {
 //         x
 //     }
 // }
-
-impl BayesianElo {
-    fn elo(&self) -> f64 {
-        self.0
-    }
-
-    fn dlo(&self) -> f64 {
-        self.1
-    }
-}
-
-impl Wdl {
-    fn w(&self) -> f64 {
-        self.0
-    }
-
-    fn d(&self) -> f64 {
-        1.0 - self.w() - self.l()
-    }
-
-    fn l(&self) -> f64 {
-        self.1
-    }
-}
-
-impl PairScore {
-    pub fn new(ll: usize, ld: usize, dd: usize, wl: usize, wd: usize, ww: usize) -> PairScore {
-        let n = (ll + ld + dd + wl + wd + ww) as f64;
-        PairScore(
-            ll as f64 / n,
-            ld as f64 / n,
-            dd as f64 / n,
-            wl as f64 / n,
-            wd as f64 / n,
-            ww as f64 / n,
-            n,
-        )
-    }
-
-    pub fn n(&self) -> f64 {
-        self.6
-    }
-
-    pub fn w(&self) -> f64 {
-        self.wd() + self.wl() + 2.0 * self.ww()
-    }
-
-    pub fn d(&self) -> f64 {
-        self.wd() + self.ld() + 2.0 * self.dd()
-    }
-
-    pub fn l(&self) -> f64 {
-        self.ld() + self.ll() + 2.0 * self.ll()
-    }
-
-    pub fn ws(&self) -> f64 {
-        self.w() * self.n()
-    }
-
-    pub fn ds(&self) -> f64 {
-        self.d() * self.n()
-    }
-
-    pub fn ls(&self) -> f64 {
-        self.l() * self.n()
-    }
-
-    pub fn ll(&self) -> f64 {
-        self.0
-    }
-
-    pub fn ld(&self) -> f64 {
-        self.1
-    }
-
-    pub fn dd(&self) -> f64 {
-        self.2
-    }
-
-    pub fn wl(&self) -> f64 {
-        self.3
-    }
-
-    pub fn wd(&self) -> f64 {
-        self.4
-    }
-
-    pub fn ww(&self) -> f64 {
-        self.5
-    }
-}
