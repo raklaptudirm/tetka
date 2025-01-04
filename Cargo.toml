@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "uxi",
-    "games/ataxx"
+    "games/ataxx",
+    "mexx"
 ]
