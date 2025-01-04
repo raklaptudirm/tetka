@@ -11,6 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// f defines the Elo model by providing a relation between elo difference and
+/// expected score based on a sigmoid scale. To be precise, f(elo_delta) = E[S].
+pub fn f(x: f64) -> f64 {
+    1.0 / (1.0 + 10f64.powf(-x / 400.0))
+}
+
 /// Model is an abstraction over the different ways of statistically modelling
 /// the results of a collection of game pairs played between two entities.
 ///
@@ -18,10 +24,9 @@
 /// parameterized collection of probability distributions over that sample
 /// space. In this case, we are modelling the results of a collection of game
 /// pairs played between two entities. A set of results is represented by a
-/// [PairScore], thus the sample space is simply all possible values of
-/// [PairScore]. The probability distributions for this model are parameterized
-/// by the Elo delta between the two entities, which is represented by a
-/// [BayesianElo] value.
+/// [Score], thus the sample space is simply all possible values of [Score].
+/// The probability distributions for this model are parameterized by the Elo
+/// delta between the two entities, which is represented by an [Elo] value.
 pub enum Model {
     /// Modern pentanomial game-pair result model.
     Pentanomial,
@@ -31,19 +36,15 @@ pub enum Model {
 
 impl Model {
     /// llr_from_elo is a utility function which converts normalized elo bounds
-    /// to [BayesianElo] values and calls [Model::llr] on the results.
-    pub fn llr_from_elo(&self, pairs: PairScore, elo0: f64, elo1: f64) -> f64 {
+    /// to [Elo] values and calls [Model::llr] on the results.
+    pub fn llr_from_elo(&self, pairs: Score, elo0: f64, elo1: f64) -> f64 {
         // Calculate the draw elo for the current match score.
-        let dlo = BayesianElo::from(pairs).dlo;
+        let dlo = Elo::from(pairs).dlo;
 
         // Figure out parameters representing the two hypotheses by combining
         // the elo bound with the draw elo for the sample and use them to
         // calculate the log-likelihood ratio.
-        self.llr(
-            pairs,
-            BayesianElo::new(elo0, dlo),
-            BayesianElo::new(elo1, dlo),
-        )
+        self.llr(pairs, Elo::new(elo0, dlo), Elo::new(elo1, dlo))
     }
 
     /// llr calculates the log-likelihood ratio for the given sample data and
@@ -53,12 +54,12 @@ impl Model {
     /// and alternate (H1: θ = theta1) hypotheses.
     ///
     /// The probability distributions of [Model] are only parameterized by
-    /// [BayesianElo], and since that value is known for both hypotheses, the
-    /// model is always completely specified. For this case, a variant of the
+    /// [Elo], and since that value is known for both hypotheses, the model is
+    /// always completely specified. For this case, a variant of the
     /// log-likelihood ratio test is available which is known to be the most
     /// powerful among all level alpha tests under the Neyman-Pearson lemma.
     /// https://en.wikipedia.org/wiki/Neyman%E2%80%93Pearson_lemma
-    pub fn llr(&self, x: PairScore, theta0: BayesianElo, theta1: BayesianElo) -> f64 {
+    pub fn llr(&self, x: Score, theta0: Elo, theta1: Elo) -> f64 {
         // No data, so llr is 0.
         if x.n == 0.0 {
             return 0.0;
@@ -73,7 +74,7 @@ impl Model {
     ///
     /// The log-likelihood is simply the natural logarithm of 𝓛(theta | x). The
     /// calculation of the 𝓛(theta | x) value depends on the selected [Model].
-    fn llh(&self, theta: BayesianElo, x: PairScore) -> f64 {
+    fn llh(&self, theta: Elo, x: Score) -> f64 {
         // g! guards possible non-finite expressions by clamping them to 1.
         macro_rules! g {
             ($e:expr) => {{
@@ -87,6 +88,7 @@ impl Model {
         }
 
         match *self {
+            // TODO: llh for the Pentanomial model
             Self::Pentanomial => 0.0,
             Self::Traditional => {
                 // The probability of the given result x = (w, d, l) occurring
@@ -105,7 +107,7 @@ impl Model {
 
 #[derive(Clone, Copy)]
 #[allow(dead_code)]
-pub struct PairScore {
+pub struct Score {
     ll: f64,
     ld: f64,
     dd: f64,
@@ -124,15 +126,15 @@ pub struct PairScore {
     n: f64,
 }
 
-impl PairScore {
-    pub fn new(ll: usize, ld: usize, dd: usize, wl: usize, wd: usize, ww: usize) -> PairScore {
+impl Score {
+    pub fn new(ll: usize, ld: usize, dd: usize, wl: usize, wd: usize, ww: usize) -> Score {
         let n = (ll + ld + dd + wl + wd + ww) as f64;
 
         let ws = (wd + wl + 2 * ww) as f64;
         let ds = (wd + ld + 2 * dd) as f64;
         let ls = (ld + ll + 2 * ll) as f64;
 
-        PairScore {
+        Score {
             ll: ll as f64 / n,
             ld: ld as f64 / n,
             dd: dd as f64 / n,
@@ -159,21 +161,15 @@ pub fn sprt_stopping_bound(alpha: f64, beta: f64) -> (f64, f64) {
     (f64::ln(beta / (1.0 - alpha)), f64::ln((1.0 - beta) / alpha))
 }
 
-/// f defines the Elo model by providing a relation between elo difference and
-/// expected score based on a sigmoid scale. To be precise, f(elo_delta) = E[S].
-pub fn f(x: f64) -> f64 {
-    1.0 / (1.0 + 10f64.powf(-x / 400.0))
-}
-
 #[derive(Clone, Copy)]
-pub struct BayesianElo {
+pub struct Elo {
     elo: f64,
     dlo: f64,
 }
 
-impl BayesianElo {
-    pub fn new(elo: f64, dlo: f64) -> BayesianElo {
-        BayesianElo { elo, dlo }
+impl Elo {
+    pub fn new(elo: f64, dlo: f64) -> Elo {
+        Elo { elo, dlo }
     }
 
     pub fn w(&self) -> f64 {
@@ -189,14 +185,14 @@ impl BayesianElo {
     }
 }
 
-impl From<PairScore> for BayesianElo {
-    fn from(wdl: PairScore) -> Self {
-        BayesianElo::new(
+impl From<Score> for Elo {
+    fn from(wdl: Score) -> Self {
+        Elo::new(
             // Simplified form of (siginv(w) - siginv(l)) / 2, which can be
-            // derived from the definition of wdl with respect to bayesian elo.
+            // derived from the definition of wdl with respect to elo.
             200.0 * f64::log10((wdl.w / wdl.l) * ((1.0 - wdl.l) / (1.0 - wdl.w))),
             // Simplified form of (siginv(w) + siginv(l)) / -2, which can be
-            // derived from the definition of wdl with respect to bayesian elo.
+            // derived from the definition of wdl with respect to elo.
             200.0 * f64::log10(((1.0 - wdl.l) / wdl.l) * ((1.0 - wdl.w) / wdl.w)),
         )
     }
