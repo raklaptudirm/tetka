@@ -13,6 +13,9 @@
 
 /// f defines the Elo model by providing a relation between elo difference and
 /// expected score based on a sigmoid scale. To be precise, f(elo_delta) = E[S].
+///
+/// E[S], otherwise known as the expected score can also be interpreted as the
+/// probability of winning a game with the given elo difference.
 pub fn f(x: f64) -> f64 {
     1.0 / (1.0 + 10f64.powf(-x / 400.0))
 }
@@ -60,13 +63,12 @@ impl Model {
     /// powerful among all level alpha tests under the Neyman-Pearson lemma.
     /// https://en.wikipedia.org/wiki/Neyman%E2%80%93Pearson_lemma
     pub fn llr(&self, x: Score, theta0: Elo, theta1: Elo) -> f64 {
-        // No data, so llr is 0.
-        if x.n == 0.0 {
-            return 0.0;
+        if x.n > 0.0 {
+            // The llr is the difference of the two log-likelihoods.
+            self.llh(theta1, x) - self.llh(theta0, x)
+        } else {
+            0.0 // No data, so llr is 0.
         }
-
-        // The llr is the difference of the two log-likelihoods.
-        self.llh(theta1, x) - self.llh(theta0, x)
     }
 
     /// llh calculates the log-likelihood of the given sample `x` arising from
@@ -105,24 +107,95 @@ impl Model {
     }
 }
 
+/// sprt_stopping bounds returns the upper and lower bounds of the llr for
+/// determining the completion of a SPRT. `alpha` and `beta` are the desired
+/// Type I (false positive) and Type II (false negative) error probabilities.
+pub fn sprt_stopping_bound(alpha: f64, beta: f64) -> (f64, f64) {
+    (f64::ln(beta / (1.0 - alpha)), f64::ln((1.0 - beta) / alpha))
+}
+
+impl From<Score> for Elo {
+    fn from(wdl: Score) -> Self {
+        Elo::new(
+            // Simplified form of (siginv(w) - siginv(l)) / 2, which can be
+            // derived from the definition of wdl with respect to elo.
+            200.0 * f64::log10((wdl.w / wdl.l) * ((1.0 - wdl.l) / (1.0 - wdl.w))),
+            // Simplified form of (siginv(w) + siginv(l)) / -2, which can be
+            // derived from the definition of wdl with respect to elo.
+            200.0 * f64::log10(((1.0 - wdl.l) / wdl.l) * ((1.0 - wdl.w) / wdl.w)),
+        )
+    }
+}
+
+/// Elo measures a strength difference between two game players using the Elo
+/// rating system, which was originally developed for chess.
+///
+/// Elo maps a elo difference value between two players to the expected score of
+/// matches between the two using a particular sigmoid scale, where a difference
+/// of 400 elo favours the stronger player winning with 10:1 odds.
+#[derive(Clone, Copy)]
+pub struct Elo {
+    /// The elo difference between the two entities.
+    elo: f64,
+    /// Draw Elo is an adjustment made to the elo while calculating the expected
+    /// score to take into account draws between the players.
+    ///
+    /// A lot of draws can arise from games played between strong players on a
+    /// drawish book, which can cause elo compression and thus skew the expected
+    /// score on a more challenging set of openings.
+    dlo: f64,
+}
+
+impl Elo {
+    /// Creates a new Elo value from the given elo delta and draw elo.
+    pub fn new(elo: f64, dlo: f64) -> Elo {
+        Elo { elo, dlo }
+    }
+
+    pub fn w(&self) -> f64 {
+        f(-self.dlo + self.elo)
+    }
+
+    pub fn d(&self) -> f64 {
+        1.0 - self.w() - self.l()
+    }
+
+    pub fn l(&self) -> f64 {
+        f(-self.dlo - self.elo)
+    }
+}
+
 #[derive(Clone, Copy)]
 #[allow(dead_code)]
 pub struct Score {
+    /// Probability of a double-killed pair.
     ll: f64,
+    /// Probability of a winning pair.
     ld: f64,
+    /// Probability of a drawn pair.
     dd: f64,
+    /// Probability of a busted pair.
     wl: f64,
+    /// Probability of a winning pair.
     wd: f64,
+    /// Probability of a double-killing pair.
     ww: f64,
 
+    /// Probability of a win.
     w: f64,
+    /// Probability of a draw.
     d: f64,
+    /// Probability of a loss.
     l: f64,
 
+    /// Number of wins.
     ws: f64,
+    /// Number of draws.
     ds: f64,
+    /// Number of losses.
     ls: f64,
 
+    /// Total number of pairs.
     n: f64,
 }
 
@@ -142,59 +215,15 @@ impl Score {
             wd: wd as f64 / n,
             ww: ww as f64 / n,
 
-            w: ws / n,
-            d: ds / n,
-            l: ls / n,
+            w: ws / (n * 2.0),
+            d: ds / (n * 2.0),
+            l: ls / (n * 2.0),
 
             ws,
             ds,
             ls,
             n,
         }
-    }
-}
-
-/// sprt_stopping bounds returns the upper and lower bounds of the llr for
-/// determining the completion of a SPRT. `alpha` and `beta` are the desired
-/// Type I (false positive) and Type II (false negative) error probabilities.
-pub fn sprt_stopping_bound(alpha: f64, beta: f64) -> (f64, f64) {
-    (f64::ln(beta / (1.0 - alpha)), f64::ln((1.0 - beta) / alpha))
-}
-
-#[derive(Clone, Copy)]
-pub struct Elo {
-    elo: f64,
-    dlo: f64,
-}
-
-impl Elo {
-    pub fn new(elo: f64, dlo: f64) -> Elo {
-        Elo { elo, dlo }
-    }
-
-    pub fn w(&self) -> f64 {
-        f(-self.dlo + self.elo)
-    }
-
-    pub fn d(&self) -> f64 {
-        1.0 - self.w() - self.l()
-    }
-
-    pub fn l(&self) -> f64 {
-        f(-self.dlo - self.elo)
-    }
-}
-
-impl From<Score> for Elo {
-    fn from(wdl: Score) -> Self {
-        Elo::new(
-            // Simplified form of (siginv(w) - siginv(l)) / 2, which can be
-            // derived from the definition of wdl with respect to elo.
-            200.0 * f64::log10((wdl.w / wdl.l) * ((1.0 - wdl.l) / (1.0 - wdl.w))),
-            // Simplified form of (siginv(w) + siginv(l)) / -2, which can be
-            // derived from the definition of wdl with respect to elo.
-            200.0 * f64::log10(((1.0 - wdl.l) / wdl.l) * ((1.0 - wdl.w) / wdl.w)),
-        )
     }
 }
 
