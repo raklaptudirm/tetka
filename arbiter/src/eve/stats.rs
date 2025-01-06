@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use statrs::function::erf::erf_inv;
+
 /// f defines the Elo model by providing a relation between elo difference and
 /// expected score based on a sigmoid scale. To be precise, f(elo_delta) = E[S].
 ///
@@ -68,6 +70,69 @@ impl Model {
             self.llh(theta1, x) - self.llh(theta0, x)
         } else {
             0.0 // No data, so llr is 0.
+        }
+    }
+
+    /// Calculates the most probable elo value for the given [Score], alongside
+    /// an error delta which encodes the possible range for the given acceptable
+    /// rate of error (p).
+    pub fn elo(&self, x: Score, p: f64) -> (f64, f64) {
+        // Calculate the mean and the standard deviation. Assuming that the
+        // random variable follows a normal distribution, these two properties
+        // completely specify the particular distribution as N(mu, sigma^2).
+        let mu = self.mean(x);
+        let sigma = self.deviation(x, mu);
+
+        // Assuming the sample data is distributed in form of N(mu, sigma^2),
+        // in other words a normal distribution with mean mu and variance
+        // sigma^2, we can find two points (mu_min and mu_max) in the sample
+        // space such that the fraction of the probability distribution covered
+        // between them equals the complement of the desired error rate.
+        //
+        // Let the desired error rate be p. Therefore, the fraction of the
+        // probability distribution covered between mu_min and mu_max should be
+        // 1 - p. Since mu_min and mu_max are centered about mu, which is to say
+        // the fraction covered between mu_min and mu, and mu and mu_max is
+        // equal, which then should equal (1 - p)/2. Considering the case of
+        // mu_max, it should be situated before p/2 of the probability
+        // distribution, or after 1 - p/2 of it, which is easily calculated
+        // using the inverse of the cumulative probability distribution as
+        // phi_inv(1 - p/2).
+        //
+        // It can be shown that mu_min and mu_max can be represented in the form
+        // mu ± delta for some delta, due to the property phi(x) = 1 - phi(-x)
+        // of the standard cumulative distribution function. Therefore, instead
+        // of calculating two different mu_min and mu_max bounds, we calculate
+        // and return a single delta value. Below, the delta value is calculated
+        // as a simplified expression of mu_max - mu:
+        // mu_max - mu = phi_inv(1 - p/2 | mu, sigma) - mu
+        //   = mu + sigma * phi_inv(1 - p/2) - mu = sigma * phi_inv(1 - p/2)
+        let delta = sigma * phi_inv(1.0 - p / 2.0);
+
+        (mu, delta)
+    }
+
+    /// Calculates the empirical mean of the random variable S from the given
+    /// sample data.
+    fn mean(&self, x: Score) -> f64 {
+        match *self {
+            Self::Pentanomial => 0.0,
+            Self::Traditional => 1.0 * x.w + 0.5 * x.d + 0.0 * x.l,
+        }
+    }
+
+    /// Calculates the deviation (square root of the variance) of the given
+    /// sample data from the given pivot point.
+    fn deviation(&self, x: Score, mu: f64) -> f64 {
+        match *self {
+            Self::Pentanomial => 0.0,
+            Self::Traditional => {
+                f64::sqrt(
+                    0.0 + x.w * f64::powi(1.0 - mu, 2)
+                        + x.d * f64::powi(0.5 - mu, 2)
+                        + x.l * f64::powi(0.0 - mu, 2),
+                ) / f64::sqrt(x.n * 2.0)
+            }
         }
     }
 
@@ -225,6 +290,14 @@ impl Score {
             n,
         }
     }
+}
+
+/// phi_inv is the inverse of the cumulative distribution of the standard
+/// normal distribution.
+///
+/// It's value is calculated using its relation with the the standard erf_inv.
+fn phi_inv(x: f64) -> f64 {
+    f64::sqrt(2.0) * erf_inv(2.0 * x - 1.0)
 }
 
 // fn clamp_elo(x: f64) -> f64 {
