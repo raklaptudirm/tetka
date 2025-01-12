@@ -22,10 +22,13 @@ pub fn f(x: f64) -> f64 {
     1.0 / (1.0 + 10f64.powf(-x / 400.0))
 }
 
+/// finv is the inverse of the f function. Its domain is (0, 1) and it returns
+/// 0 for any inputs outside its domain.
 pub fn finv(x: f64) -> f64 {
     if x > 0.0 && x < 1.0 {
         -400.0 * f64::log10(1.0 / x - 1.0)
     } else {
+        // x is outside (0, 1), return 0.
         0.0
     }
 }
@@ -85,27 +88,29 @@ impl Model {
         // in other words a normal distribution with mean mu and variance
         // sigma^2, we can find two points (mu_min and mu_max) in the sample
         // space such that the fraction of the probability distribution covered
-        // between them equals the complement of the desired error rate.
+        // by theta ∈ (mu_min, mu_max) equals the complement of the error rate.
         //
         // Let the desired error rate be p. Therefore, the fraction of the
         // probability distribution covered between mu_min and mu_max should be
         // 1 - p. Since mu_min and mu_max are centered about mu, which is to say
-        // the fraction covered between mu_min and mu, and mu and mu_max is
-        // equal, which then should equal (1 - p)/2. Considering the case of
+        // the fractions covered by theta ∈ (mu_min, mu) and theta ∈ (mu, mu_max)
+        // are equal, which then should equal (1 - p)/2. Considering the case of
         // mu_max, it should be situated before p/2 of the probability
         // distribution, or after 1 - p/2 of it, which is easily calculated
         // using the inverse of the cumulative probability distribution as
-        // phi_inv(1 - p/2).
-        //
+        // phi_inv(1 - p/2 | mu, sigma) = mu + sigma * phi_inv(1 - p/2).
+        let mu_max = mu + sigma * phi_inv(1.0 - p / 2.0);
+
         // It can be shown that mu_min and mu_max can be represented in the form
-        // mu ± delta for some delta, due to the property phi(x) = 1 - phi(-x)
+        // mu ± delta for some delta, due to the property phi(x) + phi(-x) = 1
         // of the standard cumulative distribution function. Therefore, instead
         // of calculating two different mu_min and mu_max bounds, we calculate
-        // and return a single delta value. Below, the delta value is calculated
-        // as a simplified expression of mu_max - mu:
-        // mu_max - mu = phi_inv(1 - p/2 | mu, sigma) - mu
-        //   = mu + sigma * phi_inv(1 - p/2) - mu = sigma * phi_inv(1 - p/2)
-        let mu_max = mu + sigma * phi_inv(1.0 - p / 2.0);
+        // and return a single mu-delta value, converted to its Elo equivalent.
+        //
+        // Here we directly calculate the elo-delta instead of the mu-delta by
+        // converting the score to logistic elo with the finv function. Note that
+        // the poperty where mu_max and mu_min can be represented as mu ± delta
+        // doesn't really hold when finv is applied on top, but ¯\_(ツ)_/¯
         let delta = finv(mu_max) - elo;
 
         (elo, delta)
@@ -203,10 +208,8 @@ pub fn sprt_stopping_bound(alpha: f64, beta: f64) -> (f64, f64) {
     (f64::ln(beta / (1.0 - alpha)), f64::ln((1.0 - beta) / alpha))
 }
 
-pub fn bayes_elo(x: Score) -> f64 {
-    (finv(x.w) - finv(x.l)) / 2.0
-}
-
+/// Calculate the draw elo from the given score. This formula is derived from
+/// the definition of wdl probabilities with respect to elo and draw elo.
 pub fn draw_elo(x: Score) -> f64 {
     (finv(x.w) + finv(x.l)) / -2.0
 }
@@ -221,21 +224,12 @@ const BETA: f64 = std::f64::consts::LN_10 / 400.0;
 /// elo values. To be precise, normalized elo = C_ET * normalized t-value.
 const C_ET: f64 = 2.0 / BETA;
 
+/// Calculates the score from the given normalized elo.
+///
+/// The normalized t-value can be expressed as [`C_ET`] * the normalized elo.
+/// From there the relation between the normalized t-value and score is applied.
 pub fn nelo_to_score(nelo: f64, r: f64) -> f64 {
     (nelo / C_ET) * std::f64::consts::SQRT_2 * r + 0.5
-}
-
-impl From<Score> for Elo {
-    fn from(wdl: Score) -> Self {
-        Elo::new(
-            // Simplified form of (siginv(w) - siginv(l)) / 2, which can be
-            // derived from the definition of wdl with respect to elo.
-            200.0 * f64::log10((wdl.w / wdl.l) * ((1.0 - wdl.l) / (1.0 - wdl.w))),
-            // Simplified form of (siginv(w) + siginv(l)) / -2, which can be
-            // derived from the definition of wdl with respect to elo.
-            200.0 * f64::log10(((1.0 - wdl.l) / wdl.l) * ((1.0 - wdl.w) / wdl.w)),
-        )
-    }
 }
 
 /// Elo measures a strength difference between two game players using the Elo
@@ -345,11 +339,3 @@ impl Score {
 fn phi_inv(x: f64) -> f64 {
     f64::sqrt(2.0) * erf_inv(2.0 * x - 1.0)
 }
-
-// fn clamp_elo(x: f64) -> f64 {
-//     if x <= 0.0 || x >= 1.0 {
-//         0.0
-//     } else {
-//         x
-//     }
-// }
