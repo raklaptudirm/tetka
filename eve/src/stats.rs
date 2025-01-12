@@ -135,7 +135,7 @@ impl Model {
                 let r = self.sum_of_squares(x, mu).sqrt();
                 let mu = nelo_to_score(theta, r);
 
-                self.sum_of_squares(x, mu).powi(x.n as i32).ln()
+                0.5 * x.n * -f64::ln(self.sum_of_squares(x, mu))
             }
             Self::Traditional => {
                 let elo = Elo::new(theta, draw_elo(x));
