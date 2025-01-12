@@ -16,7 +16,7 @@ tetka-games = { path = "./games" }
 
 [workspace]
 resolver = "2"
-members = [ "uxi", "games" , "arbiter"]
+members = [ "uxi", "games" , "eve"]
 
 [profile.release]
 debug = true
