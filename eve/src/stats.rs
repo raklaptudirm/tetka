@@ -99,6 +99,7 @@ impl Model {
         // distribution, or after 1 - p/2 of it, which is easily calculated
         // using the inverse of the cumulative probability distribution as
         // phi_inv(1 - p/2 | mu, sigma) = mu + sigma * phi_inv(1 - p/2).
+        let mu_min = mu + sigma * phi_inv(p / 2.0);
         let mu_max = mu + sigma * phi_inv(1.0 - p / 2.0);
 
         // It can be shown that mu_min and mu_max can be represented in the form
@@ -111,7 +112,9 @@ impl Model {
         // converting the score to logistic elo with the finv function. Note that
         // the poperty where mu_max and mu_min can be represented as mu ± delta
         // doesn't really hold when finv is applied on top, but ¯\_(ツ)_/¯
-        let delta = finv(mu_max) - elo;
+        let min_delta = elo - finv(mu_min);
+        let max_delta = finv(mu_max) - elo;
+        let delta = f64::max(min_delta, max_delta);
 
         (elo, delta)
     }
