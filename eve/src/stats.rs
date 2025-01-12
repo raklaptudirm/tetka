@@ -146,7 +146,7 @@ impl Model {
                 //
                 // Calls to g! converts non-finite (infinite/NaN) floating point
                 // values to a finite value for proper behavior in all cases.
-                0.0 + x.ws * g!(elo.w().ln()) + x.ds * g!(elo.d().ln()) + x.ls * g!(elo.l().ln())
+                x.ws * g!(elo.w().ln()) + x.ds * g!(elo.d().ln()) + x.ls * g!(elo.l().ln())
             }
         }
     }
@@ -203,8 +203,12 @@ pub fn sprt_stopping_bound(alpha: f64, beta: f64) -> (f64, f64) {
     (f64::ln(beta / (1.0 - alpha)), f64::ln((1.0 - beta) / alpha))
 }
 
+pub fn bayes_elo(x: Score) -> f64 {
+    (finv(x.w) - finv(x.l)) / 2.0
+}
+
 pub fn draw_elo(x: Score) -> f64 {
-    200.0 * f64::log10(((1.0 - x.l) / x.l) * ((1.0 - x.w) / x.w))
+    (finv(x.w) + finv(x.l)) / -2.0
 }
 
 /// BETA is defined as the constant that the standard logistic function's input
@@ -312,7 +316,7 @@ impl Score {
 
         let ws = (wd + wl + 2 * ww) as f64;
         let ds = (wd + ld + 2 * dd) as f64;
-        let ls = (ld + ll + 2 * ll) as f64;
+        let ls = (wl + ld + 2 * ll) as f64;
 
         Score {
             ll: ll as f64 / n,
