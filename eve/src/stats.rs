@@ -22,6 +22,14 @@ pub fn f(x: f64) -> f64 {
     1.0 / (1.0 + 10f64.powf(-x / 400.0))
 }
 
+pub fn finv(x: f64) -> f64 {
+    if x > 0.0 && x < 1.0 {
+        -400.0 * f64::log10(1.0 / x - 1.0)
+    } else {
+        0.0
+    }
+}
+
 /// Model is an abstraction over the different ways of statistically modelling
 /// the results of a collection of game pairs played between two entities.
 ///
@@ -71,6 +79,8 @@ impl Model {
         let mu = self.mean(x);
         let sigma = self.deviation(x, mu);
 
+        let elo = finv(mu);
+
         // Assuming the sample data is distributed in form of N(mu, sigma^2),
         // in other words a normal distribution with mean mu and variance
         // sigma^2, we can find two points (mu_min and mu_max) in the sample
@@ -95,9 +105,10 @@ impl Model {
         // as a simplified expression of mu_max - mu:
         // mu_max - mu = phi_inv(1 - p/2 | mu, sigma) - mu
         //   = mu + sigma * phi_inv(1 - p/2) - mu = sigma * phi_inv(1 - p/2)
-        let delta = sigma * phi_inv(1.0 - p / 2.0);
+        let mu_max = mu + sigma * phi_inv(1.0 - p / 2.0);
+        let delta = finv(mu_max) - elo;
 
-        (mu, delta)
+        (elo, delta)
     }
 
     /// llh calculates the log-likelihood of the given sample `x` arising from
