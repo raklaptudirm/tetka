@@ -43,13 +43,10 @@ impl Model {
     /// llr_from_elo is a utility function which converts normalized elo bounds
     /// to [Elo] values and calls [Model::llr] on the results.
     pub fn llr_from_elo(&self, pairs: Score, elo0: f64, elo1: f64) -> f64 {
-        // Calculate the draw elo for the current match score.
-        let dlo = Elo::from(pairs).dlo;
-
         // Figure out parameters representing the two hypotheses by combining
         // the elo bound with the draw elo for the sample and use them to
         // calculate the log-likelihood ratio.
-        self.llr(pairs, Elo::new(elo0, dlo), Elo::new(elo1, dlo))
+        self.llr(pairs, elo0, elo1)
     }
 
     /// llr calculates the log-likelihood ratio for the given sample data and
@@ -64,7 +61,7 @@ impl Model {
     /// log-likelihood ratio test is available which is known to be the most
     /// powerful among all level alpha tests under the Neyman-Pearson lemma.
     /// https://en.wikipedia.org/wiki/Neyman%E2%80%93Pearson_lemma
-    pub fn llr(&self, x: Score, theta0: Elo, theta1: Elo) -> f64 {
+    pub fn llr(&self, x: Score, theta0: f64, theta1: f64) -> f64 {
         if x.n > 0.0 {
             // The llr is the difference of the two log-likelihoods.
             self.llh(theta1, x) - self.llh(theta0, x)
@@ -117,7 +114,7 @@ impl Model {
     ///
     /// The log-likelihood is simply the natural logarithm of 𝓛(theta | x). The
     /// calculation of the 𝓛(theta | x) value depends on the selected [Model].
-    fn llh(&self, theta: Elo, x: Score) -> f64 {
+    fn llh(&self, theta: f64, x: Score) -> f64 {
         // g! guards possible non-finite expressions by clamping them to 1.
         macro_rules! g {
             ($e:expr) => {{
@@ -134,15 +131,15 @@ impl Model {
             // TODO: llh for the Pentanomial model
             Self::Pentanomial => 0.0,
             Self::Traditional => {
+                let elo = Elo::new(theta, draw_elo(x));
+
                 // The probability of the given result x = (w, d, l) occurring
                 // is p(w)^w + p(d)^d + p(l)^l. Taking the log, it can be
                 // simplified to the formula below.
                 //
                 // Calls to g! converts non-finite (infinite/NaN) floating point
                 // values to a finite value for proper behavior in all cases.
-                0.0 + x.ws * g!(theta.w().ln())
-                    + x.ds * g!(theta.d().ln())
-                    + x.ls * g!(theta.l().ln())
+                0.0 + x.ws * g!(elo.w().ln()) + x.ds * g!(elo.d().ln()) + x.ls * g!(elo.l().ln())
             }
         }
     }
@@ -197,6 +194,10 @@ impl Model {
 /// Type I (false positive) and Type II (false negative) error probabilities.
 pub fn sprt_stopping_bound(alpha: f64, beta: f64) -> (f64, f64) {
     (f64::ln(beta / (1.0 - alpha)), f64::ln((1.0 - beta) / alpha))
+}
+
+pub fn draw_elo(x: Score) -> f64 {
+    200.0 * f64::log10(((1.0 - x.l) / x.l) * ((1.0 - x.w) / x.w))
 }
 
 impl From<Score> for Elo {
