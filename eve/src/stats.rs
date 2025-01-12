@@ -112,43 +112,6 @@ impl Model {
         (mu, delta)
     }
 
-    /// Calculates the empirical mean of the random variable S from the given
-    /// sample data.
-    fn mean(&self, x: Score) -> f64 {
-        match *self {
-            Self::Pentanomial => {
-                0.00 * x.ll + 0.25 * x.ld + 0.50 * (x.dd + x.wl) + 0.75 * x.wd + 1.00 * x.ww
-            }
-            Self::Traditional => 1.0 * x.w + 0.5 * x.d + 0.0 * x.l,
-        }
-    }
-
-    /// Calculates the deviation (square root of the variance) of the given
-    /// sample data from the given pivot point.
-    fn deviation(&self, x: Score, mu: f64) -> f64 {
-        self.variance(x, mu).sqrt()
-    }
-
-    /// Calculates the variance of the given sample data from the given pivot.
-    fn variance(&self, x: Score, mu: f64) -> f64 {
-        match *self {
-            Self::Pentanomial => {
-                ((x.dd + x.wl) * f64::powi(0.50 - mu, 2)
-                    + x.ll * f64::powi(0.00 - mu, 2)
-                    + x.ld * f64::powi(0.25 - mu, 2)
-                    + x.wd * f64::powi(0.75 - mu, 2)
-                    + x.ww * f64::powi(1.00 - mu, 2))
-                    / x.n
-            }
-            Self::Traditional => {
-                (x.w * f64::powi(1.0 - mu, 2)
-                    + x.d * f64::powi(0.5 - mu, 2)
-                    + x.l * f64::powi(0.0 - mu, 2))
-                    / (x.n * 2.0)
-            }
-        }
-    }
-
     /// llh calculates the log-likelihood of the given sample `x` arising from
     /// the probability distribution specified by the parameter `theta`.
     ///
@@ -180,6 +143,50 @@ impl Model {
                 0.0 + x.ws * g!(theta.w().ln())
                     + x.ds * g!(theta.d().ln())
                     + x.ls * g!(theta.l().ln())
+            }
+        }
+    }
+
+    /// Calculates the empirical mean of the random variable S from the given
+    /// sample data.
+    fn mean(&self, x: Score) -> f64 {
+        match *self {
+            Self::Pentanomial => {
+                0.00 * x.ll + 0.25 * x.ld + 0.50 * (x.dd + x.wl) + 0.75 * x.wd + 1.00 * x.ww
+            }
+            Self::Traditional => 1.0 * x.w + 0.5 * x.d + 0.0 * x.l,
+        }
+    }
+
+    /// Calculates the deviation (square root of the variance) of the given
+    /// sample data from the given pivot point.
+    fn deviation(&self, x: Score, mu: f64) -> f64 {
+        self.variance(x, mu).sqrt()
+    }
+
+    /// Calculates the variance of the given sample data from the given pivot.
+    fn variance(&self, x: Score, mu: f64) -> f64 {
+        match *self {
+            Self::Pentanomial => self.sum_of_squares(x, mu) / x.n,
+            Self::Traditional => self.sum_of_squares(x, mu) / (x.n * 2.0),
+        }
+    }
+
+    /// Calculates the sum of squares (variance * sample size) of the given
+    /// sample data from the given pivot point.
+    fn sum_of_squares(&self, x: Score, mu: f64) -> f64 {
+        match *self {
+            Self::Pentanomial => {
+                (x.dd + x.wl) * f64::powi(0.50 - mu, 2)
+                    + x.ll * f64::powi(0.00 - mu, 2)
+                    + x.ld * f64::powi(0.25 - mu, 2)
+                    + x.wd * f64::powi(0.75 - mu, 2)
+                    + x.ww * f64::powi(1.00 - mu, 2)
+            }
+            Self::Traditional => {
+                x.w * f64::powi(1.0 - mu, 2)
+                    + x.d * f64::powi(0.5 - mu, 2)
+                    + x.l * f64::powi(0.0 - mu, 2)
             }
         }
     }
