@@ -63,7 +63,7 @@ impl Model {
     pub fn llr(&self, x: Score, theta0: f64, theta1: f64) -> f64 {
         if x.n > 0.0 {
             // The llr is the difference of the two log-likelihoods.
-            self.llh(theta1, x) - self.llh(theta0, x)
+            self.llh(theta0, x) - self.llh(theta1, x)
         } else {
             0.0 // No data, so llr is 0.
         }
@@ -135,7 +135,7 @@ impl Model {
                 let r = self.sum_of_squares(x, mu).sqrt();
                 let mu = nelo_to_score(theta, r);
 
-                0.5 * x.n * -f64::ln(self.sum_of_squares(x, mu))
+                0.5 * x.n * f64::ln(self.sum_of_squares(x, mu))
             }
             Self::Traditional => {
                 let elo = Elo::new(theta, draw_elo(x));
@@ -146,7 +146,7 @@ impl Model {
                 //
                 // Calls to g! converts non-finite (infinite/NaN) floating point
                 // values to a finite value for proper behavior in all cases.
-                x.ws * g!(elo.w().ln()) + x.ds * g!(elo.d().ln()) + x.ls * g!(elo.l().ln())
+                -(x.ws * g!(elo.w().ln()) + x.ds * g!(elo.d().ln()) + x.ls * g!(elo.l().ln()))
             }
         }
     }
