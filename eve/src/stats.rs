@@ -40,15 +40,6 @@ pub enum Model {
 }
 
 impl Model {
-    /// llr_from_elo is a utility function which converts normalized elo bounds
-    /// to [Elo] values and calls [Model::llr] on the results.
-    pub fn llr_from_elo(&self, pairs: Score, elo0: f64, elo1: f64) -> f64 {
-        // Figure out parameters representing the two hypotheses by combining
-        // the elo bound with the draw elo for the sample and use them to
-        // calculate the log-likelihood ratio.
-        self.llr(pairs, elo0, elo1)
-    }
-
     /// llr calculates the log-likelihood ratio for the given sample data and
     /// hypothesis pair according to the selected statistical model.
     ///
@@ -128,8 +119,13 @@ impl Model {
         }
 
         match *self {
-            // TODO: llh for the Pentanomial model
-            Self::Pentanomial => 0.0,
+            Self::Pentanomial => {
+                let mu = self.mean(x);
+                let r = self.sum_of_squares(x, mu).sqrt();
+                let mu = nelo_to_score(theta, r);
+
+                self.sum_of_squares(x, mu).powi(x.n as i32).ln()
+            }
             Self::Traditional => {
                 let elo = Elo::new(theta, draw_elo(x));
 
@@ -198,6 +194,20 @@ pub fn sprt_stopping_bound(alpha: f64, beta: f64) -> (f64, f64) {
 
 pub fn draw_elo(x: Score) -> f64 {
     200.0 * f64::log10(((1.0 - x.l) / x.l) * ((1.0 - x.w) / x.w))
+}
+
+/// BETA is defined as the constant that the standard logistic function's input
+/// needs to be be multiplied by to get the Elo sigmoid.
+///
+/// To be precise with the definition: f(x) = L(BETA * x).
+const BETA: f64 = std::f64::consts::LN_10 / 400.0;
+
+/// C_ET is the constant ratio between the normalized t-value and the normalized
+/// elo values. To be precise, normalized elo = C_ET * normalized t-value.
+const C_ET: f64 = 2.0 / BETA;
+
+pub fn nelo_to_score(nelo: f64, r: f64) -> f64 {
+    (nelo / C_ET) * std::f64::consts::SQRT_2 * r + 0.5
 }
 
 impl From<Score> for Elo {
