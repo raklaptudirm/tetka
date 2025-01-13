@@ -22,15 +22,10 @@ pub fn f(x: f64) -> f64 {
     1.0 / (1.0 + 10f64.powf(-x / 400.0))
 }
 
-/// finv is the inverse of the f function. Its domain is (0, 1) and it returns
-/// 0 for any inputs outside its domain.
+/// finv is the inverse of the f function. Its domain is (0, 1).
 pub fn finv(x: f64) -> f64 {
-    if x > 0.0 && x < 1.0 {
-        -400.0 * f64::log10(1.0 / x - 1.0)
-    } else {
-        // x is outside (0, 1), return 0.
-        0.0
-    }
+    debug_assert!(x > 0.0 && x < 1.0);
+    -400.0 * f64::log10(1.0 / x - 1.0)
 }
 
 /// Model is an abstraction over the different ways of statistically modelling
