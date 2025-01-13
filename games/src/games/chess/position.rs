@@ -202,6 +202,10 @@ impl Position {
     pub fn castling(&self) -> &castling::Info {
         &self.castling
     }
+
+    pub fn is_frc(&self) -> bool {
+        self.is_fischer_random
+    }
 }
 
 /// PositionParseErr represents an error encountered while parsing
