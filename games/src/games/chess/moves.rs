@@ -13,13 +13,10 @@
 
 use std::sync::LazyLock;
 
-use strum::IntoEnumIterator;
-
-use super::{BitBoard, Color, Square};
-
+use super::{BitBoard, Color, Direction, Square};
 use crate::interface::{BitBoardType, RepresentableType, SetType, SquareType};
 
-use super::Direction;
+use strum::IntoEnumIterator;
 
 pub fn pawn_attacks(square: Square, color: Color) -> BitBoard {
     PAWN_ATTACKS_TABLE[color as usize][square as usize]
@@ -29,7 +26,6 @@ pub fn knight(square: Square) -> BitBoard {
     KNIGHT_MOVES_TABLE[square as usize]
 }
 
-#[inline(always)]
 pub fn bishop(square: Square, blockers: BitBoard) -> BitBoard {
     hyperbola(square, blockers, BitBoard::diagonal(square.diagonal()))
         | hyperbola(
@@ -39,13 +35,11 @@ pub fn bishop(square: Square, blockers: BitBoard) -> BitBoard {
         )
 }
 
-#[inline(always)]
 pub fn rook(square: Square, blockers: BitBoard) -> BitBoard {
     hyperbola(square, blockers, BitBoard::file(square.file()))
         | hyperbola(square, blockers, BitBoard::rank(square.rank()))
 }
 
-#[inline(always)]
 pub fn queen(square: Square, blockers: BitBoard) -> BitBoard {
     bishop(square, blockers) | rook(square, blockers)
 }

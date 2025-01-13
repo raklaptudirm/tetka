@@ -13,9 +13,8 @@
 
 use std::{fmt, str::FromStr};
 
-use crate::interface::{representable_type, MoveType, RepresentableType};
-
 use super::{castling, Piece, Square};
+use crate::interface::{representable_type, MoveType, RepresentableType};
 
 #[derive(Copy, Clone, PartialEq, Default)]
 pub struct Move(u16);

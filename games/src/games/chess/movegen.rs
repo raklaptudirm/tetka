@@ -1,11 +1,10 @@
-use crate::interface::{
-    BitBoardType, Color, ColoredPieceType, MoveStore, PositionType, SetType,
-    SquareType,
-};
-
 use super::{
     castling, moves, BitBoard, ColoredPiece, Direction, Move, MoveFlag, Piece,
     Position, Rank, Square,
+};
+use crate::interface::{
+    BitBoardType, Color, ColoredPieceType, MoveStore, PositionType, SetType,
+    SquareType,
 };
 
 pub struct MoveGenerationInfo<'a> {
@@ -258,7 +257,7 @@ impl MoveGenerationInfo<'_> {
                 movelist,
             );
 
-            if let Some(target) = self.position.en_passant_target {
+            if let Some(target) = self.position.en_passant_target() {
                 let mut passanters = attackers
                     & moves::pawn_attacks(
                         target,
@@ -414,15 +413,15 @@ impl MoveGenerationInfo<'_> {
     ) {
         let dimension =
             castling::Dimension::from(self.position.side_to_move(), side);
-        let rook = self.position.castling.rook(dimension);
+        let rook = self.position.castling().rook(dimension);
 
-        if self.position.castling.rights.contains(dimension)
+        if self.position.castling().rights.contains(dimension)
             // Castling path blockers
             && self
                 .blocker
-                .is_disjoint(self.position.castling.blocker_mask(dimension))
+                .is_disjoint(self.position.castling().blocker_mask(dimension))
             // Castling path attackers
-            && !self.any_attacked(self.position.castling.attack_mask(dimension), self.blocker)
+            && !self.any_attacked(self.position.castling().attack_mask(dimension), self.blocker)
             &&!self.pinmask_l.contains(rook)
         {
             movelist.push(Move::new_castling(self.king, rook, side))

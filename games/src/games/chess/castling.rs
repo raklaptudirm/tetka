@@ -13,14 +13,13 @@
 
 use std::str::FromStr;
 
+use super::{BitBoard, Color, File, Rank, Square};
 use crate::interface::{
     representable_type, set_type, RepresentableType, SetType, SquareType,
     TypeParseError,
 };
 
 use thiserror::Error;
-
-use super::{BitBoard, Color, File, Rank, Square};
 
 set_type!(Rights<Dimension>: u8);
 

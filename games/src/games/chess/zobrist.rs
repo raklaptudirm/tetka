@@ -11,10 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::{ColoredPiece, File, Square};
+use super::{castling, ColoredPiece, File, Square};
 use crate::interface::{Hash, RepresentableType, SquareType};
-
-use super::castling;
 
 #[rustfmt::skip]
 const PIECE_SQUARE_KEYS: [[u64; Square::N]; ColoredPiece::N] = [

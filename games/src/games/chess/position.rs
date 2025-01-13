@@ -11,34 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
-use std::num::ParseIntError;
-use std::str::FromStr;
+use std::{fmt, num::ParseIntError, str::FromStr};
+
+use super::{
+    castling::{self, CastlingRightsParseError, Dimension, Rights, Side},
+    movegen, BitBoard, Color, ColoredPiece, File, Move, MoveFlag, Piece, Rank,
+    Square,
+};
+use crate::interface::{
+    self, parse::PiecePlacementParseError, ColoredPieceType, Hash, MoveStore,
+    PositionType, RepresentableType, SetType, SquareType, TypeParseError,
+};
 
 use strum::IntoEnumIterator;
-
-use crate::interface;
-use crate::interface::parse::PiecePlacementParseError;
-use crate::interface::ColoredPieceType;
-use crate::interface::PositionType;
-use crate::interface::TypeParseError;
-use crate::interface::{Hash, RepresentableType, SetType, SquareType};
-
 use thiserror::Error;
-
-#[rustfmt::skip]
-use super::{
-    BitBoard, ColoredPiece, File, Move,
-    Rank, Square, Color, Piece, castling
-};
-use crate::interface::MoveStore;
-
-use super::castling::CastlingRightsParseError;
-use super::castling::Dimension;
-use super::castling::Rights;
-use super::castling::Side;
-use super::movegen;
-use super::MoveFlag;
 
 /// Position represents the snapshot of an Ataxx Board, the state of the an
 /// ataxx game at a single point in time. It also provides all of the methods
@@ -46,22 +32,19 @@ use super::MoveFlag;
 #[derive(Clone)]
 pub struct Position {
     // BitBoard board representation.
-    pub color_bbs: [BitBoard; Color::N],
-    pub piece_bbs: [BitBoard; Piece::N],
+    color_bbs: [BitBoard; Color::N],
+    piece_bbs: [BitBoard; Piece::N],
 
     // Position metadata.
     side_to_move: Color,
     ply_count: u16,
     half_move_clock: u8,
 
-    #[allow(dead_code)]
-    pub en_passant_target: Option<Square>,
+    en_passant_target: Option<Square>,
 
     // Game metadata.
-    #[allow(dead_code)]
     is_fischer_random: bool,
-    #[allow(dead_code)]
-    pub castling: castling::Info,
+    castling: castling::Info,
     checksum: Hash,
 }
 
@@ -208,6 +191,16 @@ impl PositionType for Position {
     ) {
         let info = movegen::MoveGenerationInfo::new(self);
         info.generate_moves_into(movelist);
+    }
+}
+
+impl Position {
+    pub fn en_passant_target(&self) -> Option<Square> {
+        self.en_passant_target
+    }
+
+    pub fn castling(&self) -> &castling::Info {
+        &self.castling
     }
 }
 

@@ -1,3 +1,9 @@
+use std::{ops, sync::LazyLock};
+
+use crate::interface::{BitBoardType, RepresentableType, SetType, SquareType};
+
+use strum::IntoEnumIterator;
+
 // Namespaced modules.
 pub mod castling;
 pub mod moves;
@@ -14,14 +20,6 @@ mod position;
 // without their parent namespace.
 pub use self::position::*;
 pub use self::r#move::*;
-
-use std::ops;
-use std::sync::LazyLock;
-
-use crate::interface::SetType;
-use crate::interface::{BitBoardType, RepresentableType, SquareType};
-
-use strum::IntoEnumIterator;
 
 crate::interface::game_details!(
     Files: A, B, C, D, E, F, G, H;
