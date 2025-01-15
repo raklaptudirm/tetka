@@ -78,18 +78,6 @@ impl PositionType for Position {
             .find(|piece| self.colored_piece_bb(*piece).contains(sq))
     }
 
-    fn piece_bb(&self, piece: Piece) -> BitBoard {
-        self.bitboards[piece as usize]
-    }
-
-    fn color_bb(&self, color: Color) -> BitBoard {
-        self.bitboards[color as usize]
-    }
-
-    fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
-        self.bitboards[piece as usize]
-    }
-
     fn side_to_move(&self) -> Color {
         self.side_to_move
     }
@@ -286,6 +274,17 @@ impl PositionType for Position {
 }
 
 impl Position {
+    pub fn piece_bb(&self, piece: Piece) -> BitBoard {
+        self.bitboards[piece as usize]
+    }
+
+    pub fn color_bb(&self, color: Color) -> BitBoard {
+        self.bitboards[color as usize]
+    }
+
+    pub fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
+        self.bitboards[piece as usize]
+    }
     fn get_hash(black: BitBoard, white: BitBoard, stm: Color) -> Hash {
         let a = black.into();
         let b = white.into();

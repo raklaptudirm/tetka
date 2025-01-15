@@ -81,24 +81,6 @@ impl PositionType for Position {
             .find(|piece| self.colored_piece_bb(*piece).contains(sq))
     }
 
-    fn piece_bb(&self, piece: Piece) -> BitBoard {
-        match piece {
-            Piece::Pawn => BitBoard::from(self.pawns[0]) | self.pawns[1],
-            Piece::Tile => self.tiles,
-        }
-    }
-
-    fn color_bb(&self, color: Color) -> BitBoard {
-        BitBoard::from(self.pawn(color))
-    }
-
-    fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
-        match piece.piece() {
-            Piece::Pawn => BitBoard::from(self.pawn(piece.color())),
-            Piece::Tile => self.tiles,
-        }
-    }
-
     fn hash(&self) -> Hash {
         self.checksum
     }
@@ -193,6 +175,23 @@ impl PositionType for Position {
 }
 
 impl Position {
+    pub fn piece_bb(&self, piece: Piece) -> BitBoard {
+        match piece {
+            Piece::Pawn => BitBoard::from(self.pawns[0]) | self.pawns[1],
+            Piece::Tile => self.tiles,
+        }
+    }
+
+    pub fn color_bb(&self, color: Color) -> BitBoard {
+        BitBoard::from(self.pawn(color))
+    }
+
+    pub fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
+        match piece.piece() {
+            Piece::Pawn => BitBoard::from(self.pawn(piece.color())),
+            Piece::Tile => self.tiles,
+        }
+    }
     fn pawn(&self, color: Color) -> Square {
         self.pawns[color as usize]
     }

@@ -77,18 +77,6 @@ impl PositionType for Position {
             .find(|piece| self.colored_piece_bb(*piece).contains(sq))
     }
 
-    fn piece_bb(&self, piece: Piece) -> BitBoard {
-        self.piece_bbs[piece as usize]
-    }
-
-    fn color_bb(&self, color: Color) -> BitBoard {
-        self.color_bbs[color as usize]
-    }
-
-    fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
-        self.piece_bb(piece.piece()) & self.color_bb(piece.color())
-    }
-
     fn side_to_move(&self) -> interface::Color<Self> {
         self.side_to_move
     }
@@ -195,6 +183,17 @@ impl PositionType for Position {
 }
 
 impl Position {
+    pub fn piece_bb(&self, piece: Piece) -> BitBoard {
+        self.piece_bbs[piece as usize]
+    }
+
+    pub fn color_bb(&self, color: Color) -> BitBoard {
+        self.color_bbs[color as usize]
+    }
+
+    pub fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
+        self.piece_bb(piece.piece()) & self.color_bb(piece.color())
+    }
     pub fn en_passant_target(&self) -> Option<Square> {
         self.en_passant_target
     }

@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use super::{
     BitBoardType, Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType,
-    Piece, Square,
+    Square,
 };
 
 /// Position is a generalized interface for board representations of a wide
@@ -34,6 +34,8 @@ where
     /// non-empty, the behavior is undefined.
     fn insert(&mut self, sq: Square<Self>, piece: Self::ColoredPiece);
     /// Removes any Piece on the given Square, and returns the removed Piece.
+    /// For games where there may be multiple pieces on a single Square,
+    /// it removes only the 'topmost' Piece.
     fn remove(&mut self, sq: Square<Self>) -> Option<Self::ColoredPiece>;
     /// Returns the Piece present at the given Square.
     #[must_use]
@@ -41,16 +43,6 @@ where
         &self,
         sq: <Self::BitBoard as BitBoardType>::Square,
     ) -> Option<Self::ColoredPiece>;
-
-    /// Returns a BitBoard with all the Squares containing the given Piece.
-    #[must_use]
-    fn piece_bb(&self, piece: Piece<Self>) -> Self::BitBoard;
-    /// Returns a BitBoard with all the Squares containing the given Color.
-    #[must_use]
-    fn color_bb(&self, color: Color<Self>) -> Self::BitBoard;
-    /// Returns a BitBoard with all the Squares containing the given ColoredPiece.
-    #[must_use]
-    fn colored_piece_bb(&self, piece: Self::ColoredPiece) -> Self::BitBoard;
 
     /// Returns the current side to move.
     #[must_use]
