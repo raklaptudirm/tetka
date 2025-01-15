@@ -18,7 +18,7 @@ pub trait MoveType: FromStr + Display + From<u16> + Into<u16> + Copy {
 /// inside themselves and are thus usable in move-generation methods in
 /// [Position](super::PositionType) like
 /// [`generate_moves_into<T>`](super::PositionType::generate_moves_into<T>).
-pub trait MoveStore<M>: Default {
+pub trait MoveStore<M>: Default + IntoIterator<Item = M> {
     /// Appends a move to the back of the [MoveStore].
     fn push(&mut self, m: M);
 

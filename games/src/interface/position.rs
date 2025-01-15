@@ -102,7 +102,7 @@ where
         const NOISY: bool,
     >(
         &self,
-    ) -> MoveList<Self::Move> {
+    ) -> impl MoveStore<Self::Move> {
         let mut movelist: MoveList<Self::Move> = Default::default();
         self.generate_moves_into::<ALLOW_ILLEGAL, QUIET, NOISY, _>(
             &mut movelist,
