@@ -2,8 +2,7 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use super::{
-    BitBoardType, Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType,
-    SquareType,
+    Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType, SquareType,
 };
 
 /// Position is a generalized interface for board representations of a wide
@@ -12,14 +11,10 @@ use super::{
 /// custom ones can also be implemented by the library user.
 pub trait PositionType: FromStr + Display
 where
-    Self::BitBoard: BitBoardType,
     Self::ColoredPiece: ColoredPieceType,
     Self::Move: MoveType,
 {
     type Square: SquareType;
-
-    /// Type for the bitboards used by this board representation.
-    type BitBoard;
 
     /// Type for the pieces (with color) used by this board representation.
     type ColoredPiece;

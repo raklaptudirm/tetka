@@ -50,7 +50,6 @@ pub struct Position {
 
 impl PositionType for Position {
     type Square = Square;
-    type BitBoard = BitBoard;
     type ColoredPiece = ColoredPiece;
     type Move = Move;
 

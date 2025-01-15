@@ -29,7 +29,6 @@ pub use r#move::*;
 pub use set::*;
 pub use square::*;
 
-pub type BitBoard<P> = <P as PositionType>::BitBoard;
 pub type Square<P> = <P as PositionType>::Square;
 pub type File<P> = <Square<P> as SquareType>::File;
 pub type Rank<P> = <Square<P> as SquareType>::Rank;
