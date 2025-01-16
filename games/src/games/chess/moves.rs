@@ -14,16 +14,16 @@
 use std::sync::LazyLock;
 
 use super::{BitBoard, Color, Direction, Square};
-use crate::interface::{BitBoardType, RepresentableType, SetType, SquareType};
+use crate::interface::{RepresentableType, SetType};
 
 use strum::IntoEnumIterator;
 
 pub fn pawn_attacks(square: Square, color: Color) -> BitBoard {
-    PAWN_ATTACKS_TABLE[color as usize][square as usize]
+    PAWN_ATTACKS_TABLE[color as usize][square.into()]
 }
 
 pub fn knight(square: Square) -> BitBoard {
-    KNIGHT_MOVES_TABLE[square as usize]
+    KNIGHT_MOVES_TABLE[square.into()]
 }
 
 pub fn bishop(square: Square, blockers: BitBoard) -> BitBoard {
@@ -45,7 +45,7 @@ pub fn queen(square: Square, blockers: BitBoard) -> BitBoard {
 }
 
 pub fn king(square: Square) -> BitBoard {
-    KING_MOVES_TABLE[square as usize]
+    KING_MOVES_TABLE[square.into()]
 }
 
 pub(crate) fn hyperbola(
@@ -53,10 +53,10 @@ pub(crate) fn hyperbola(
     blockers: BitBoard,
     mask: BitBoard,
 ) -> BitBoard {
-    let mask = mask.0;
-    let square = BitBoard::from(square).0;
+    let mask = mask.into();
+    let square = BitBoard::from(square).into();
     let rev_sq = square.reverse_bits();
-    let blockers = blockers.0;
+    let blockers = blockers.into();
 
     let mut ray = blockers & mask;
     let mut rev = ray.reverse_bits();
@@ -65,7 +65,7 @@ pub(crate) fn hyperbola(
     ray ^= rev.reverse_bits();
     ray &= mask;
 
-    BitBoard(ray)
+    BitBoard::from(ray)
 }
 
 static KING_MOVES_TABLE: LazyLock<[BitBoard; Square::N]> =
@@ -75,7 +75,7 @@ static KING_MOVES_TABLE: LazyLock<[BitBoard; Square::N]> =
             let square_bb = BitBoard::from(square);
             let line = square_bb | square_bb.east() | square_bb.west();
             let cell = line | line.north() | line.south();
-            king_moves[square as usize] = cell ^ square_bb;
+            king_moves[square.into()] = cell ^ square_bb;
         }
 
         king_moves
@@ -99,7 +99,7 @@ static KNIGHT_MOVES_TABLE: LazyLock<[BitBoard; Square::N]> =
             let north = north.east() | north.west();
             let south = south.east() | south.west();
 
-            knight_moves[square as usize] = north | south | east | west;
+            knight_moves[square.into()] = north | south | east | west;
         }
 
         knight_moves
@@ -113,7 +113,7 @@ static PAWN_ATTACKS_TABLE: LazyLock<[[BitBoard; Square::N]; Color::N]> =
             for square in Square::iter() {
                 let square_bb_up =
                     BitBoard::from(square).shift(Direction::up(color));
-                pawn_attacks[color as usize][square as usize] =
+                pawn_attacks[color as usize][square.into()] =
                     square_bb_up.east() | square_bb_up.west();
             }
         }

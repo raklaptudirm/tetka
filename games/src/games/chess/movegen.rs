@@ -1,10 +1,11 @@
+use std::str::FromStr;
+
 use super::{
     castling, moves, BitBoard, ColoredPiece, Direction, Move, MoveFlag, Piece,
     Position, Rank, Square,
 };
 use crate::interface::{
-    BitBoardType, Color, ColoredPieceType, MoveStore, PositionType, SetType,
-    SquareType,
+    Color, ColoredPieceType, MoveStore, PositionType, SetType,
 };
 
 pub struct MoveGenerationInfo<'a> {
@@ -59,8 +60,8 @@ impl MoveGenerationInfo<'_> {
         movelist: &mut ML,
     ) {
         let last_rank = match self.position.side_to_move() {
-            Color::<Position>::White => BitBoard::rank(Rank::Eighth),
-            Color::<Position>::Black => BitBoard::rank(Rank::First),
+            Color::<Position>::White => BitBoard::rank(Rank::last()),
+            Color::<Position>::Black => BitBoard::rank(Rank::first()),
         };
 
         let targets = targets & self.checkmask & self.territory;
@@ -224,8 +225,12 @@ impl MoveGenerationInfo<'_> {
         let uw = up + Direction::West;
 
         let third_rank = match self.position.side_to_move() {
-            Color::<Position>::White => BitBoard::rank(Rank::Third),
-            Color::<Position>::Black => BitBoard::rank(Rank::Sixth),
+            Color::<Position>::White => {
+                BitBoard::rank(Rank::from_str("3").unwrap())
+            }
+            Color::<Position>::Black => {
+                BitBoard::rank(Rank::from_str("6").unwrap())
+            }
         };
 
         let pawns = self.position.piece_bb(Piece::Pawn) & self.friends;

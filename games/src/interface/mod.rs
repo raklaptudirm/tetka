@@ -31,8 +31,6 @@ pub use set::*;
 pub use square::*;
 
 pub type Square<P> = <P as PositionType>::Square;
-pub type File<P> = <Square<P> as SquareType>::File;
-pub type Rank<P> = <Square<P> as SquareType>::Rank;
 
 pub type ColoredPiece<P> = <P as PositionType>::ColoredPiece;
 pub type Piece<P> = <ColoredPiece<P> as ColoredPieceType>::Piece;
@@ -93,7 +91,7 @@ macro_rules! game_details {
         Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
                 $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
     ) => {
-        $crate::interface::game_details!(
+        /*$crate::interface::game_details!(
             @bitboard
             u64 {
                 Square = Square;
@@ -101,7 +99,7 @@ macro_rules! game_details {
                 FirstFile = $crate::interface::derive_set!(@first_file BitBoard);
                 FirstRank = $crate::interface::derive_set!(@first_rank BitBoard);
             }
-        );
+        );*/
 
         $crate::interface::game_details!(
             @bitboard_less
@@ -141,6 +139,7 @@ macro_rules! game_details {
         );
     };
 
+    /*
     // @bitboard generates the BitBoard type from the given game details.
     (@bitboard $typ:tt {
         Square = $sq:tt;
@@ -190,7 +189,7 @@ macro_rules! game_details {
                 write!(f, "{}", self)
             }
         }
-    };
+    };*/
 
     // @pieces generates the piece types, which include Piece, Color, and
     // ColoredPiece from the given game specific details like their string
@@ -301,6 +300,7 @@ macro_rules! game_details {
         @cartesian_square
         Squares: $sq_base:ident $file_num:literal $rank_num:literal;
     ) => {
+        pub type BitBoard = $crate::interface::CartesianSquareSet<$sq_base, $file_num, $rank_num>;
         pub type Square = $crate::interface::CartesianSquare<$sq_base, $file_num, $rank_num>;
         pub type File = $crate::interface::CartesianFile<$file_num>;
         pub type Rank = $crate::interface::CartesianRank<$rank_num>;

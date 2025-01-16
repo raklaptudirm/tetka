@@ -15,8 +15,8 @@ use std::{fmt, num::ParseIntError, str::FromStr};
 
 use crate::interface::{
     parse::{self, PiecePlacementParseError},
-    BitBoardType, ColoredPieceType, Hash, MoveStore, MoveType, PositionType,
-    RepresentableType, SetType, SquareType, TypeParseError,
+    ColoredPieceType, Hash, MoveStore, MoveType, PositionType,
+    RepresentableType, SetType, TypeParseError,
 };
 
 use strum::IntoEnumIterator;
@@ -204,7 +204,7 @@ impl Position {
         tiles: BitBoard,
         stm: Color,
     ) -> Hash {
-        let a = pawns[0] as u64 * Square::N as u64 + pawns[1] as u64;
+        let a = pawns[0].into() * Square::N as u64 + pawns[1].into();
         let b = tiles.into();
 
         // Currently, an 2^-63-almost delta universal hash function, based on
@@ -279,7 +279,7 @@ impl FromStr for Position {
             ply_count: 0,
         };
 
-        parse::piece_placement(&mut position, pos)?;
+        // TODO: parse::piece_placement(&mut position, pos)?;
 
         position.side_to_move = Color::from_str(stm)?;
         position.ply_count = parse::ply_count(fmc, position.side_to_move)?;
@@ -301,19 +301,21 @@ impl fmt::Display for Position {
         let board = self;
         let mut string_rep = String::from(" ");
 
-        for rank in Rank::iter().rev() {
-            for file in File::iter() {
-                let square = Square::new(file, rank);
-                let square_str = match board.at(square) {
-                    Some(piece) => format!("{} ", piece),
-                    None => ". ".to_string(),
-                };
-                string_rep += &square_str;
-            }
+        /*
+                for rank in Rank::iter().rev() {
+                    for file in File::iter() {
+                        let square = Square::new(file, rank);
+                        let square_str = match board.at(square) {
+                            Some(piece) => format!("{} ", piece),
+                            None => ". ".to_string(),
+                        };
+                        string_rep += &square_str;
+                    }
 
-            // Append the rank marker.
-            string_rep += &format!(" {} \n ", rank);
-        }
+                    // Append the rank marker.
+                    string_rep += &format!(" {} \n ", rank);
+                }
+        */
 
         // Append the file markers.
         string_rep += "a b c d e f g h\n";
@@ -372,8 +374,8 @@ impl Move {
     #[rustfmt::skip]
     pub fn new(pawn: Square, tile: Square) -> Move {
 		Move(
-			(pawn as u16) << Move::PAWN_OFFSET |
-			(tile as u16) << Move::TILE_OFFSET
+			(pawn.into()) << Move::PAWN_OFFSET |
+			(tile.into()) << Move::TILE_OFFSET
 		)
     }
 
