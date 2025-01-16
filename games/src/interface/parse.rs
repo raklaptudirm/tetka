@@ -36,7 +36,7 @@ pub enum PiecePlacementParseError {
     TooManyRanks(usize),
 }
 
-pub(crate) fn piece_placement<T: PositionType>(
+pub(crate) fn piece_placement<T: PositionType<Square: SquareType>>(
     position: &mut T,
     fen_fragment: &str,
 ) -> Result<(), PiecePlacementParseError> {
