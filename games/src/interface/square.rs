@@ -1,4 +1,7 @@
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, iter::FusedIterator, str::FromStr};
+
+use num_traits::{FromPrimitive, PrimInt};
+use strum::IntoEnumIterator;
 
 use super::{RepresentableType, TypeParseError};
 
@@ -84,34 +87,38 @@ where
     }
 }
 
-#[derive(Clone, Copy, derive_more::Into)]
-pub struct CartesianSquare<const F: u8, const R: u8>(u16);
+#[derive(Clone, Copy, PartialEq, Eq, Default, derive_more::Into)]
+pub struct CartesianSquare<B: PrimInt, const F: u8, const R: u8>(B);
 
-impl<const F: u8, const R: u8> CartesianSquare<F, R> {
+impl<B: PrimInt, const F: u8, const R: u8> CartesianSquare<B, F, R> {
     /// Creates a new Square from the given File and Rank.
     #[must_use]
     pub fn new(file: CartesianFile<F>, rank: CartesianRank<R>) -> Self {
-        Self((u8::from(rank) * F + u8::from(file)) as u16)
+        Self(
+            ((u8::from(rank) * F + u8::from(file)) as u16)
+                .into()
+                .unwrap(),
+        )
     }
 
     /// Returns the File of self.
     #[must_use]
     pub fn file(self) -> CartesianFile<F> {
-        CartesianFile::<F>((u16::from(self) % F as u16) as u8)
+        CartesianFile::<F>(u8::from(self.into() % B::from(F).unwrap()))
     }
 
     /// Returns the Rank of self.
     #[must_use]
     pub fn rank(self) -> CartesianRank<R> {
-        CartesianRank::<R>((u16::from(self) / F as u16) as u8)
+        CartesianRank::<R>(u8::from(self.into() / B::from(F).unwrap()))
     }
 
     #[must_use]
     pub fn north(self) -> Option<Self> {
-        if self.rank().last() {
+        if self.rank().is_last() {
             None
         } else {
-            Some(Self(u16::from(self) + F as u16))
+            Some(Self(self.into() + B::from(F).unwrap()))
         }
     }
 
@@ -119,10 +126,10 @@ impl<const F: u8, const R: u8> CartesianSquare<F, R> {
     /// south of self, it returns None.
     #[must_use]
     pub fn south(self) -> Option<Self> {
-        if self.rank().first() {
+        if self.rank().is_first() {
             None
         } else {
-            Some(Self(u16::from(self) - F as u16))
+            Some(Self(self.into() - B::from(F).unwrap()))
         }
     }
 
@@ -130,10 +137,10 @@ impl<const F: u8, const R: u8> CartesianSquare<F, R> {
     /// east of self, it returns None.
     #[must_use]
     pub fn east(self) -> Option<Self> {
-        if self.file().last() {
+        if self.file().is_last() {
             None
         } else {
-            Some(Self(u16::from(self) + 1))
+            Some(Self(self.into() + B::one()))
         }
     }
 
@@ -141,15 +148,17 @@ impl<const F: u8, const R: u8> CartesianSquare<F, R> {
     /// west of self, it returns None.
     #[must_use]
     pub fn west(self) -> Option<Self> {
-        if self.file().first() {
+        if self.file().is_first() {
             None
         } else {
-            Some(Self(u16::from(self) - 1))
+            Some(Self(self.into() - B::one()))
         }
     }
 }
 
-impl<const F: u8, const R: u8> FromStr for CartesianSquare<F, R> {
+impl<B: PrimInt, const F: u8, const R: u8> FromStr
+    for CartesianSquare<B, F, R>
+{
     type Err = TypeParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -160,22 +169,98 @@ impl<const F: u8, const R: u8> FromStr for CartesianSquare<F, R> {
     }
 }
 
-impl<const F: u8, const R: u8> Display for CartesianSquare<F, R> {
+impl<B: PrimInt, const F: u8, const R: u8> Display
+    for CartesianSquare<B, F, R>
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}", self.file(), self.rank())
     }
 }
 
-#[derive(Clone, Copy, derive_more::Into)]
+impl<B: PrimInt, const F: u8, const R: u8> From<B>
+    for CartesianSquare<B, F, R>
+{
+    fn from(value: B) -> Self {
+        Self(value)
+    }
+}
+
+impl<B: PrimInt, const F: u8, const R: u8> RepresentableType<B>
+    for CartesianSquare<B, F, R>
+{
+    const N: usize = F as usize * R as usize;
+    unsafe fn unsafe_from<T: PrimInt>(number: T) -> Self {
+        Self(B::from(number).unwrap_unchecked())
+    }
+}
+
+impl<B: PrimInt, const F: u8, const R: u8> IntoEnumIterator
+    for CartesianSquare<B, F, R>
+{
+    type Iterator = Self;
+
+    fn iter() -> Self::Iterator {
+        Self(B::zero())
+    }
+}
+
+impl<B: PrimInt, const F: u8, const R: u8> Iterator
+    for CartesianSquare<B, F, R>
+{
+    type Item = Self;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let idx = (*self).into();
+        if idx < B::from(F).unwrap() * B::from(R).unwrap() {
+            self.0 = idx + B::one();
+            Some(Self(idx))
+        } else {
+            None
+        }
+    }
+}
+
+impl<B: PrimInt, const F: u8, const R: u8> DoubleEndedIterator
+    for CartesianSquare<B, F, R>
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let idx = (*self).into();
+        self.0 = idx - B::one();
+        if idx < B::from(F).unwrap() * B::from(R).unwrap() {
+            Some(Self(idx))
+        } else {
+            None
+        }
+    }
+}
+
+impl<B: PrimInt, const F: u8, const R: u8> ExactSizeIterator
+    for CartesianSquare<B, F, R>
+{
+}
+impl<B: PrimInt, const F: u8, const R: u8> FusedIterator
+    for CartesianSquare<B, F, R>
+{
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, derive_more::Into, derive_more::From)]
 pub struct CartesianFile<const N: u8>(u8);
 
 impl<const N: u8> CartesianFile<N> {
-    pub fn first(self) -> bool {
-        u8::from(self) == 0
+    pub fn first() -> Self {
+        Self(0)
     }
 
-    pub fn last(self) -> bool {
-        u8::from(self) + 1 == N
+    pub fn last() -> Self {
+        Self(N - 1)
+    }
+
+    pub fn is_first(self) -> bool {
+        self == Self::first()
+    }
+
+    pub fn is_last(self) -> bool {
+        self == Self::last()
     }
 }
 
@@ -207,16 +292,24 @@ impl<const N: u8> Display for CartesianFile<N> {
     }
 }
 
-#[derive(Clone, Copy, derive_more::Into)]
+#[derive(Clone, Copy, PartialEq, Eq, derive_more::Into, derive_more::From)]
 pub struct CartesianRank<const N: u8>(u8);
 
 impl<const N: u8> CartesianRank<N> {
-    pub fn first(self) -> bool {
-        u8::from(self) == 0
+    pub fn first() -> Self {
+        Self(0)
     }
 
-    pub fn last(self) -> bool {
-        u8::from(self) + 1 == N
+    pub fn last() -> Self {
+        Self(N - 1)
+    }
+
+    pub fn is_first(self) -> bool {
+        self == Self::first()
+    }
+
+    pub fn is_last(self) -> bool {
+        self == Self::last()
     }
 }
 

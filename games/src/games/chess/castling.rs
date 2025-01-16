@@ -15,8 +15,7 @@ use std::str::FromStr;
 
 use super::{BitBoard, Color, File, Rank, Square};
 use crate::interface::{
-    representable_type, set_type, RepresentableType, SetType, SquareType,
-    TypeParseError,
+    representable_type, set_type, RepresentableType, SetType, TypeParseError,
 };
 
 use thiserror::Error;
@@ -54,7 +53,7 @@ impl Dimension {
     }
 
     pub fn from_sqs(king_sq: Square, rook_sq: Square) -> Dimension {
-        let color: Color = if king_sq.rank() == Rank::First {
+        let color: Color = if king_sq.rank() == Rank::first() {
             Color::White
         } else {
             Color::Black
@@ -65,10 +64,22 @@ impl Dimension {
 
     pub fn get_targets(self) -> (Square, Square) {
         match self {
-            Dimension::WhiteH => (Square::G1, Square::F1),
-            Dimension::WhiteA => (Square::C1, Square::D1),
-            Dimension::BlackH => (Square::G8, Square::F8),
-            Dimension::BlackA => (Square::C8, Square::D8),
+            Dimension::WhiteH => (
+                Square::from_str("g1").unwrap(),
+                Square::from_str("f1").unwrap(),
+            ),
+            Dimension::WhiteA => (
+                Square::from_str("c1").unwrap(),
+                Square::from_str("d1").unwrap(),
+            ),
+            Dimension::BlackH => (
+                Square::from_str("g8").unwrap(),
+                Square::from_str("f8").unwrap(),
+            ),
+            Dimension::BlackA => (
+                Square::from_str("c8").unwrap(),
+                Square::from_str("d8").unwrap(),
+            ),
         }
     }
 }
@@ -81,7 +92,7 @@ pub enum Side {
 
 impl Side {
     pub fn from_sqs(king_sq: Square, rook_sq: Square) -> Side {
-        if (king_sq as u8) < rook_sq as u8 {
+        if king_sq.into() < rook_sq.into() {
             Side::H
         } else {
             Side::A
@@ -99,17 +110,27 @@ pub struct Info {
 }
 
 mod ends {
+    use std::{str::FromStr, sync::LazyLock};
+
     use super::Square;
 
-    pub const WHITE_KING_H: Square = Square::G1;
-    pub const WHITE_KING_A: Square = Square::C1;
-    pub const BLACK_KING_H: Square = Square::G8;
-    pub const BLACK_KING_A: Square = Square::C8;
+    pub static WHITE_KING_H: LazyLock<Square> =
+        LazyLock::new(|| Square::from_str("g1").unwrap());
+    pub static WHITE_KING_A: LazyLock<Square> =
+        LazyLock::new(|| Square::from_str("c1").unwrap());
+    pub static BLACK_KING_H: LazyLock<Square> =
+        LazyLock::new(|| Square::from_str("g8").unwrap());
+    pub static BLACK_KING_A: LazyLock<Square> =
+        LazyLock::new(|| Square::from_str("c8").unwrap());
 
-    pub const WHITE_ROOK_H: Square = Square::F1;
-    pub const WHITE_ROOK_A: Square = Square::D1;
-    pub const BLACK_ROOK_H: Square = Square::F8;
-    pub const BLACK_ROOK_A: Square = Square::D8;
+    pub static WHITE_ROOK_H: LazyLock<Square> =
+        LazyLock::new(|| Square::from_str("f1").unwrap());
+    pub static WHITE_ROOK_A: LazyLock<Square> =
+        LazyLock::new(|| Square::from_str("d1").unwrap());
+    pub static BLACK_ROOK_H: LazyLock<Square> =
+        LazyLock::new(|| Square::from_str("f8").unwrap());
+    pub static BLACK_ROOK_A: LazyLock<Square> =
+        LazyLock::new(|| Square::from_str("d8").unwrap());
 }
 
 #[derive(Error, Debug)]
@@ -127,15 +148,7 @@ impl Info {
         black_king: Square,
     ) -> Result<Self, CastlingRightsParseError> {
         if s == "-" {
-            return Ok(Info::from_squares(
-                Square::E1,
-                File::H,
-                File::A,
-                Square::E8,
-                File::H,
-                File::A,
-                Rights::new(),
-            ));
+            return Ok(Default::default());
         }
 
         if s.is_empty() || s.len() > 4 {
@@ -149,17 +162,17 @@ impl Info {
 
         let mut rights = Rights::new();
 
-        let mut white_h = File::H;
-        let mut white_a = File::A;
-        let mut black_h = File::H;
-        let mut black_a = File::A;
+        let mut white_h = File::from_str("h").unwrap();
+        let mut white_a = File::from_str("a").unwrap();
+        let mut black_h = File::from_str("h").unwrap();
+        let mut black_a = File::from_str("a").unwrap();
 
         for right in s.chars() {
             if frc {
                 if right.is_uppercase() {
                     let file =
                         File::from_str(&right.to_lowercase().to_string())?;
-                    if file as usize > white_king.file() as usize {
+                    if file.into() > white_king.file().into() {
                         white_h = file;
                         rights = rights | Dimension::WhiteH;
                     } else {
@@ -168,7 +181,7 @@ impl Info {
                     }
                 } else {
                     let file = File::from_str(&right.to_string())?;
-                    if file as usize > black_king.file() as usize {
+                    if file.into() > black_king.file().into() {
                         black_h = file;
                         rights = rights | Dimension::BlackH;
                     } else {
@@ -204,7 +217,7 @@ impl Info {
     ) -> Info {
         let mut info = Info {
             rights,
-            rooks: [Square::A1; Dimension::N],
+            rooks: [Square::default(); Dimension::N],
             attacks_mask: [BitBoard::EMPTY; Dimension::N],
             blocker_mask: [BitBoard::EMPTY; Dimension::N],
             rights_masks: [Rights::new(); Square::N],
@@ -217,41 +230,41 @@ impl Info {
         let ba = Dimension::BlackA as usize;
 
         // Initialize the rook square table.
-        info.rooks[wh] = Square::new(w_rook_h, Rank::First);
-        info.rooks[wa] = Square::new(w_rook_a, Rank::First);
-        info.rooks[bh] = Square::new(b_rook_h, Rank::Eighth);
-        info.rooks[ba] = Square::new(b_rook_a, Rank::Eighth);
+        info.rooks[wh] = Square::new(w_rook_h, Rank::from_str("1").unwrap());
+        info.rooks[wa] = Square::new(w_rook_a, Rank::from_str("1").unwrap());
+        info.rooks[bh] = Square::new(b_rook_h, Rank::from_str("8").unwrap());
+        info.rooks[ba] = Square::new(b_rook_a, Rank::from_str("8").unwrap());
 
         // Initialize the castling path table.
-        info.blocker_mask[wh] = blocker_mask(w_king, info.rooks[wh], ends::WHITE_KING_H, ends::WHITE_ROOK_H);
-        info.blocker_mask[wa] = blocker_mask(w_king, info.rooks[wa], ends::WHITE_KING_A, ends::WHITE_ROOK_A);
-        info.blocker_mask[bh] = blocker_mask(b_king, info.rooks[bh], ends::BLACK_KING_H, ends::BLACK_ROOK_H);
-        info.blocker_mask[ba] = blocker_mask(b_king, info.rooks[ba], ends::BLACK_KING_A, ends::BLACK_ROOK_A);
+        info.blocker_mask[wh] = blocker_mask(w_king, info.rooks[wh], *ends::WHITE_KING_H, *ends::WHITE_ROOK_H);
+        info.blocker_mask[wa] = blocker_mask(w_king, info.rooks[wa], *ends::WHITE_KING_A, *ends::WHITE_ROOK_A);
+        info.blocker_mask[bh] = blocker_mask(b_king, info.rooks[bh], *ends::BLACK_KING_H, *ends::BLACK_ROOK_H);
+        info.blocker_mask[ba] = blocker_mask(b_king, info.rooks[ba], *ends::BLACK_KING_A, *ends::BLACK_ROOK_A);
 
-        info.attacks_mask[wh] = BitBoard::between2(w_king, ends::WHITE_KING_H);
-        info.attacks_mask[wa] = BitBoard::between2(w_king, ends::WHITE_KING_A);
-        info.attacks_mask[bh] = BitBoard::between2(b_king, ends::BLACK_KING_H);
-        info.attacks_mask[ba] = BitBoard::between2(b_king, ends::BLACK_KING_A);
+        info.attacks_mask[wh] = BitBoard::between2(w_king, *ends::WHITE_KING_H);
+        info.attacks_mask[wa] = BitBoard::between2(w_king, *ends::WHITE_KING_A);
+        info.attacks_mask[bh] = BitBoard::between2(b_king, *ends::BLACK_KING_H);
+        info.attacks_mask[ba] = BitBoard::between2(b_king, *ends::BLACK_KING_A);
 
         fn blocker_mask(king: Square, rook: Square, king_end: Square, rook_end: Square) -> BitBoard {
             (BitBoard::between2(king, king_end) | BitBoard::between2(rook, rook_end)) - (BitBoard::from(king) | BitBoard::from(rook))
         }
 
         // Initialize the rights update for the king's squares.
-        info.rights_masks[w_king as usize] = Rights::new() | Dimension::WhiteH | Dimension::WhiteA;
-        info.rights_masks[b_king as usize] = Rights::new() | Dimension::BlackH | Dimension::BlackA;
+        info.rights_masks[w_king.into()] = Rights::new() | Dimension::WhiteH | Dimension::WhiteA;
+        info.rights_masks[b_king.into()] = Rights::new() | Dimension::BlackH | Dimension::BlackA;
 
         // Initialize the rights update for the rook's squares.
-        info.rights_masks[info.rooks[wh] as usize] = Rights::new() | Dimension::WhiteH;
-        info.rights_masks[info.rooks[wa] as usize] = Rights::new() | Dimension::WhiteA;
-        info.rights_masks[info.rooks[bh] as usize] = Rights::new() | Dimension::BlackH;
-        info.rights_masks[info.rooks[ba] as usize] = Rights::new() | Dimension::BlackA;
+        info.rights_masks[info.rooks[wh].into()] = Rights::new() | Dimension::WhiteH;
+        info.rights_masks[info.rooks[wa].into()] = Rights::new() | Dimension::WhiteA;
+        info.rights_masks[info.rooks[bh].into()] = Rights::new() | Dimension::BlackH;
+        info.rights_masks[info.rooks[ba].into()] = Rights::new() | Dimension::BlackA;
 
         info
     }
 
     pub fn get_updates(&self, square: Square) -> Rights {
-        self.rights_masks[square as usize]
+        self.rights_masks[square.into()]
     }
 
     pub fn rook(&self, side: Dimension) -> Square {
@@ -264,5 +277,19 @@ impl Info {
 
     pub fn blocker_mask(&self, side: Dimension) -> BitBoard {
         self.blocker_mask[side as usize]
+    }
+}
+
+impl Default for Info {
+    fn default() -> Self {
+        Info::from_squares(
+            Square::from_str("e1").unwrap(),
+            File::from_str("h").unwrap(),
+            File::from_str("a").unwrap(),
+            Square::from_str("e8").unwrap(),
+            File::from_str("h").unwrap(),
+            File::from_str("a").unwrap(),
+            Rights::new(),
+        )
     }
 }

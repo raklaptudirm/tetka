@@ -17,7 +17,7 @@ use crate::interface::{
     game_details,
     parse::{self, PiecePlacementParseError},
     BitBoardType, Hash, MoveStore, MoveType, PositionType, RepresentableType,
-    SetType, SquareType, TypeParseError,
+    SetType, TypeParseError,
 };
 
 use strum::IntoEnumIterator;
@@ -28,8 +28,7 @@ use thiserror::Error;
 // colored. The two colors are Black and White respectively, with Black moving
 // first.
 game_details!(
-    Files: A, B, C, D, E, F, G;
-    Ranks: 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth, 7 Seventh;
+    Squares: u8 7 7;
     Pieces: Piece "x"; Block "-";
     Colors: Black "x" ("x"),
             White "o" ("o");
@@ -362,7 +361,7 @@ impl FromStr for Position {
             half_move_clock: 0,
         };
 
-        parse::piece_placement(&mut position, pos)?;
+        // TODO: parse::piece_placement(&mut position, pos)?;
 
         position.side_to_move = Color::from_str(stm)?;
         position.half_move_clock = hmc.parse::<u8>()?;
@@ -384,21 +383,21 @@ impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let board = self;
         let mut string_rep = String::from(" ");
+        /* TODO
+                for rank in Rank::iter().rev() {
+                    for file in File::iter() {
+                        let square = Square::new(file, rank);
+                        let square_str = match board.at(square) {
+                            Some(piece) => format!("{} ", piece),
+                            None => ". ".to_string(),
+                        };
+                        string_rep += &square_str;
+                    }
 
-        for rank in Rank::iter().rev() {
-            for file in File::iter() {
-                let square = Square::new(file, rank);
-                let square_str = match board.at(square) {
-                    Some(piece) => format!("{} ", piece),
-                    None => ". ".to_string(),
-                };
-                string_rep += &square_str;
-            }
-
-            // Append the rank marker.
-            string_rep += &format!(" {} \n ", rank);
-        }
-
+                    // Append the rank marker.
+                    string_rep += &format!(" {} \n ", rank);
+                }
+        */
         // Append the file markers.
         string_rep += "a b c d e f g\n";
 
@@ -488,8 +487,8 @@ impl Move {
     #[rustfmt::skip]
     pub fn new(source: Square, target: Square) -> Move {
 		Move(
-			(source as u16) << Move::SOURCE_OFFSET |
-			(target as u16) << Move::TARGET_OFFSET
+			(source.into()) << Move::SOURCE_OFFSET |
+			(target.into()) << Move::TARGET_OFFSET
 		)
     }
 
@@ -643,12 +642,12 @@ impl BitBoard {
 
     /// single returns the targets of a singular Move from the given Square.
     pub fn single(square: Square) -> BitBoard {
-        SINGLES[square as usize]
+        SINGLES[square.into()]
     }
 
     /// double returns the targets of a jump Move from the given Square.
     pub fn double(square: Square) -> BitBoard {
-        DOUBLES[square as usize]
+        DOUBLES[square.into()]
     }
 }
 
@@ -656,7 +655,7 @@ static SINGLES: LazyLock<[BitBoard; Square::N]> = LazyLock::new(|| {
     let mut singles = [BitBoard::EMPTY; Square::N];
     for square in Square::iter() {
         let square_bb = BitBoard::from(square);
-        singles[square as usize] = BitBoard::singles(square_bb) ^ square_bb;
+        singles[square.into()] = BitBoard::singles(square_bb) ^ square_bb;
     }
     singles
 });
@@ -665,7 +664,7 @@ static DOUBLES: LazyLock<[BitBoard; Square::N]> = LazyLock::new(|| {
     let mut doubles = [BitBoard::EMPTY; Square::N];
     for square in Square::iter() {
         let singles = BitBoard::singles(BitBoard::from(square));
-        doubles[square as usize] = BitBoard::singles(singles) ^ singles;
+        doubles[square.into()] = BitBoard::singles(singles) ^ singles;
     }
     doubles
 });
