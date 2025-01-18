@@ -203,6 +203,14 @@ impl<B: PrimInt, const F: u8, const R: u8> From<CartesianSquareSet<B, F, R>>
     }
 }
 
+impl<B: PrimInt, const F: u8, const R: u8> From<u64>
+    for CartesianSquareSet<B, F, R>
+{
+    fn from(value: u64) -> Self {
+        Self(value, PhantomData)
+    }
+}
+
 // a -> {a}
 impl<B: PrimInt, const F: u8, const R: u8> From<CartesianSquare<B, F, R>>
     for CartesianSquareSet<B, F, R>
