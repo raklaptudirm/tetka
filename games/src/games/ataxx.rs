@@ -361,7 +361,7 @@ impl FromStr for Position {
             half_move_clock: 0,
         };
 
-        // TODO: parse::piece_placement(&mut position, pos)?;
+        parse::piece_placement(&mut position, pos)?;
 
         position.side_to_move = Color::from_str(stm)?;
         position.half_move_clock = hmc.parse::<u8>()?;
@@ -383,21 +383,19 @@ impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let board = self;
         let mut string_rep = String::from(" ");
-        /* TODO
-                for rank in Rank::iter().rev() {
-                    for file in File::iter() {
-                        let square = Square::new(file, rank);
-                        let square_str = match board.at(square) {
-                            Some(piece) => format!("{} ", piece),
-                            None => ". ".to_string(),
-                        };
-                        string_rep += &square_str;
-                    }
+        for rank in Rank::iter().rev() {
+            for file in File::iter() {
+                let square = Square::new(file, rank);
+                let square_str = match board.at(square) {
+                    Some(piece) => format!("{} ", piece),
+                    None => ". ".to_string(),
+                };
+                string_rep += &square_str;
+            }
 
-                    // Append the rank marker.
-                    string_rep += &format!(" {} \n ", rank);
-                }
-        */
+            // Append the rank marker.
+            string_rep += &format!(" {} \n ", rank);
+        }
         // Append the file markers.
         string_rep += "a b c d e f g\n";
 
