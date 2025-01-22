@@ -27,7 +27,7 @@ use thiserror::Error;
 // colored. The two colors are White and Black respectively, with White moving
 // first.
 crate::interface::game_details!(
-    Squares: u8 8 6;
+    Squares: 8 6;
     Pieces: Pawn "p"; Tile "-";
     Colors: White "w" ("P"),
             Black "b" ("p");
@@ -204,7 +204,8 @@ impl Position {
         tiles: BitBoard,
         stm: Color,
     ) -> Hash {
-        let a = pawns[0].into() * Square::N as u64 + pawns[1].into();
+        let a = u8::from(pawns[0]) as u64 * Square::N as u64
+            + u8::from(pawns[1]) as u64;
         let b = tiles.into();
 
         // Currently, an 2^-63-almost delta universal hash function, based on
@@ -374,8 +375,8 @@ impl Move {
     #[rustfmt::skip]
     pub fn new(pawn: Square, tile: Square) -> Move {
 		Move(
-			(pawn.into()) << Move::PAWN_OFFSET |
-			(tile.into()) << Move::TILE_OFFSET
+            ((u8::from(pawn) as u16) << Move::PAWN_OFFSET) |
+            ((u8::from(tile) as u16) << Move::TILE_OFFSET)
 		)
     }
 

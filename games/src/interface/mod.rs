@@ -60,7 +60,7 @@ pub trait RepresentableType<B: PrimInt>:
     /// uphold this invariant will result in undefined behavior.
     #[must_use]
     unsafe fn unsafe_from<T: PrimInt>(number: T) -> Self {
-        debug_assert!(number.into() < Self::N);
+        debug_assert!(number.to_usize().unwrap() < Self::N);
         std::mem::transmute_copy(&number)
     }
 }
@@ -84,7 +84,7 @@ pub enum TypeParseError {
 // together. Use the undecorated macro unless more precise control is needed.
 macro_rules! game_details {
     (
-        Squares: $sq_base:ident $file_num:literal $rank_num:literal;
+        Squares: $file_num:literal $rank_num:literal;
 
         Pieces: $($piece_variant:ident $piece_repr:literal),*;
                 $($other_variant:ident $other_repr:literal),*;
@@ -103,7 +103,7 @@ macro_rules! game_details {
 
         $crate::interface::game_details!(
             @bitboard_less
-            Squares: $sq_base $file_num $rank_num;
+            Squares: $file_num $rank_num;
 
             Pieces: $($piece_variant $piece_repr),*;
                     $($other_variant $other_repr),*;
@@ -116,7 +116,7 @@ macro_rules! game_details {
     // except BitBoard from the given game specific information.
     (
         @bitboard_less
-        Squares: $sq_base:ident $file_num:literal $rank_num:literal;
+        Squares: $file_num:literal $rank_num:literal;
 
         Pieces: $($piece_variant:ident $piece_repr:literal),*;
                 $($other_variant:ident $other_repr:literal),*;
@@ -126,7 +126,7 @@ macro_rules! game_details {
         // Square types.
         $crate::interface::game_details!(
             @cartesian_square
-            Squares: $sq_base $file_num $rank_num;
+            Squares: $file_num $rank_num;
         );
 
         // Piece types.
@@ -298,10 +298,10 @@ macro_rules! game_details {
     // from the given game specific details like the number of Files and Ranks.
     (
         @cartesian_square
-        Squares: $sq_base:ident $file_num:literal $rank_num:literal;
+        Squares: $file_num:literal $rank_num:literal;
     ) => {
-        pub type BitBoard = $crate::interface::CartesianSquareSet<$sq_base, $file_num, $rank_num>;
-        pub type Square = $crate::interface::CartesianSquare<$sq_base, $file_num, $rank_num>;
+        pub type BitBoard = $crate::interface::CartesianSquareSet<$file_num, $rank_num>;
+        pub type Square = $crate::interface::CartesianSquare<$file_num, $rank_num>;
         pub type File = $crate::interface::CartesianFile<$file_num>;
         pub type Rank = $crate::interface::CartesianRank<$rank_num>;
     };

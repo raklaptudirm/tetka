@@ -15,8 +15,7 @@ use std::{fmt, num::ParseIntError, str::FromStr};
 
 use super::{
     castling::{self, CastlingRightsParseError, Dimension, Side},
-    movegen, BitBoard, Color, ColoredPiece, File, Move, MoveFlag, Piece, Rank,
-    Square,
+    movegen, BitBoard, Color, ColoredPiece, Move, MoveFlag, Piece, Square,
 };
 use crate::interface::{
     self, parse::PiecePlacementParseError, ColoredPieceType, Hash, MoveStore,
