@@ -1,5 +1,6 @@
 use super::{
-    CartesianFile, CartesianRank, CartesianSquare, RepresentableType, SetType,
+    derive_set, CartesianFile, CartesianRank, CartesianSquare,
+    RepresentableType, SetType,
 };
 
 #[derive(
@@ -24,9 +25,9 @@ pub struct CartesianSquareSet<const F: u8, const R: u8>(u64);
 
 impl<const F: u8, const R: u8> CartesianSquareSet<F, R> {
     /// The BitBoard containing Squares in the first File.
-    const FIRST_FILE: Self = Self(0);
+    const FIRST_FILE: Self = derive_set!(@first_file u64 F R);
     /// The BitBoard containing Squares in the first Rank.
-    const FIRST_RANK: Self = Self(0);
+    const FIRST_RANK: Self = derive_set!(@first_rank u64 F R);
 
     /// north returns a new Self with all the squares shifted to the north.
     #[must_use]
@@ -68,7 +69,7 @@ impl<const F: u8, const R: u8> CartesianSquareSet<F, R> {
 impl<const F: u8, const R: u8> SetType<u64, CartesianSquare<F, R>, u8>
     for CartesianSquareSet<F, R>
 {
-    const EMPTY: Self = Self(0);
+    const EMPTY: Self = derive_set!(@universe_bb u64 F R);
     const UNIVERSE: Self = Self(0);
 }
 

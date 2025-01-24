@@ -593,8 +593,7 @@ pub(crate) use set_type;
 
 // derive_set resolves into some of the fundamental sets for a SetType/BitBoard.
 macro_rules! derive_set {
-    // @universe resolves into the universal set.
-    (@universe $base:tt $elem:tt) => {{
+    (@universe $base:tt $elem:path) => {{
         use $crate::interface::RepresentableType;
         Self(
             // (1 << Square::N) - 1
@@ -607,37 +606,42 @@ macro_rules! derive_set {
         )
     }};
 
+    // @universe resolves into the universal set.
+    (@universe_bb $base:ident $F:ident $R:ident) => {{
+        Self(
+            // (1 << Square::N) - 1
+            match (1 as $base).checked_shl($F as u32 * $R as u32) {
+                Some(universe) => universe.wrapping_sub(1),
+                None => (-1i8) as $base,
+            },
+        )
+    }};
+
     // @first_rank resolves into the set containing the Squares in the first Rank.
-    (@first_rank $bb:tt) => {{
-        use $crate::interface::{RepresentableType, BitBoardType, SquareType};
+    (@first_rank $base:ident $F:ident $R:ident) => {{
         Self(
             // (1 << File::N) - 1
-            match (1 as <$bb as BitBoardType>::Base)
-                .checked_shl(<<<$bb as BitBoardType>::Square as SquareType>::File as RepresentableType<u8>>::N as u32) {
-                    Some(universe) => universe.wrapping_sub(1),
-                    None => 1,
-                }
+            match (1 as $base).checked_shl($F as u32) {
+                Some(universe) => universe.wrapping_sub(1),
+                None => 1,
+            },
         )
     }};
 
     // @first_file resolves into the set containing the Squares in the first File.
-    (@first_file $bb:tt) => {{
-        use $crate::interface::{RepresentableType, BitBoardType, SquareType};
-
+    (@first_file $base:ident $F:ident $R:ident) => {{
         let mut i = 0u32;
-        let mut file = 0 as <$bb as BitBoardType>::Base;
-        let file_n = <<
-            <$bb as BitBoardType>::Square as SquareType
-        >::File as RepresentableType<u8>>::N as u32;
+        let mut file = 0 as $base;
+        let file_n = $F as u32;
 
         loop {
             // i < file_n
             if i >= file_n {
-                break
+                break;
             }
 
             // file |= 1 << (File::N * i)
-            file |= match (1 as <$bb as BitBoardType>::Base).checked_shl(file_n * i) {
+            file |= match (1 as $base).checked_shl(file_n * i) {
                 Some(file) => file,
                 None => 0,
             };
