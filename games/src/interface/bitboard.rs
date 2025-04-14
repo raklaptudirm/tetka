@@ -1,13 +1,73 @@
 use std::{
     marker::PhantomData,
-    ops::{BitAnd, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, Shr},
+    ops::{BitAnd, BitOr, BitXor, Shl, Shr},
 };
 
 use num_traits::int::PrimInt;
 
 use super::{
     CartesianFile, CartesianRank, CartesianSquare, RepresentableType, SetType,
+    SquareType,
 };
+
+/// BitBoardType is a generalized interface implemented by BitBoards of
+/// arbitrary size. This allows programs to handle BitBoards of any size with
+/// generic functions using this common interface.
+pub trait BitBoardType: SetType<Self::Base, Self::Square, u8>
+where
+    Self::Base: PrimInt,
+    Self::Square: SquareType,
+{
+    /// The backing [`PrimInt`] type for the BitBoard.
+    type Base;
+    /// The type of the Squares in the BitBoard.
+    type Square;
+
+    /// The BitBoard containing Squares in the first File.
+    const FIRST_FILE: Self;
+    /// The BitBoard containing Squares in the first Rank.
+    const FIRST_RANK: Self;
+
+    /// north returns a new Self with all the squares shifted to the north.
+    #[must_use]
+    fn north(self) -> Self {
+        (self << <Self::Square as SquareType>::File::N) & Self::UNIVERSE
+    }
+
+    /// south returns a new Self with all the squares shifted to the south.
+    #[must_use]
+    fn south(self) -> Self {
+        self >> <Self::Square as SquareType>::File::N
+    }
+
+    /// east returns a new Self with all the squares shifted to the east.
+    #[must_use]
+    fn east(self) -> Self {
+        (self << 1) & (Self::UNIVERSE ^ Self::FIRST_FILE)
+    }
+
+    /// west returns a new Self with all the squares shifted to the west.
+    #[must_use]
+    fn west(self) -> Self {
+        (self >> 1)
+            & (Self::UNIVERSE
+                ^ (Self::FIRST_FILE
+                    << (<Self::Square as SquareType>::File::N - 1)))
+    }
+
+    /// Returns a BitBoard containing all the squares from the given `File`.
+    #[must_use]
+    fn file(file: <Self::Square as SquareType>::File) -> Self {
+        Self::FIRST_FILE << file.into() as usize
+    }
+
+    /// Returns a BitBoard containing all the squares from the given `Rank`.
+    #[must_use]
+    fn rank(rank: <Self::Square as SquareType>::Rank) -> Self {
+        Self::FIRST_RANK
+            << (<Self::Square as SquareType>::File::N * rank.into() as usize)
+    }
+}
 
 #[derive(
     Copy,
@@ -41,37 +101,37 @@ impl<B: PrimInt, const F: u8, const R: u8> CartesianSquareSet<B, F, R> {
 
     /// north returns a new Self with all the squares shifted to the north.
     #[must_use]
-    pub fn north(self) -> Self {
+    fn north(self) -> Self {
         (self << F) & Self::UNIVERSE
     }
 
     /// south returns a new Self with all the squares shifted to the south.
     #[must_use]
-    pub fn south(self) -> Self {
+    fn south(self) -> Self {
         self >> F
     }
 
     /// east returns a new Self with all the squares shifted to the east.
     #[must_use]
-    pub fn east(self) -> Self {
+    fn east(self) -> Self {
         (self << 1u8) & (Self::UNIVERSE ^ Self::FIRST_FILE)
     }
 
     /// west returns a new Self with all the squares shifted to the west.
     #[must_use]
-    pub fn west(self) -> Self {
+    fn west(self) -> Self {
         (self >> 1u8) & (Self::UNIVERSE ^ (Self::FIRST_FILE << (F - 1)))
     }
 
     /// Returns a BitBoard containing all the squares from the given `File`.
     #[must_use]
-    pub fn file(file: CartesianFile<F>) -> Self {
+    fn file(file: CartesianFile<F>) -> Self {
         Self::FIRST_FILE << u8::from(file) as usize
     }
 
     /// Returns a BitBoard containing all the squares from the given `Rank`.
     #[must_use]
-    pub fn rank(rank: CartesianRank<R>) -> Self {
+    fn rank(rank: CartesianRank<R>) -> Self {
         Self::FIRST_RANK << (F as usize * u8::from(rank) as usize)
     }
 }
@@ -144,22 +204,6 @@ impl<B: PrimInt, const F: u8, const R: u8> Shr<usize>
 
     fn shr(self, rhs: usize) -> Self::Output {
         Self(self.0 >> rhs, self.1)
-    }
-}
-
-impl<B: PrimInt, const F: u8, const R: u8> BitOrAssign
-    for CartesianSquareSet<B, F, R>
-{
-    fn bitor_assign(&mut self, rhs: Self) {
-        *self = *self | rhs
-    }
-}
-
-impl<B: PrimInt, const F: u8, const R: u8> BitXorAssign
-    for CartesianSquareSet<B, F, R>
-{
-    fn bitxor_assign(&mut self, rhs: Self) {
-        *self = *self ^ rhs
     }
 }
 // REMOVE //

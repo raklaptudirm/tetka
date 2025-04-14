@@ -258,7 +258,7 @@ impl FromStr for Position {
             castling: Default::default(),
         };
 
-        // TODO: interface::parse::piece_placement(&mut position, pos)?;
+        interface::parse::piece_placement(&mut position, pos)?;
 
         let kings = position.piece_bb(Piece::King);
         let white_king = (kings & position.color_bb(Color::White)).next();
@@ -291,21 +291,19 @@ impl fmt::Display for Position {
         let board = self;
         let mut string_rep = String::from(" ");
 
-        /*
-                for rank in Rank::iter().rev() {
-                    for file in File::iter() {
-                        let square = Square::new(file, rank);
-                        let square_str = match board.at(square) {
-                            Some(piece) => format!("{} ", piece),
-                            None => ". ".to_string(),
-                        };
-                        string_rep += &square_str;
-                    }
+        for rank in Rank::iter().rev() {
+            for file in File::iter() {
+                let square = Square::new(file, rank);
+                let square_str = match board.at(square) {
+                    Some(piece) => format!("{} ", piece),
+                    None => ". ".to_string(),
+                };
+                string_rep += &square_str;
+            }
 
-                    // Append the rank marker.
-                    string_rep += &format!(" {} \n ", rank);
-                }
-        */
+            // Append the rank marker.
+            string_rep += &format!(" {} \n ", rank);
+        }
 
         // Append the file markers.
         string_rep += "a b c d e f g\n";

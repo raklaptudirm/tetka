@@ -12,9 +12,13 @@
 // limitations under the License.
 
 use std::num::ParseIntError;
+use std::str::FromStr;
 
-use crate::interface::ColorType;
+use crate::interface::{
+    ColorType, ColoredPiece, File, PositionType, Rank, Square, SquareType,
+};
 
+use strum::IntoEnumIterator;
 use thiserror::Error;
 
 /// PositionParseErr represents an error encountered while parsing
@@ -32,13 +36,7 @@ pub enum PiecePlacementParseError {
     TooManyRanks(usize),
 }
 
-/*
-pub(crate) fn piece_placement<
-    T: PositionType<Square = CartesianSquare<B, F, R>>,
-    B: PrimInt,
-    const F: u8,
-    const R: u8,
->(
+pub(crate) fn piece_placement<T: PositionType<Square: SquareType>>(
     position: &mut T,
     fen_fragment: &str,
 ) -> Result<(), PiecePlacementParseError> {
@@ -113,7 +111,7 @@ pub(crate) fn piece_placement<
 
     Ok(())
 }
-*/
+
 pub(crate) fn ply_count<C: ColorType>(
     fmc: &str,
     stm: C,

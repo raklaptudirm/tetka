@@ -1,6 +1,6 @@
 use std::{ops, sync::LazyLock};
 
-use crate::interface::{RepresentableType, SetType};
+use crate::interface::{BitBoardType, RepresentableType, SetType, SquareType};
 
 use strum::IntoEnumIterator;
 

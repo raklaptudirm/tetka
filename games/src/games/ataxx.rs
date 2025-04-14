@@ -16,8 +16,8 @@ use std::{cmp, fmt, num::ParseIntError, str::FromStr, sync::LazyLock};
 use crate::interface::{
     game_details,
     parse::{self, PiecePlacementParseError},
-    Hash, MoveStore, MoveType, PositionType, RepresentableType, SetType,
-    TypeParseError,
+    BitBoardType, Hash, MoveStore, MoveType, PositionType, RepresentableType,
+    SetType, TypeParseError,
 };
 
 use strum::IntoEnumIterator;
