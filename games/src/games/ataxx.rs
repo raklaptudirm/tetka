@@ -60,13 +60,13 @@ impl PositionType for Position {
     const STARTPOS: &str = "x5o/7/7/7/7/7/o5x x 0 1";
 
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
-        self.bitboards[piece as usize].insert(sq);
+        self.bitboards[piece].insert(sq);
     }
 
     fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
         match self.at(sq) {
             Some(piece) => {
-                self.bitboards[piece as usize].remove(sq);
+                self.bitboards[piece].remove(sq);
                 Some(piece)
             }
             None => None,
@@ -275,15 +275,15 @@ impl PositionType for Position {
 
 impl Position {
     pub fn piece_bb(&self, piece: Piece) -> BitBoard {
-        self.bitboards[piece as usize]
+        self.bitboards[piece]
     }
 
     pub fn color_bb(&self, color: Color) -> BitBoard {
-        self.bitboards[color as usize]
+        self.bitboards[color]
     }
 
     pub fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
-        self.bitboards[piece as usize]
+        self.bitboards[piece]
     }
     fn get_hash(black: BitBoard, white: BitBoard, stm: Color) -> Hash {
         let a = black.into();
@@ -643,12 +643,12 @@ impl BitBoard {
 
     /// single returns the targets of a singular Move from the given Square.
     pub fn single(square: Square) -> BitBoard {
-        SINGLES[square as usize]
+        SINGLES[square]
     }
 
     /// double returns the targets of a jump Move from the given Square.
     pub fn double(square: Square) -> BitBoard {
-        DOUBLES[square as usize]
+        DOUBLES[square]
     }
 }
 
@@ -656,7 +656,7 @@ static SINGLES: LazyLock<[BitBoard; Square::N]> = LazyLock::new(|| {
     let mut singles = [BitBoard::EMPTY; Square::N];
     for square in Square::iter() {
         let square_bb = BitBoard::from(square);
-        singles[square as usize] = BitBoard::singles(square_bb) ^ square_bb;
+        singles[square] = BitBoard::singles(square_bb) ^ square_bb;
     }
     singles
 });
@@ -665,7 +665,7 @@ static DOUBLES: LazyLock<[BitBoard; Square::N]> = LazyLock::new(|| {
     let mut doubles = [BitBoard::EMPTY; Square::N];
     for square in Square::iter() {
         let singles = BitBoard::singles(BitBoard::from(square));
-        doubles[square as usize] = BitBoard::singles(singles) ^ singles;
+        doubles[square] = BitBoard::singles(singles) ^ singles;
     }
     doubles
 });

@@ -103,7 +103,7 @@ impl PositionType for Position {
         let mut pawns = self.pawns;
 
         // Move our pawn to the new square.
-        pawns[stm as usize] = m.pawn();
+        pawns[stm] = m.pawn();
 
         // Remove the selected tile from the board.
         let tiles = self.colored_piece_bb(ColoredPiece::Tile)
@@ -193,11 +193,11 @@ impl Position {
         }
     }
     fn pawn(&self, color: Color) -> Square {
-        self.pawns[color as usize]
+        self.pawns[color]
     }
 
     fn set_pawn(&mut self, color: Color, square: Square) {
-        self.pawns[color as usize] = square
+        self.pawns[color] = square
     }
 
     fn get_hash(

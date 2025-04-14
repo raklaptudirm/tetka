@@ -57,15 +57,15 @@ impl PositionType for Position {
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
-        self.piece_bbs[piece.piece() as usize].insert(sq);
-        self.color_bbs[piece.color() as usize].insert(sq);
+        self.piece_bbs[piece.piece()].insert(sq);
+        self.color_bbs[piece.color()].insert(sq);
     }
 
     fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
         match self.at(sq) {
             Some(piece) => {
-                self.piece_bbs[piece.piece() as usize].remove(sq);
-                self.color_bbs[piece.color() as usize].remove(sq);
+                self.piece_bbs[piece.piece()].remove(sq);
+                self.color_bbs[piece.color()].remove(sq);
                 Some(piece)
             }
             None => None,
@@ -184,11 +184,11 @@ impl PositionType for Position {
 
 impl Position {
     pub fn piece_bb(&self, piece: Piece) -> BitBoard {
-        self.piece_bbs[piece as usize]
+        self.piece_bbs[piece]
     }
 
     pub fn color_bb(&self, color: Color) -> BitBoard {
-        self.color_bbs[color as usize]
+        self.color_bbs[color]
     }
 
     pub fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {

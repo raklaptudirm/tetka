@@ -60,11 +60,11 @@ impl BitBoard {
     }
 
     pub fn between(sq_1: Square, sq_2: Square) -> BitBoard {
-        BETWEEN[sq_1 as usize][sq_2 as usize]
+        BETWEEN[sq_1][sq_2]
     }
 
     pub fn between2(sq_1: Square, sq_2: Square) -> BitBoard {
-        BETWEEN[sq_1 as usize][sq_2 as usize] | sq_2
+        BETWEEN[sq_1][sq_2] | sq_2
     }
 }
 
@@ -148,7 +148,7 @@ static BETWEEN: LazyLock<[[BitBoard; Square::N]; Square::N]> =
                 // The intersection between the two blocked rays will be the between
                 // BitBoard + Squares 1 and 2. Therefore, to get the between BitBoard, a
                 // final intersection operator with the union of Squares 1 and 2 is do
-                between[square_1 as usize][square_2 as usize] =
+                between[square_1][square_2] =
                     moves::hyperbola(square_1, blockers, mask)
                         & moves::hyperbola(square_2, blockers, mask);
             }

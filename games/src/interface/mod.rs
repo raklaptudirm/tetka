@@ -548,6 +548,20 @@ macro_rules! representable_type {
                 }
             }
         }
+
+        impl<A, const N: usize> std::ops::Index<$type> for [A; N] {
+            type Output = A;
+
+            fn index(&self, index: $type) -> &Self::Output {
+                &self[u8::from(index) as usize]
+            }
+        }
+
+        impl<A, const N: usize> std::ops::IndexMut<$type> for [A; N] {
+            fn index_mut(&mut self, index: $type) -> &mut Self::Output {
+                &mut self[u8::from(index) as usize]
+            }
+        }
     };
 
     (@__puke_1 $($t:tt)*) => { 1 };
