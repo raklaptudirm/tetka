@@ -233,43 +233,6 @@ impl<A, const C: u8, const N: usize> IndexMut<CartesianFile<C>> for [A; N] {
     }
 }
 
-impl<const C: u8> IntoEnumIterator for CartesianFile<C> {
-    type Iterator = Self;
-
-    fn iter() -> Self::Iterator {
-        Self(0)
-    }
-}
-
-impl<const C: u8> Iterator for CartesianFile<C> {
-    type Item = Self;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let idx = (*self).into();
-        if idx < C {
-            self.0 = idx + 1;
-            Some(Self(idx))
-        } else {
-            None
-        }
-    }
-}
-
-impl<const C: u8> DoubleEndedIterator for CartesianFile<C> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        let idx = (*self).into();
-        self.0 = idx - 1;
-        if idx < C {
-            Some(Self(idx))
-        } else {
-            None
-        }
-    }
-}
-
-impl<const C: u8> FusedIterator for CartesianFile<C> {}
-impl<const C: u8> ExactSizeIterator for CartesianFile<C> {}
-
 #[derive(Clone, Copy, PartialEq, Eq, derive_more::Into, derive_more::From)]
 pub struct CartesianRank<const N: u8>(u8);
 
@@ -321,40 +284,3 @@ impl<A, const C: u8, const N: usize> IndexMut<CartesianRank<C>> for [A; N] {
         &mut self[u8::from(index) as usize]
     }
 }
-
-impl<const C: u8> IntoEnumIterator for CartesianRank<C> {
-    type Iterator = Self;
-
-    fn iter() -> Self::Iterator {
-        Self(0)
-    }
-}
-
-impl<const C: u8> Iterator for CartesianRank<C> {
-    type Item = Self;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let idx = (*self).into();
-        if idx < C {
-            self.0 = idx + 1;
-            Some(Self(idx))
-        } else {
-            None
-        }
-    }
-}
-
-impl<const C: u8> DoubleEndedIterator for CartesianRank<C> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        let idx = (*self).into();
-        self.0 = idx - 1;
-        if idx < C {
-            Some(Self(idx))
-        } else {
-            None
-        }
-    }
-}
-
-impl<const C: u8> FusedIterator for CartesianRank<C> {}
-impl<const C: u8> ExactSizeIterator for CartesianRank<C> {}

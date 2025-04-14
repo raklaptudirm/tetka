@@ -11,16 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{num::ParseIntError, str::FromStr};
+use std::num::ParseIntError;
 
-use crate::interface::{
-    CartesianFile, CartesianRank, CartesianSquare, ColorType, ColoredPiece,
-    PositionType,
-};
+use crate::interface::ColorType;
 
 use thiserror::Error;
-
-use strum::IntoEnumIterator;
 
 /// PositionParseErr represents an error encountered while parsing
 /// the given FEN position field into a valid Position.
@@ -37,8 +32,10 @@ pub enum PiecePlacementParseError {
     TooManyRanks(usize),
 }
 
+/*
 pub(crate) fn piece_placement<
-    T: PositionType<Square = CartesianSquare<F, R>>,
+    T: PositionType<Square = CartesianSquare<B, F, R>>,
+    B: PrimInt,
     const F: u8,
     const R: u8,
 >(
@@ -52,17 +49,17 @@ pub(crate) fn piece_placement<
     // Spilt the position spec by the Ranks which are separated by '/'.
     let ranks: Vec<&str> = fen_fragment.split('/').collect();
 
-    let first_file = CartesianFile::<F>::iter().next().unwrap();
+    let first_file = File::<T>::iter().next().unwrap();
 
     let mut file = Ok(first_file);
-    let mut rank = Ok(CartesianRank::<R>::iter().last().unwrap());
+    let mut rank = Ok(Rank::<T>::iter().last().unwrap());
 
     // Iterate over the Ranks in the string spec.
     for rank_data in ranks {
         // Rank pointer ran out, but data carried on.
         if rank.is_err() {
             return Err(PiecePlacementParseError::TooManyRanks(
-                CartesianRank::<R>::iter().len(),
+                Rank::<T>::iter().len(),
             ));
         }
 
@@ -73,14 +70,14 @@ pub(crate) fn piece_placement<
                 return Err(PiecePlacementParseError::JumpTooLong);
             }
 
-            let file_value = file.unwrap();
-            let rank_value = rank.unwrap();
-            let square = CartesianSquare::<F, R>::new(file_value, rank_value);
+            let file_value = *file.as_ref().unwrap();
+            let rank_value = *rank.as_ref().unwrap();
+            let square = Square::<T>::new(file_value, rank_value);
             match data {
                 // Numbers represent jump specs to jump over empty squares.
                 '1'..='8' => {
-                    file = CartesianFile::<F>::try_from(
-                        u8::from(file_value) + data as u8 - b'1',
+                    file = File::<T>::try_from(
+                        file_value.into() + data as u8 - b'1',
                     );
                     if file.is_err() {
                         return Err(PiecePlacementParseError::JumpTooLong);
@@ -98,7 +95,7 @@ pub(crate) fn piece_placement<
             }
 
             // On to the next Square spec in the Rank spec.
-            file = CartesianFile::<F>::try_from(u8::from(file.unwrap()) + 1);
+            file = <File<T>>::try_from(file.unwrap().into() + 1);
         }
 
         // After rank data runs out, file pointer should be
@@ -110,15 +107,13 @@ pub(crate) fn piece_placement<
         }
 
         // Switch rank pointer and reset file pointer.
-        rank = CartesianRank::<R>::try_from(
-            (u8::from(rank.unwrap())).wrapping_sub(1),
-        );
+        rank = Rank::<T>::try_from((rank.unwrap().into()).wrapping_sub(1));
         file = Ok(first_file);
     }
 
     Ok(())
 }
-
+*/
 pub(crate) fn ply_count<C: ColorType>(
     fmc: &str,
     stm: C,

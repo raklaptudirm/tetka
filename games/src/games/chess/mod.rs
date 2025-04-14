@@ -69,19 +69,19 @@ impl BitBoard {
 }
 
 static DIAGONAL: LazyLock<[BitBoard; 15]> = LazyLock::new(|| {
-    let main_diagonal = BitBoard::from(0x8040201008040201u64);
+    let MAIN_DIAGONAL = BitBoard::from(0x8040201008040201u64);
 
     let mut diagonals = [BitBoard::EMPTY; 15];
 
     // Initialize diagonals to the east of the main.
-    let mut upper_triangle = main_diagonal;
+    let mut upper_triangle = MAIN_DIAGONAL;
     for diagonal in diagonals.iter_mut().rev().skip(7) {
         *diagonal = upper_triangle;
         upper_triangle = upper_triangle.east();
     }
 
     // Initialize diagonals to the west of the main.
-    let mut upper_triangle = main_diagonal;
+    let mut upper_triangle = MAIN_DIAGONAL;
     for diagonal in diagonals.iter_mut().skip(7) {
         *diagonal = upper_triangle;
         upper_triangle = upper_triangle.west();
@@ -91,19 +91,19 @@ static DIAGONAL: LazyLock<[BitBoard; 15]> = LazyLock::new(|| {
 });
 
 static ANTI_DIAGONAL: LazyLock<[BitBoard; 15]> = LazyLock::new(|| {
-    let main_anti_diagonal = BitBoard::from(0x0102040810204080u64);
+    let MAIN_ANTI_DIAGONAL = BitBoard::from(0x0102040810204080u64);
 
     let mut anti_diagonals = [BitBoard::EMPTY; 15];
 
     // Initialize anti-diagonals to the east of the main.
-    let mut upper_triangle = main_anti_diagonal;
+    let mut upper_triangle = MAIN_ANTI_DIAGONAL;
     for anti_diagonal in anti_diagonals.iter_mut().skip(7) {
         *anti_diagonal = upper_triangle;
         upper_triangle = upper_triangle.east();
     }
 
     // Initialize anti-diagonals to the west of the main.
-    let mut upper_triangle = main_anti_diagonal;
+    let mut upper_triangle = MAIN_ANTI_DIAGONAL;
     for anti_diagonal in anti_diagonals.iter_mut().rev().skip(7) {
         *anti_diagonal = upper_triangle;
         upper_triangle = upper_triangle.west();
