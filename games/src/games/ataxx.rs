@@ -28,7 +28,7 @@ use thiserror::Error;
 // colored. The two colors are Black and White respectively, with Black moving
 // first.
 game_details!(
-    Squares: 7 7;
+    Squares: u8 7 7;
     Pieces: Piece "x"; Block "-";
     Colors: Black "x" ("x"),
             White "o" ("o");
@@ -487,8 +487,8 @@ impl Move {
     #[rustfmt::skip]
     pub fn new(source: Square, target: Square) -> Move {
 		Move(
-			(u8::from(source) as u16) << Move::SOURCE_OFFSET |
-			(u8::from(target) as u16) << Move::TARGET_OFFSET
+			(source.into()) << Move::SOURCE_OFFSET |
+			(target.into()) << Move::TARGET_OFFSET
 		)
     }
 
@@ -642,12 +642,12 @@ impl BitBoard {
 
     /// single returns the targets of a singular Move from the given Square.
     pub fn single(square: Square) -> BitBoard {
-        SINGLES[square]
+        SINGLES[square.into()]
     }
 
     /// double returns the targets of a jump Move from the given Square.
     pub fn double(square: Square) -> BitBoard {
-        DOUBLES[square]
+        DOUBLES[square.into()]
     }
 }
 
@@ -655,7 +655,7 @@ static SINGLES: LazyLock<[BitBoard; Square::N]> = LazyLock::new(|| {
     let mut singles = [BitBoard::EMPTY; Square::N];
     for square in Square::iter() {
         let square_bb = BitBoard::from(square);
-        singles[square] = BitBoard::singles(square_bb) ^ square_bb;
+        singles[square.into()] = BitBoard::singles(square_bb) ^ square_bb;
     }
     singles
 });
@@ -664,7 +664,7 @@ static DOUBLES: LazyLock<[BitBoard; Square::N]> = LazyLock::new(|| {
     let mut doubles = [BitBoard::EMPTY; Square::N];
     for square in Square::iter() {
         let singles = BitBoard::singles(BitBoard::from(square));
-        doubles[square] = BitBoard::singles(singles) ^ singles;
+        doubles[square.into()] = BitBoard::singles(singles) ^ singles;
     }
     doubles
 });

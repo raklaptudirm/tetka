@@ -92,7 +92,7 @@ pub enum Side {
 
 impl Side {
     pub fn from_sqs(king_sq: Square, rook_sq: Square) -> Side {
-        if u8::from(king_sq) < u8::from(rook_sq) {
+        if king_sq.into() < rook_sq.into() {
             Side::H
         } else {
             Side::A
@@ -172,7 +172,7 @@ impl Info {
                 if right.is_uppercase() {
                     let file =
                         File::from_str(&right.to_lowercase().to_string())?;
-                    if u8::from(file) > u8::from(white_king.file()) {
+                    if file.into() > white_king.file().into() {
                         white_h = file;
                         rights = rights | Dimension::WhiteH;
                     } else {
@@ -181,7 +181,7 @@ impl Info {
                     }
                 } else {
                     let file = File::from_str(&right.to_string())?;
-                    if u8::from(file) > u8::from(black_king.file()) {
+                    if file.into() > black_king.file().into() {
                         black_h = file;
                         rights = rights | Dimension::BlackH;
                     } else {
@@ -251,20 +251,20 @@ impl Info {
         }
 
         // Initialize the rights update for the king's squares.
-        info.rights_masks[w_king] = Rights::new() | Dimension::WhiteH | Dimension::WhiteA;
-        info.rights_masks[b_king] = Rights::new() | Dimension::BlackH | Dimension::BlackA;
+        info.rights_masks[w_king.into()] = Rights::new() | Dimension::WhiteH | Dimension::WhiteA;
+        info.rights_masks[b_king.into()] = Rights::new() | Dimension::BlackH | Dimension::BlackA;
 
         // Initialize the rights update for the rook's squares.
-        info.rights_masks[info.rooks[wh]] = Rights::new() | Dimension::WhiteH;
-        info.rights_masks[info.rooks[wa]] = Rights::new() | Dimension::WhiteA;
-        info.rights_masks[info.rooks[bh]] = Rights::new() | Dimension::BlackH;
-        info.rights_masks[info.rooks[ba]] = Rights::new() | Dimension::BlackA;
+        info.rights_masks[info.rooks[wh].into()] = Rights::new() | Dimension::WhiteH;
+        info.rights_masks[info.rooks[wa].into()] = Rights::new() | Dimension::WhiteA;
+        info.rights_masks[info.rooks[bh].into()] = Rights::new() | Dimension::BlackH;
+        info.rights_masks[info.rooks[ba].into()] = Rights::new() | Dimension::BlackA;
 
         info
     }
 
     pub fn get_updates(&self, square: Square) -> Rights {
-        self.rights_masks[square]
+        self.rights_masks[square.into()]
     }
 
     pub fn rook(&self, side: Dimension) -> Square {

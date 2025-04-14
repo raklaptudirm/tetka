@@ -43,12 +43,12 @@ const EN_PASSANT_KEYS: [u64; File::N] = [
 
 #[inline(always)]
 pub fn piece_square_key(piece: ColoredPiece, square: Square) -> Hash {
-    Hash::new(PIECE_SQUARE_KEYS[piece as usize][square])
+    Hash::new(PIECE_SQUARE_KEYS[piece as usize][square.into()])
 }
 
 #[inline(always)]
 pub fn en_passant_key(ep_square: Square) -> Hash {
-    Hash::new(EN_PASSANT_KEYS[ep_square.file()])
+    Hash::new(EN_PASSANT_KEYS[ep_square.file().into()])
 }
 
 #[inline(always)]
