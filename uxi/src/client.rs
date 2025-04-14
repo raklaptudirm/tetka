@@ -19,15 +19,43 @@ use crate::bundles::{new_guarded_ctx, GuardedBundledCtx};
 use crate::inbuilt::Context;
 use crate::{error, flag, inbuilt, CmdResult, Command, Parameter, RunError};
 
-/// Client represents an UXI engine client. It can accept and parse commands
-/// from the GUI and send commands to the GUI though its input and output.
-/// Commands sent from the GUI are automatically parsed and executed according
-/// to the Command schema provided by the user to the Client. The client supports
-/// any UXI type protocol, including but not limited to UCI and UAI.
+/// Client is the basic representation of an UXI engine.
 ///
-/// Options can also be added to a Client in the form of [parameters](Parameter).
-/// See the documentation of [`Parameter`] and the [`Client::option`] function
-/// for more details.
+/// It takes a single generic argument `C`, which is the type for the engine's
+/// internal context. A value of this type will be persistently stored and
+/// made available across all the commands run by the Client. Data which needs
+/// persistence across commands such as the internal game board should be
+/// stored here.
+///
+/// It can accept and parse commands from the GUI and send commands to the GUI
+/// though its standard input and output streams. Commands sent from the GUI are
+/// automatically parsed and executed according to the Command schema provided
+/// by the user to the Client. The client supports any UXI type protocol,
+/// including but not limited to UCI and UAI.
+///
+/// ```
+/// # use uxi::Client;
+/// # type Context = u64;
+/// // Define the details of your engine in a Client.
+/// let client = Client::<Context>::new()
+///     // various builder methods...
+///     .protocol("uci")
+///     .engine("Engine v0.0.0")
+///     .author("Rak Laptudirm");
+///
+/// // Run some given command with the Client.
+/// client.run_cmd_string("uci");
+///
+/// // Start the engine's command loop.
+/// client.start();
+/// ```
+///
+/// These are all the builder methods supported by the Client:
+/// - [`Client::command`]: Adds a UXI [Command] and its implementation.
+/// - [`Client::option`]: Adds a UXI option (called a [Parameter]).
+/// - [`Client::protocol`]: Sets the UXI protocol for the engine.
+/// - [`Client::engine`]: Sets the name of the engine.
+/// - [`Client::author`]: Sets the author of the engine.
 pub struct Client<C: Send> {
     initial_context: Context,
     commands: HashMap<&'static str, Command<C>>,
@@ -51,7 +79,7 @@ impl<C: Send + Default + 'static> Client<C> {
         'reading: for line in stdin.lock().lines() {
             // Run the Command and handle any errors.
             if let Err(err) =
-                self.run_from_string::<false>(&line.unwrap(), &context)
+                self.run_from_string::<true>(&line.unwrap(), &context)
             {
                 println!("{}", err);
                 if err.should_quit() {
