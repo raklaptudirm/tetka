@@ -21,7 +21,7 @@ use crate::inbuilt::Context;
 // Dependency Graph of the Various Bundle structures: //
 // -------------------------------------------------- //
 // Bundle(Encapsulation) --locking--vv                //
-//      /                  MutexGuard<'_, BundledCtx> //
+//      /                \ MutexGuard<'_, BundledCtx> //
 // Flag Values            \                           //
 //         GuardedBundledCtx(Mutex-guard)             //
 //                          \                         //
@@ -31,11 +31,19 @@ use crate::inbuilt::Context;
 // -------------------------------------------------- //
 
 /// Bundle is a packet containing all the relevant context necessary for a
-/// [Command](crate::Command) invocation. It provides access to the values of
-/// the flags provided to the command during invocation, the user specific
-/// context, and the inbuilt context for use in a Command's run function. A
-/// given Bundle is tied to a Command's invocation and can't be used outside
-/// that context.
+/// [Command](crate::Command) invocation.
+///
+/// It provides access to the values of the flags provided to the command during
+/// invocation, the values of the UXI options defined by the engine, the user
+/// specific persistent context, and the inbuilt context for use in a Command's
+/// run function. A given Bundle is tied to a Command's invocation and can't be
+/// used outside that context.
+///
+/// Due to the existence of commands which do not block the main command loop,
+/// some of the data exposed by a bundle (specifically, all the data not scoped
+/// to the current command, so everything other than the flag values) might be
+/// accessed and mutated by multiple threads at a time. Thus for safe access,
+/// the bundle needs to be locked with [`Bundle::lock`] to access those data.
 pub struct Bundle<C: Send> {
     context: GuardedBundledCtx<C>,
     flags: flag::Values,
@@ -104,10 +112,18 @@ pub(crate) fn new_guarded_ctx<C: Send>(
     Arc::new(Mutex::new(BundledCtx { user, client }))
 }
 
-/// A BundledCtx bundles the user-provided context `C` and the inbuilt context
+/// BundledCtx provides access to data which might be shared between commands.
+///
+/// Specifically, it bundles the user-given context `C` and the inbuilt context
 /// into a single type for ease of mutex guarding for concurrency. It provides
-/// methods which allow Commands to retrieve information from those contexts. A
-/// [BundledCtx] can be obtained by locking a [Bundle] provided to a Command.
+/// methods which allow Commands to retrieve information from those contexts.
+/// - [`BundledCtx::protocol`]: Currently active protocol. It starts at ``, but
+///     can change to `ugi` or the engine's protocol string due to commands.
+/// - [`BundledCtx::get_check_option`]: Get the value of a check option.
+/// - [`BundledCtx::get_string_option`]: Get the value of a string/combo option.
+/// - [`BundledCtx::get_spin_option`]: Get the value of a spin option.
+///
+/// A [BundledCtx] can be obtained by locking a [Bundle] provided to a Command.
 pub struct BundledCtx<C: Send> {
     user: C,
     pub(crate) client: Context,
