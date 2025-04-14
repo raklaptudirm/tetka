@@ -7,6 +7,7 @@ use super::{
     Clone,
     PartialEq,
     Eq,
+    num_derive::FromPrimitive,
     derive_more::BitOr,
     derive_more::BitAnd,
     derive_more::BitXor,
