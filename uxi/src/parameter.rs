@@ -16,7 +16,7 @@ pub enum Parameter {
     /// String represents a string parameter which can have any string value.
     ///
     /// Its first field contains the default String value for the parameter.
-    String(String),
+    String(&'static str),
 
     /// Spin represents a spin wheel which can be an integer in a certain range.
     ///
@@ -31,7 +31,7 @@ pub enum Parameter {
     ///
     /// Its first argument is the default value while the second argument is the
     /// list of predefined strings. The default value must be included in the list.
-    Combo(String, Vec<String>),
+    Combo(&'static str, Vec<&'static str>),
 }
 
 #[derive(Clone, Default)]
@@ -106,14 +106,13 @@ impl Values {
                 self.numbers.insert(name, value);
             }
             Parameter::Combo(_, strings) => {
-                let value = value_str.to_owned();
-                if strings.contains(&value) {
+                if strings.contains(&value_str) {
                     return Err(format!(
                         "option {}: {} is not one of the combo strings",
-                        name, value
+                        name, value_str
                     ));
                 }
-                self.strings.insert(name, value);
+                self.strings.insert(name, value_str.to_string());
             }
         };
 
@@ -126,13 +125,13 @@ impl Values {
                 self.checks.insert(name, *default);
             }
             Parameter::String(default) => {
-                self.strings.insert(name, default.clone());
+                self.strings.insert(name, default.to_string());
             }
             Parameter::Spin(default, _, _) => {
                 self.numbers.insert(name, *default);
             }
             Parameter::Combo(default, _) => {
-                self.strings.insert(name, default.clone());
+                self.strings.insert(name, default.to_string());
             }
         };
     }

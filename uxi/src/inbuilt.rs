@@ -17,18 +17,18 @@ use std::collections::HashMap;
 #[derive(Clone)]
 pub struct Context {
     /// The name of this Client's engine.
-    pub engine: String,
+    pub engine: &'static str,
     /// The author of this Client's engine.
-    pub author: String,
+    pub author: &'static str,
 
     /// The UXI protocol supported by this Client.
-    pub protocol: String,
+    pub protocol: &'static str,
     /// The currently selected protocol. It can have the values "" for when no uxi
     /// command has been received, "ugi", or <protocol> for those protocols.
-    pub selected_protocol: String,
+    pub selected_protocol: &'static str,
 
     /// Schema of the options supported by this Client.
-    pub options: HashMap<String, Parameter>,
+    pub options: HashMap<&'static str, Parameter>,
     /// Values of the options supported by this Client.
     pub option_values: parameter::Values,
 }
@@ -49,10 +49,10 @@ impl Context {
 impl Default for Context {
     fn default() -> Self {
         Context {
-            engine: "Nameless v0.0.0".to_string(),
-            author: "Anonymous".to_string(),
-            protocol: "".to_string(),
-            selected_protocol: "".to_string(),
+            engine: "Nameless v0.0.0",
+            author: "Anonymous",
+            protocol: "u*i",
+            selected_protocol: "",
             options: HashMap::new(),
             option_values: Default::default(),
         }
@@ -89,7 +89,7 @@ pub mod commands {
             print_client_info(&ctx.client);
             println!("{}ok", ctx.client.protocol);
 
-            ctx.client.selected_protocol = ctx.client.protocol.clone();
+            ctx.client.selected_protocol = ctx.client.protocol;
 
             Ok(())
         })
@@ -103,7 +103,7 @@ pub mod commands {
             print_client_info(&ctx.client);
             println!("ugiok");
 
-            ctx.client.selected_protocol = "ugi".to_string();
+            ctx.client.selected_protocol = "ugi";
 
             Ok(())
         })

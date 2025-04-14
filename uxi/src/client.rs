@@ -30,7 +30,7 @@ use crate::{error, flag, inbuilt, CmdResult, Command, Parameter, RunError};
 /// for more details.
 pub struct Client<C: Send> {
     initial_context: Context,
-    commands: HashMap<String, Command<C>>,
+    commands: HashMap<&'static str, Command<C>>,
 }
 
 impl<C: Send + Default + 'static> Client<C> {
@@ -51,7 +51,7 @@ impl<C: Send + Default + 'static> Client<C> {
         'reading: for line in stdin.lock().lines() {
             // Run the Command and handle any errors.
             if let Err(err) =
-                self.run_from_string::<false>(line.unwrap(), &context)
+                self.run_from_string::<false>(&line.unwrap(), &context)
             {
                 println!("{}", err);
                 if err.should_quit() {
@@ -64,7 +64,7 @@ impl<C: Send + Default + 'static> Client<C> {
     /// run_cmd_strings allows running a Command independently from the main uxi
     /// loop. Since the commands are run in a standalone way, everything is run
     /// synchronously.
-    pub fn run_cmd_string(&self, str: String) -> CmdResult {
+    pub fn run_cmd_string(&self, str: &str) -> CmdResult {
         let context =
             new_guarded_ctx(Default::default(), self.initial_context.clone());
         self.run_from_string::<false>(str, &context)
@@ -74,7 +74,7 @@ impl<C: Send + Default + 'static> Client<C> {
     /// String and then runs that Command with the flag values and the context.
     fn run_from_string<const PARALLEL: bool>(
         &self,
-        str: String,
+        str: &str,
         context: &GuardedBundledCtx<C>,
     ) -> CmdResult {
         let parts = str.split_whitespace().collect::<Vec<&str>>();
@@ -134,11 +134,11 @@ impl<C: Send> Client<C> {
         Client::<C> {
             initial_context: Default::default(),
             commands: HashMap::from([
-                ("quit".to_owned(), inbuilt::commands::quit()),
-                ("isready".to_owned(), inbuilt::commands::isready()),
-                ("ugi".to_owned(), inbuilt::commands::ugi()),
-                ("setoption".to_owned(), inbuilt::commands::setoption()),
-                ("options".to_owned(), inbuilt::commands::options()),
+                ("quit", inbuilt::commands::quit()),
+                ("isready", inbuilt::commands::isready()),
+                ("ugi", inbuilt::commands::ugi()),
+                ("setoption", inbuilt::commands::setoption()),
+                ("options", inbuilt::commands::options()),
             ]),
         }
     }
@@ -151,8 +151,8 @@ impl<C: Send> Client<C> {
     ///     .command("go", go_cmd)
     ///     .command("perft", perft_cmd);
     /// ```
-    pub fn command(mut self, name: &str, cmd: Command<C>) -> Self {
-        self.commands.insert(name.to_string(), cmd);
+    pub fn command(mut self, name: &'static str, cmd: Command<C>) -> Self {
+        self.commands.insert(name, cmd);
         self
     }
 
@@ -166,10 +166,8 @@ impl<C: Send> Client<C> {
     ///     .option("Hash", Parameter::Spin(16, 1, 33554432))
     ///     .option("Threads", Parameter::Spin(1, 1, 1024));
     /// ```
-    pub fn option(mut self, name: &str, option: Parameter) -> Self {
-        self.initial_context
-            .options
-            .insert(name.to_string(), option.clone());
+    pub fn option(mut self, name: &'static str, option: Parameter) -> Self {
+        self.initial_context.options.insert(name, option.clone());
         self.initial_context
             .option_values
             .insert_default(name.to_string(), &option);
@@ -189,16 +187,15 @@ impl<C: Send> Client<C> {
     /// let client = Client::new()
     ///     .protocol("uci");
     /// ```
-    pub fn protocol(mut self, name: &str) -> Self {
+    pub fn protocol(mut self, name: &'static str) -> Self {
         assert!(!self.commands.contains_key(name));
 
         // Move the previous protocol identifier command to the new name.
         self.commands.remove(&self.initial_context.protocol);
-        self.commands
-            .insert(name.to_string(), inbuilt::commands::uxi());
+        self.commands.insert(name, inbuilt::commands::uxi());
 
         // Change the protocol name.
-        name.clone_into(&mut self.initial_context.protocol);
+        self.initial_context.protocol = name;
         self
     }
 
@@ -210,8 +207,8 @@ impl<C: Send> Client<C> {
     /// let client = Client::new()
     ///     .engine("Stockfish2");
     /// ```
-    pub fn engine(mut self, name: &str) -> Self {
-        name.clone_into(&mut self.initial_context.engine);
+    pub fn engine(mut self, name: &'static str) -> Self {
+        self.initial_context.engine = name;
         self
     }
 
@@ -223,8 +220,8 @@ impl<C: Send> Client<C> {
     /// let client = Client::new()
     ///     .author("Rak Laptudirm");
     /// ```
-    pub fn author(mut self, name: &str) -> Self {
-        name.clone_into(&mut self.initial_context.author);
+    pub fn author(mut self, name: &'static str) -> Self {
+        self.initial_context.author = name;
         self
     }
 }

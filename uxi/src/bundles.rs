@@ -116,8 +116,9 @@ pub struct BundledCtx<C: Send> {
 impl<C: Send> BundledCtx<C> {
     /// protocol returns the last protocol command which was issues to the Client.
     /// It returns "" if no protocol command has been issued to the engine till now.
-    pub fn protocol(&self) -> String {
-        self.client.selected_protocol.clone()
+    #[allow(clippy::misnamed_getters)]
+    pub fn protocol(&self) -> &str {
+        self.client.selected_protocol
     }
 
     /// get_check_option returns the value of a check option with the given name.
