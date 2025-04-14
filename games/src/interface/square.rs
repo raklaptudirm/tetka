@@ -258,8 +258,8 @@ impl<const C: u8> Iterator for CartesianFile<C> {
 impl<const C: u8> DoubleEndedIterator for CartesianFile<C> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let idx = (*self).into();
-        if idx > 0 {
-            self.0 = idx - 1;
+        self.0 = idx - 1;
+        if idx < C {
             Some(Self(idx))
         } else {
             None
@@ -347,8 +347,8 @@ impl<const C: u8> Iterator for CartesianRank<C> {
 impl<const C: u8> DoubleEndedIterator for CartesianRank<C> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let idx = (*self).into();
-        if idx > 0 {
-            self.0 = idx - 1;
+        self.0 = idx - 1;
+        if idx < C {
             Some(Self(idx))
         } else {
             None
