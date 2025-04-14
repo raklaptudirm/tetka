@@ -1,7 +1,9 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use super::{Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType};
+use super::{
+    Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType, SquareType,
+};
 
 /// Position is a generalized interface for board representations of a wide
 /// range of games. It can be used to create game-agnostic software. Tetka
@@ -12,7 +14,7 @@ where
     Self::ColoredPiece: ColoredPieceType,
     Self::Move: MoveType,
 {
-    type Square: Copy + Display + FromStr;
+    type Square: SquareType;
 
     /// Type for the pieces (with color) used by this board representation.
     type ColoredPiece;
