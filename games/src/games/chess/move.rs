@@ -63,8 +63,8 @@ impl Move {
     pub fn new(source: Square, target: Square, mvflag: MoveFlag) -> Move {
         Move(
             (mvflag as u16) << Move::MVFLAG_OFFSET
-                | (u8::from(source) as u16) << Move::SOURCE_OFFSET
-                | (target.into() as u16) << Move::TARGET_OFFSET,
+                | (source as u16) << Move::SOURCE_OFFSET
+                | (target as u16) << Move::TARGET_OFFSET,
         )
     }
 
@@ -90,8 +90,8 @@ impl Move {
     ) -> Move {
         Move(
             (promotion as u16) << Move::MVFLAG_OFFSET
-                | (u8::from(source) as u16) << Move::SOURCE_OFFSET
-                | (target.into()) << Move::TARGET_OFFSET,
+                | (source as u16) << Move::SOURCE_OFFSET
+                | (target as u16) << Move::TARGET_OFFSET,
         )
     }
 

@@ -1,4 +1,3 @@
-use std::usize;
 use std::{ops, sync::LazyLock};
 
 use crate::interface::{RepresentableType, SetType};
@@ -31,7 +30,7 @@ crate::interface::game_details!(
 
 impl BitBoard {
     pub fn new(raw: u64) -> BitBoard {
-        BitBoard::from(raw)
+        BitBoard(raw)
     }
 
     pub fn shift(&self, dir: Direction) -> BitBoard {
@@ -60,16 +59,16 @@ impl BitBoard {
     }
 
     pub fn between(sq_1: Square, sq_2: Square) -> BitBoard {
-        BETWEEN[u8::from(sq_1) as usize][sq_2.into()]
+        BETWEEN[sq_1 as usize][sq_2 as usize]
     }
 
     pub fn between2(sq_1: Square, sq_2: Square) -> BitBoard {
-        BETWEEN[u8::from(sq_1) as usize][sq_2.into()] | sq_2
+        BETWEEN[sq_1 as usize][sq_2 as usize] | sq_2
     }
 }
 
 static DIAGONAL: LazyLock<[BitBoard; 15]> = LazyLock::new(|| {
-    const MAIN_DIAGONAL: BitBoard = BitBoard::from(0x8040201008040201u64);
+    const MAIN_DIAGONAL: BitBoard = BitBoard(0x8040201008040201u64);
 
     let mut diagonals = [BitBoard::EMPTY; 15];
 
@@ -91,7 +90,7 @@ static DIAGONAL: LazyLock<[BitBoard; 15]> = LazyLock::new(|| {
 });
 
 static ANTI_DIAGONAL: LazyLock<[BitBoard; 15]> = LazyLock::new(|| {
-    const MAIN_ANTI_DIAGONAL: BitBoard = BitBoard::from(0x0102040810204080u64);
+    const MAIN_ANTI_DIAGONAL: BitBoard = BitBoard(0x0102040810204080u64);
 
     let mut anti_diagonals = [BitBoard::EMPTY; 15];
 
@@ -148,7 +147,7 @@ static BETWEEN: LazyLock<[[BitBoard; Square::N]; Square::N]> =
                 // The intersection between the two blocked rays will be the between
                 // BitBoard + Squares 1 and 2. Therefore, to get the between BitBoard, a
                 // final intersection operator with the union of Squares 1 and 2 is do
-                between[square_1.into()][square_2.into()] =
+                between[square_1 as usize][square_2 as usize] =
                     moves::hyperbola(square_1, blockers, mask)
                         & moves::hyperbola(square_2, blockers, mask);
             }
@@ -173,15 +172,15 @@ impl Square {
     }
 
     pub fn shift(self, dir: Direction) -> Square {
-        unsafe { Square::unsafe_from((u8::from(self) as i8 + dir as i8) as u8) }
+        unsafe { Square::unsafe_from((self as i8 + dir as i8) as u8) }
     }
 
     pub fn diagonal(self) -> usize {
-        7usize + u8::from(self.rank()) as usize - self.file().into()
+        7 + self.rank() as usize - self.file() as usize
     }
 
     pub fn anti_diagonal(self) -> usize {
-        self.rank().into() + self.file().into()
+        self.rank() as usize + self.file() as usize
     }
 }
 
