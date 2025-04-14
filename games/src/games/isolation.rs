@@ -27,7 +27,8 @@ use thiserror::Error;
 // colored. The two colors are White and Black respectively, with White moving
 // first.
 crate::interface::game_details!(
-    Squares: u8 8 6;
+    Files: A, B, C, D, E, F, G, H;
+    Ranks: 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth;
     Pieces: Pawn "p"; Tile "-";
     Colors: White "w" ("P"),
             Black "b" ("p");
@@ -272,7 +273,7 @@ impl FromStr for Position {
         let fmc = parts[2];
 
         let mut position = Position {
-            pawns: [Square::default(), Square::default()],
+            pawns: [Square::A1, Square::A1],
             tiles: BitBoard::EMPTY,
             checksum: Default::default(),
             side_to_move: Color::Black,

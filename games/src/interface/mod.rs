@@ -8,7 +8,6 @@
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
-use num_traits::PrimInt;
 use strum::IntoEnumIterator;
 use thiserror::Error;
 
@@ -42,7 +41,7 @@ pub type Move<P> = <P as PositionType>::Move;
 
 /// RepresentableType is a basic trait which is implemented by enums with both a
 /// binary and string representation and backed by an integer.
-pub trait RepresentableType<B: PrimInt>:
+pub trait RepresentableType<B: Into<usize>>:
     Copy
     + Eq
     + FromStr
@@ -61,7 +60,7 @@ pub trait RepresentableType<B: PrimInt>:
     /// The function comes with a debug check for the same, and failure to
     /// uphold this invariant will result in undefined behavior.
     #[must_use]
-    unsafe fn unsafe_from<T: PrimInt>(number: T) -> Self {
+    unsafe fn unsafe_from<T: Copy + Into<usize>>(number: T) -> Self {
         debug_assert!(number.into() < Self::N);
         std::mem::transmute_copy(&number)
     }
@@ -86,7 +85,8 @@ pub enum TypeParseError {
 // together. Use the undecorated macro unless more precise control is needed.
 macro_rules! game_details {
     (
-        Squares: $sq_base:ident $file_num:literal $rank_num:literal;
+        Files: $($file_variant:ident),* ;
+        Ranks: $($rank_number:literal $rank_variant:ident),* ;
 
         Pieces: $($piece_variant:ident $piece_repr:literal),*;
                 $($other_variant:ident $other_repr:literal),*;
@@ -105,7 +105,8 @@ macro_rules! game_details {
 
         $crate::interface::game_details!(
             @bitboard_less
-            Squares: $sq_base $file_num $rank_num;
+            Files: $($file_variant),* ;
+            Ranks: $($rank_number $rank_variant),* ;
 
             Pieces: $($piece_variant $piece_repr),*;
                     $($other_variant $other_repr),*;
@@ -118,7 +119,8 @@ macro_rules! game_details {
     // except BitBoard from the given game specific information.
     (
         @bitboard_less
-        Squares: $sq_base:ident $file_num:literal $rank_num:literal;
+        Files: $($file_variant:ident),* ;
+        Ranks: $($rank_number:literal $rank_variant:ident),* ;
 
         Pieces: $($piece_variant:ident $piece_repr:literal),*;
                 $($other_variant:ident $other_repr:literal),*;
@@ -127,8 +129,9 @@ macro_rules! game_details {
     ) => {
         // Square types.
         $crate::interface::game_details!(
-            @cartesian_square
-            Squares: $sq_base $file_num $rank_num;
+            @squares
+            Files: $($file_variant),* ;
+            Ranks: $($rank_number $rank_variant),* ;
         );
 
         // Piece types.
@@ -298,12 +301,101 @@ macro_rules! game_details {
     // @squares generates the square types, which include Square, File, and Rank
     // from the given game specific details like the number of Files and Ranks.
     (
-        @cartesian_square
-        Squares: $sq_base:ident $file_num:literal $rank_num:literal;
+        @squares
+        Files: $($file_variant:ident),* ;
+        Ranks: $($rank_number:literal $rank_variant:ident),* ;
     ) => {
-        pub type Square = $crate::interface::CartesianSquare<$sq_base, $file_num, $rank_num>;
-        pub type File = $crate::interface::CartesianFile<$file_num>;
-        pub type Rank = $crate::interface::CartesianRank<$rank_num>;
+        // The Square type's variants are the cartesian product of the variants
+        // of its File and Rank types.
+        $crate::interface::game_details!(
+            @file_rank_product $($rank_number),*;$($file_variant),*
+        );
+
+        // SquareType implementation for Square.
+        impl $crate::interface::SquareType for Square {
+            type File = File;
+            type Rank = Rank;
+        }
+
+        // The File type. A custom display method is implemented so the
+        // @no_display decorator for representable_type! is used.
+        $crate::interface::representable_type!(
+            @no_display enum File: u8 {
+                $($file_variant,)*
+            }
+        );
+
+        impl std::str::FromStr for File {
+            type Err = $crate::interface::TypeParseError;
+
+            #[allow(clippy::char_lit_as_u8)]
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                if s.len() != 1 {
+                    Err($crate::interface::TypeParseError::StrError(
+                        stringify!(File).to_string()
+                    ))
+                } else {
+                    unsafe {
+                        use $crate::interface::RepresentableType;
+                        // Files are represented by small letters from the
+                        // English alphabet, starting from 'a'.
+                        let file_idx = s.chars().next().unwrap_unchecked() as u8 - 'a' as u8;
+                        if file_idx < File::N as u8 {
+                                Ok(File::unsafe_from(file_idx))
+                        } else {
+                            Err($crate::interface::TypeParseError::StrError(
+                                stringify!(File).to_string()
+                            ))
+                        }
+                    }
+                }
+            }
+        }
+
+        impl std::fmt::Display for File {
+            #[allow(clippy::char_lit_as_u8)]
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", (*self as u8 + 'a' as u8) as char)
+            }
+        }
+
+        // The Rank type. A custom display method is implemented so the
+        // @no_display decorator for representable_type! is used.
+        $crate::interface::representable_type!(
+            @no_display enum Rank: u8 {
+                $($rank_variant,)*
+            }
+        );
+
+        impl std::str::FromStr for Rank {
+            type Err = $crate::interface::TypeParseError;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                if let Ok(rank_idx) = s.parse::<u8>() {
+                    if rank_idx < Rank::N as u8 {
+                        Ok(unsafe {
+                            // The first rank is represented as 0 so subtract 1.
+                            Rank::unsafe_from(rank_idx - 1)
+                        })
+                    } else {
+                        Err($crate::interface::TypeParseError::StrError(
+                            stringify!(Rank).to_string()
+                        ))
+                    }
+                } else {
+                    Err($crate::interface::TypeParseError::StrError(
+                        stringify!(Rank).to_string()
+                    ))
+                }
+            }
+        }
+
+        impl std::fmt::Display for Rank {
+            #[allow(clippy::char_lit_as_u8)]
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", *self as u8 + 1)
+            }
+        }
     };
 
     // @file_rank_product generates the Square type, populating its variants
@@ -490,7 +582,7 @@ macro_rules! set_type {
         )]
         pub struct $name(pub $typ);
 
-        impl crate::interface::SetType<$typ, $sq, u8> for $name {
+        impl crate::interface::SetType<$typ, $sq> for $name {
             const EMPTY: Self = Self(0);
             const UNIVERSE: Self = $crate::interface::derive_set!(@universe $typ $sq);
         }

@@ -14,13 +14,13 @@
 use std::{fmt, num::ParseIntError, str::FromStr};
 
 use super::{
-    castling::{self, CastlingRightsParseError, Dimension, Side},
+    castling::{self, CastlingRightsParseError, Dimension, Rights, Side},
     movegen, BitBoard, Color, ColoredPiece, File, Move, MoveFlag, Piece, Rank,
     Square,
 };
 use crate::interface::{
     self, parse::PiecePlacementParseError, ColoredPieceType, Hash, MoveStore,
-    PositionType, RepresentableType, SetType, TypeParseError,
+    PositionType, RepresentableType, SetType, SquareType, TypeParseError,
 };
 
 use strum::IntoEnumIterator;
@@ -255,7 +255,15 @@ impl FromStr for Position {
             half_move_clock: 0,
             en_passant_target: None,
             is_fischer_random: false,
-            castling: Default::default(),
+            castling: castling::Info::from_squares(
+                Square::E1,
+                File::H,
+                File::A,
+                Square::E8,
+                File::H,
+                File::A,
+                Rights::new(),
+            ),
         };
 
         interface::parse::piece_placement(&mut position, pos)?;

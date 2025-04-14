@@ -4,7 +4,7 @@ use super::RepresentableType;
 
 use num_traits::PrimInt;
 
-pub trait SetType<B: PrimInt, E: RepresentableType<S>, S: PrimInt>:
+pub trait SetType<B: PrimInt, E: RepresentableType<u8>>:
     Sized
     + Copy
     + Eq
