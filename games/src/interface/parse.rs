@@ -11,8 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::num::ParseIntError;
-use std::str::FromStr;
+use std::{num::ParseIntError, str::FromStr};
 
 use crate::interface::{
     ColorType, ColoredPiece, File, PositionType, Rank, Square, SquareType,

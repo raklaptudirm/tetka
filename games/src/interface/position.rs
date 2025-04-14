@@ -5,15 +5,17 @@ use super::{
     Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType, SquareType,
 };
 
-/// Position is a generalized interface for board representations of a wide
-/// range of games. It can be used to create game-agnostic software. Tetka
-/// provides some of the popular board representations out of the box, but
-/// custom ones can also be implemented by the library user.
+/// A generalized interface for board representations of a wide range of games.
+///
+/// It is designed to create game-agnostic software. Tetka provides the logic
+/// for many popular games out of the box, but custom games can easily be
+/// implemented by the library user.
 pub trait PositionType: FromStr + Display
 where
     Self::ColoredPiece: ColoredPieceType,
     Self::Move: MoveType,
 {
+    /// Type for the squares in the board representation.
     type Square: SquareType;
 
     /// Type for the pieces (with color) used by this board representation.
@@ -22,10 +24,11 @@ where
     /// Type for one move in this board representation.
     type Move;
 
-    /// FEN string for the starting position of the game.
+    /// FEN string for the standard starting position of the game.
+    ///
+    /// If the game doesn't have a standard starting a position, any legal
+    /// starting position or a de-facto standard may be used.
     const STARTPOS: &str;
-
-    // Peeking, insertion, and removal of pieces from the board representation.
 
     /// Adds the given Piece to the given Square. If the target Square is
     /// non-empty, the behavior is undefined.
@@ -51,8 +54,6 @@ where
     #[must_use]
     fn hash(&self) -> Hash;
 
-    // Game Result functions.
-
     /// Returns the side which has won in the current position, if any.
     #[must_use]
     fn winner(&self) -> Option<Option<Color<Self>>>;
@@ -73,8 +74,6 @@ where
         &self,
         mov: Self::Move,
     ) -> Self;
-
-    // Move Generation functions for the board representation.
 
     /// Generates all the moves in the current position and add them into the
     ///  given move storage.

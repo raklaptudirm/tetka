@@ -4,6 +4,9 @@ use super::RepresentableType;
 
 use num_traits::PrimInt;
 
+/// SetTypes behave like a set of a given type of objects.
+///
+/// The API has been adapted from set-like types from the standard libary.
 pub trait SetType<B: PrimInt, E: RepresentableType<u8>>:
     Sized
     + Copy

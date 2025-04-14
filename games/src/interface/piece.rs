@@ -32,6 +32,7 @@ where
     fn color(self) -> Self::Color;
 }
 
+/// A type representing the color in a board representation.
 pub trait ColorType: RepresentableType<u8> + Not {
     const FIRST: Self;
 }
