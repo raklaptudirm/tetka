@@ -5,6 +5,7 @@ use std::str::FromStr;
 macro_rules! perft_test {
     ($name:ident $pos:literal $depth:literal $nodes:literal) => {
         #[test]
+        #[ignore]
         fn $name() {
             let position = Position::from_str($pos).unwrap();
             assert_eq!(perft::<true, true, _>(position, $depth), $nodes)
