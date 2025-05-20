@@ -11,70 +11,59 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, Mutex};
+use crate::{parameter, Parameter};
+use std::collections::HashMap;
 
-use crate::context::{Context, GuardedBundledCtx};
+#[derive(Clone)]
+pub struct Context {
+    /// The name of this Client's engine.
+    pub engine: &'static str,
+    /// The author of this Client's engine.
+    pub author: &'static str,
 
-/// A BundledCtx bundles the user-provided context `C` and the inbuilt context
-/// into a single type of ease of mutex guarding for concurrency. It provides
-/// methods which allow Commands to retrieve information from those contexts.
-pub struct BundledCtx<C: Send> {
-    user: C,
-    client: Context,
+    /// The UXI protocol supported by this Client.
+    pub protocol: &'static str,
+    /// The currently selected protocol. It can have the values "" for when no uxi
+    /// command has been received, "ugi", or <protocol> for those protocols.
+    pub selected_protocol: &'static str,
+
+    /// Schema of the options supported by this Client.
+    pub options: HashMap<&'static str, Parameter>,
+    /// Values of the options supported by this Client.
+    pub option_values: parameter::Values,
 }
 
-/// new_guarded_ctx created a new [GuardedBundledCtx] from the given user and
-/// client contexts.
-pub fn new_guarded_ctx<C: Send>(user: C, client: Context) -> GuardedBundledCtx<C> {
-    Arc::new(Mutex::new(BundledCtx { user, client }))
-}
+impl Context {
+    /// setoption sets the value of the given option to the given value.
+    pub fn setoption(&mut self, name: &str, value: &str) -> Result<(), String> {
+        let option = self.options.get(name);
+        if option.is_none() {
+            return Err(format!("unknown option \"{}\"", name));
+        }
 
-impl<T: Send> BundledCtx<T> {
-    /// protocol returns the last protocol command which was issues to the Client.
-    /// It returns "" if no protocol command has been issued to the engine till now.
-    pub fn protocol(&self) -> String {
-        self.client.selected_protocol.clone()
-    }
-
-    /// get_check_option returns the value of a check option with the given name.
-    pub fn get_check_option(&self, name: &str) -> Option<bool> {
-        self.client.option_values.get_check(name)
-    }
-
-    /// get_string_option returns the value of a combo/string option with the given
-    /// name.
-    pub fn get_string_option(&self, name: &str) -> Option<String> {
-        self.client.option_values.get_string(name)
-    }
-
-    /// get_spin_option returns the value of a spin option with the given name.
-    pub fn get_spin_option(&self, name: &str) -> Option<i64> {
-        self.client.option_values.get_spin(name)
+        self.option_values
+            .insert(name.to_owned(), option.unwrap(), value)
     }
 }
 
-impl<T: Send> Deref for BundledCtx<T> {
-    /// A BundledCtx can be dereferenced into the user's context and freely
-    /// manipulated. This is because both Deref and DerefMut are implemented.
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.user
-    }
-}
-
-impl<T: Send> DerefMut for BundledCtx<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.user
+impl Default for Context {
+    fn default() -> Self {
+        Context {
+            engine: "Nameless v0.0.0",
+            author: "Anonymous",
+            protocol: "u*i",
+            selected_protocol: "",
+            options: HashMap::new(),
+            option_values: Default::default(),
+        }
     }
 }
 
 /// The commands module contains functions which resolve into one of the inbuilt
 /// Commands which come pre-registered with the Client.
 pub mod commands {
-    use crate::context::Context;
-    use crate::{error, quit, Command, Flag, Parameter, RunError};
+    use crate::inbuilt::Context;
+    use crate::{error, quit, Command, Flag, RunError};
 
     /// quit resolves into the quit Command which quits the Client.
     pub fn quit<C: Send>() -> Command<C> {
@@ -100,7 +89,7 @@ pub mod commands {
             print_client_info(&ctx.client);
             println!("{}ok", ctx.client.protocol);
 
-            ctx.client.selected_protocol = ctx.client.protocol.clone();
+            ctx.client.selected_protocol = ctx.client.protocol;
 
             Ok(())
         })
@@ -114,7 +103,7 @@ pub mod commands {
             print_client_info(&ctx.client);
             println!("ugiok");
 
-            ctx.client.selected_protocol = "ugi".to_string();
+            ctx.client.selected_protocol = "ugi";
 
             Ok(())
         })
@@ -163,19 +152,12 @@ pub mod commands {
         Command::new(|ctx| {
             let ctx = ctx.lock();
 
-            for (name, option) in ctx.client.options.clone() {
-                print!("option name {} value ", name);
-                match option {
-                    Parameter::Check(_) => {
-                        println!("{}", ctx.client.option_values.get_check(&name).unwrap())
-                    }
-                    Parameter::String(_) | Parameter::Combo(_, _) => {
-                        println!("{}", ctx.client.option_values.get_string(&name).unwrap())
-                    }
-                    Parameter::Spin(_, _, _) => {
-                        println!("{}", ctx.client.option_values.get_spin(&name).unwrap())
-                    }
-                }
+            for name in ctx.client.options.keys() {
+                print!(
+                    "option name {} value {}",
+                    name,
+                    ctx.client.option_values.get_string_rep(name)
+                );
             }
 
             Ok(())

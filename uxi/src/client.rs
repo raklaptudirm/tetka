@@ -15,41 +15,72 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::io::{self, BufRead};
 
-use crate::context::Context;
-use crate::context::GuardedBundledCtx;
-use crate::inbuilt::new_guarded_ctx;
-use crate::{error, flag, inbuilt, Command, Parameter, RunError};
+use crate::bundles::{new_guarded_ctx, GuardedBundledCtx};
+use crate::inbuilt::Context;
+use crate::{error, flag, inbuilt, CmdResult, Command, Parameter, RunError};
 
-/// Client represents an UXI engine client. It can accept and parse commands
-/// from the GUI and send commands to the GUI though its input and output.
-/// Commands sent from the GUI are automatically parsed and executed according
-/// to the Command schema provided by the user to the Client. The client supports
-/// any UXI type protocol, including but not limited to UCI, UGI, and UAI.
-/// Options can also be added to a Client in the form of [parameters](Parameter).
-/// See the documentation of [`Parameter`] and the [`Client::option`] function
-/// for more details.
-pub struct Client<T: Send> {
+/// Client is the basic representation of an UXI engine.
+///
+/// It takes a single generic argument `C`, which is the type for the engine's
+/// internal context. A value of this type will be persistently stored and
+/// made available across all the commands run by the Client. Data which needs
+/// persistence across commands such as the internal game board should be
+/// stored here.
+///
+/// It can accept and parse commands from the GUI and send commands to the GUI
+/// though its standard input and output streams. Commands sent from the GUI are
+/// automatically parsed and executed according to the Command schema provided
+/// by the user to the Client. The client supports any UXI type protocol,
+/// including but not limited to UCI and UAI.
+///
+/// ```
+/// # use uxi::Client;
+/// # type Context = u64;
+/// // Define the details of your engine in a Client.
+/// let client = Client::<Context>::new()
+///     // various builder methods...
+///     .protocol("uci")
+///     .engine("Engine v0.0.0")
+///     .author("Rak Laptudirm");
+///
+/// // Run some given command with the Client.
+/// client.run_cmd_string("uci");
+///
+/// // Start the engine's command loop.
+/// client.start();
+/// ```
+///
+/// These are all the builder methods supported by the Client:
+/// - [`Client::command`]: Adds a UXI [Command] and its implementation.
+/// - [`Client::option`]: Adds a UXI option (called a [Parameter]).
+/// - [`Client::protocol`]: Sets the UXI protocol for the engine.
+/// - [`Client::engine`]: Sets the name of the engine.
+/// - [`Client::author`]: Sets the author of the engine.
+pub struct Client<C: Send> {
     initial_context: Context,
-    commands: HashMap<String, Command<T>>,
+    commands: HashMap<&'static str, Command<C>>,
 }
 
-impl<T: Send + 'static> Client<T> {
+impl<C: Send + Default + 'static> Client<C> {
     /// start starts the Client so that it can now accept Commands from the GUI and
     /// send Commands back to the GUI as necessary. The Client will return only if
     /// it encounters a fatal error while running a command ([`RunError::Fatal`])
     /// or one of the commands asks the Client to quit ([`RunError::Quit`]).
-    pub fn start(&self, context: T) {
+    pub fn start(&self) {
         // The GUI sends commands to the stdin.
         let stdin = io::stdin();
 
         // Make the context thread safe to allow commands to run in parallel.
-        let context = new_guarded_ctx(context, self.initial_context.clone());
+        let context =
+            new_guarded_ctx(Default::default(), self.initial_context.clone());
 
         // Iterate over the lines in the input, since Commands for the GUI are
         // separated by newlines and we want to parse each Command separately.
         'reading: for line in stdin.lock().lines() {
             // Run the Command and handle any errors.
-            if let Err(err) = self.run_from_string::<false>(line.unwrap(), &context) {
+            if let Err(err) =
+                self.run_from_string::<true>(&line.unwrap(), &context)
+            {
                 println!("{}", err);
                 if err.should_quit() {
                     break 'reading;
@@ -61,8 +92,9 @@ impl<T: Send + 'static> Client<T> {
     /// run_cmd_strings allows running a Command independently from the main uxi
     /// loop. Since the commands are run in a standalone way, everything is run
     /// synchronously.
-    pub fn run_cmd_string(&self, str: String, context: T) -> Result<(), RunError> {
-        let context = new_guarded_ctx(context, self.initial_context.clone());
+    pub fn run_cmd_string(&self, str: &str) -> CmdResult {
+        let context =
+            new_guarded_ctx(Default::default(), self.initial_context.clone());
         self.run_from_string::<false>(str, &context)
     }
 
@@ -70,9 +102,9 @@ impl<T: Send + 'static> Client<T> {
     /// String and then runs that Command with the flag values and the context.
     fn run_from_string<const PARALLEL: bool>(
         &self,
-        str: String,
-        context: &GuardedBundledCtx<T>,
-    ) -> Result<(), RunError> {
+        str: &str,
+        context: &GuardedBundledCtx<C>,
+    ) -> CmdResult {
         let parts = str.split_whitespace().collect::<Vec<&str>>();
 
         if parts.is_empty() {
@@ -86,7 +118,7 @@ impl<T: Send + 'static> Client<T> {
             Some(c) => c,
             None => {
                 // Command not found, return error and continue.
-                return error!("info error command {} not found", cmd_name);
+                return error!("command {} not found", cmd_name);
             }
         };
 
@@ -98,10 +130,10 @@ impl<T: Send + 'static> Client<T> {
     /// started. Only use this function if you know what you are doing.
     fn run<const PARALLEL: bool>(
         &self,
-        cmd: &Command<T>,
-        context: &GuardedBundledCtx<T>,
+        cmd: &Command<C>,
+        context: &GuardedBundledCtx<C>,
         args: &[&str],
-    ) -> Result<(), RunError> {
+    ) -> CmdResult {
         // Initialize an empty list of the Command's Flags' values.
         let flags = match flag::Values::parse(args, &cmd.flags) {
             Ok(values) => values,
@@ -113,7 +145,7 @@ impl<T: Send + 'static> Client<T> {
     }
 }
 
-impl<T: Send> Client<T> {
+impl<C: Send> Client<C> {
     /// new creates a new [Client]. The Client can be configured using builder
     /// methods like [`Client::command`], [`Client::option`], etc. These functions
     /// take the ownership of the given Client value and return that ownership
@@ -127,14 +159,14 @@ impl<T: Send> Client<T> {
     #[allow(clippy::new_without_default)]
     #[rustfmt::skip]
     pub fn new() -> Self {
-        Client::<T> {
+        Client::<C> {
             initial_context: Default::default(),
             commands: HashMap::from([
-                ("quit".to_owned(), inbuilt::commands::quit()),
-                ("isready".to_owned(), inbuilt::commands::isready()),
-                ("ugi".to_owned(), inbuilt::commands::ugi()),
-                ("setoption".to_owned(), inbuilt::commands::setoption()),
-                ("options".to_owned(), inbuilt::commands::options()),
+                ("quit", inbuilt::commands::quit()),
+                ("isready", inbuilt::commands::isready()),
+                ("ugi", inbuilt::commands::ugi()),
+                ("setoption", inbuilt::commands::setoption()),
+                ("options", inbuilt::commands::options()),
             ]),
         }
     }
@@ -147,8 +179,8 @@ impl<T: Send> Client<T> {
     ///     .command("go", go_cmd)
     ///     .command("perft", perft_cmd);
     /// ```
-    pub fn command(mut self, name: &str, cmd: Command<T>) -> Self {
-        self.commands.insert(name.to_string(), cmd);
+    pub fn command(mut self, name: &'static str, cmd: Command<C>) -> Self {
+        self.commands.insert(name, cmd);
         self
     }
 
@@ -162,10 +194,8 @@ impl<T: Send> Client<T> {
     ///     .option("Hash", Parameter::Spin(16, 1, 33554432))
     ///     .option("Threads", Parameter::Spin(1, 1, 1024));
     /// ```
-    pub fn option(mut self, name: &str, option: Parameter) -> Self {
-        self.initial_context
-            .options
-            .insert(name.to_string(), option.clone());
+    pub fn option(mut self, name: &'static str, option: Parameter) -> Self {
+        self.initial_context.options.insert(name, option.clone());
         self.initial_context
             .option_values
             .insert_default(name.to_string(), &option);
@@ -183,18 +213,17 @@ impl<T: Send> Client<T> {
     /// game-agnostic protocol which is supported by all Clients by default.
     /// ```rust,ignore
     /// let client = Client::new()
-    ///     .protocol("uai");
+    ///     .protocol("uci");
     /// ```
-    pub fn protocol(mut self, name: &str) -> Self {
+    pub fn protocol(mut self, name: &'static str) -> Self {
         assert!(!self.commands.contains_key(name));
 
         // Move the previous protocol identifier command to the new name.
         self.commands.remove(&self.initial_context.protocol);
-        self.commands
-            .insert(name.to_string(), inbuilt::commands::uxi());
+        self.commands.insert(name, inbuilt::commands::uxi());
 
         // Change the protocol name.
-        name.clone_into(&mut self.initial_context.protocol);
+        self.initial_context.protocol = name;
         self
     }
 
@@ -204,10 +233,10 @@ impl<T: Send> Client<T> {
     /// is also accessible by Commands through their [bundles](crate::BundledCtx).
     /// ```rust,ignore
     /// let client = Client::new()
-    ///     .protocol("uai");
+    ///     .engine("Stockfish2");
     /// ```
-    pub fn engine(mut self, name: &str) -> Self {
-        name.clone_into(&mut self.initial_context.engine);
+    pub fn engine(mut self, name: &'static str) -> Self {
+        self.initial_context.engine = name;
         self
     }
 
@@ -217,10 +246,10 @@ impl<T: Send> Client<T> {
     /// is also accessible by Commands through their [bundles](crate::BundledCtx).
     /// ```rust,ignore
     /// let client = Client::new()
-    ///     .protocol("uai");
+    ///     .author("Rak Laptudirm");
     /// ```
-    pub fn author(mut self, name: &str) -> Self {
-        name.clone_into(&mut self.initial_context.author);
+    pub fn author(mut self, name: &'static str) -> Self {
+        self.initial_context.author = name;
         self
     }
 }

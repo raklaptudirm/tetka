@@ -17,9 +17,3 @@ tetka-games = { path = "./games" }
 [workspace]
 resolver = "2"
 members = [ "uxi", "games" ]
-
-[profile.release]
-debug = true
-opt-level = 3
-codegen-units = 1
-lto = true
