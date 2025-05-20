@@ -13,12 +13,8 @@
 
 use std::{fmt, str::FromStr};
 
-use crate::{
-    chess,
-    interface::{representable_type, MoveType, RepresentableType},
-};
-
-use super::{castling, Piece};
+use super::{castling, Piece, Square};
+use crate::interface::{representable_type, MoveType, RepresentableType};
 
 #[derive(Copy, Clone, PartialEq, Default)]
 pub struct Move(u16);
@@ -64,11 +60,7 @@ impl Move {
     const TARGET_OFFSET: u16 = Move::SOURCE_OFFSET + Move::SOURCE_WIDTH;
     const MVFLAG_OFFSET: u16 = Move::TARGET_OFFSET + Move::TARGET_WIDTH;
 
-    pub fn new(
-        source: chess::Square,
-        target: chess::Square,
-        mvflag: MoveFlag,
-    ) -> Move {
+    pub fn new(source: Square, target: Square, mvflag: MoveFlag) -> Move {
         Move(
             (mvflag as u16) << Move::MVFLAG_OFFSET
                 | (source as u16) << Move::SOURCE_OFFSET
@@ -77,8 +69,8 @@ impl Move {
     }
 
     pub fn new_castling(
-        king: chess::Square,
-        rook: chess::Square,
+        king: Square,
+        rook: Square,
         side: castling::Side,
     ) -> Move {
         Self::new(
@@ -92,9 +84,9 @@ impl Move {
     }
 
     pub fn new_with_promotion(
-        source: chess::Square,
-        target: chess::Square,
-        promotion: chess::Piece,
+        source: Square,
+        target: Square,
+        promotion: Piece,
     ) -> Move {
         Move(
             (promotion as u16) << Move::MVFLAG_OFFSET
@@ -103,17 +95,17 @@ impl Move {
         )
     }
 
-    pub fn source(self) -> chess::Square {
+    pub fn source(self) -> Square {
         unsafe {
-            chess::Square::unsafe_from(
+            Square::unsafe_from(
                 (self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK,
             )
         }
     }
 
-    pub fn target(self) -> chess::Square {
+    pub fn target(self) -> Square {
         unsafe {
-            chess::Square::unsafe_from(
+            Square::unsafe_from(
                 (self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK,
             )
         }

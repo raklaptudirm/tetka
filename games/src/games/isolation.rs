@@ -11,27 +11,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
-use std::num::ParseIntError;
-use std::str::FromStr;
+use std::{fmt, num::ParseIntError, str::FromStr};
+
+use crate::interface::{
+    parse::{self, PiecePlacementParseError},
+    BitBoardType, ColoredPieceType, Hash, MoveStore, MoveType, PositionType,
+    RepresentableType, SetType, SquareType, TypeParseError,
+};
 
 use strum::IntoEnumIterator;
-
-use crate::interface;
-use crate::interface::ColoredPieceType;
-use crate::interface::PiecePlacementParseError;
-use crate::interface::PositionType;
-use crate::interface::TypeParseError;
-use crate::interface::{BitBoardType, Hash, RepresentableType, SquareType};
-
 use thiserror::Error;
 
-#[rustfmt::skip]
-use super::{
-    BitBoard, ColoredPiece, File, Move,
-    Rank, Square, Color, Piece
-};
-use crate::interface::MoveStore;
+// The Isolation board has 8 Files and 6 Ranks, for a total of 48 Squares. It
+// has two types of pieces, the Pawn and the Tile. Among the two only Pawn is
+// colored. The two colors are White and Black respectively, with White moving
+// first.
+crate::interface::game_details!(
+    Files: A, B, C, D, E, F, G, H;
+    Ranks: 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth;
+    Pieces: Pawn "p"; Tile "-";
+    Colors: White "w" ("P"),
+            Black "b" ("p");
+);
 
 /// Position represents the snapshot of an Isolation Board, the state of the an
 /// Isolation game at a single point in time. It also provides all of the methods
@@ -48,9 +49,12 @@ pub struct Position {
 }
 
 impl PositionType for Position {
-    type BitBoard = BitBoard;
+    type Square = Square;
     type ColoredPiece = ColoredPiece;
     type Move = Move;
+
+    const STARTPOS: &str =
+        "--------/--------/p-------/-------P/--------/-------- w 1";
 
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
         match piece.piece() {
@@ -77,24 +81,6 @@ impl PositionType for Position {
             .find(|piece| self.colored_piece_bb(*piece).contains(sq))
     }
 
-    fn piece_bb(&self, piece: Piece) -> BitBoard {
-        match piece {
-            Piece::Pawn => BitBoard::from(self.pawns[0]) | self.pawns[1],
-            Piece::Tile => self.tiles,
-        }
-    }
-
-    fn color_bb(&self, color: Color) -> BitBoard {
-        BitBoard::from(self.pawn(color))
-    }
-
-    fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
-        match piece.piece() {
-            Piece::Pawn => BitBoard::from(self.pawn(piece.color())),
-            Piece::Tile => self.tiles,
-        }
-    }
-
     fn hash(&self) -> Hash {
         self.checksum
     }
@@ -103,9 +89,9 @@ impl PositionType for Position {
         self.count_moves::<true, true>() == 0
     }
 
-    fn winner(&self) -> Option<Color> {
+    fn winner(&self) -> Option<Option<Color>> {
         if self.is_game_over() {
-            Some(!self.side_to_move)
+            Some(Some(!self.side_to_move))
         } else {
             None
         }
@@ -117,7 +103,7 @@ impl PositionType for Position {
         let mut pawns = self.pawns;
 
         // Move our pawn to the new square.
-        pawns[stm as usize] = m.pawn();
+        pawns[stm] = m.pawn();
 
         // Remove the selected tile from the board.
         let tiles = self.colored_piece_bb(ColoredPiece::Tile)
@@ -174,15 +160,44 @@ impl PositionType for Position {
 
         (BitBoard::singles(stm) & allowed).count() * (allowed.count() - 1)
     }
+
+    fn side_to_move(&self) -> Color {
+        self.side_to_move
+    }
+
+    fn half_move_clock(&self) -> usize {
+        0
+    }
+
+    fn ply_count(&self) -> usize {
+        self.ply_count as usize
+    }
 }
 
 impl Position {
+    pub fn piece_bb(&self, piece: Piece) -> BitBoard {
+        match piece {
+            Piece::Pawn => BitBoard::from(self.pawns[0]) | self.pawns[1],
+            Piece::Tile => self.tiles,
+        }
+    }
+
+    pub fn color_bb(&self, color: Color) -> BitBoard {
+        BitBoard::from(self.pawn(color))
+    }
+
+    pub fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
+        match piece.piece() {
+            Piece::Pawn => BitBoard::from(self.pawn(piece.color())),
+            Piece::Tile => self.tiles,
+        }
+    }
     fn pawn(&self, color: Color) -> Square {
-        self.pawns[color as usize]
+        self.pawns[color]
     }
 
     fn set_pawn(&mut self, color: Color, square: Square) {
-        self.pawns[color as usize] = square
+        self.pawns[color] = square
     }
 
     fn get_hash(
@@ -265,13 +280,10 @@ impl FromStr for Position {
             ply_count: 0,
         };
 
-        interface::parse_piece_placement(&mut position, pos)?;
+        parse::piece_placement(&mut position, pos)?;
 
         position.side_to_move = Color::from_str(stm)?;
-        position.ply_count = fmc.parse::<u16>()? * 2 - 1;
-        if position.side_to_move == Color::White {
-            position.ply_count -= 1;
-        }
+        position.ply_count = parse::ply_count(fmc, position.side_to_move)?;
 
         // Calculate the Hash value for the Position.
         position.checksum = Self::get_hash(
@@ -309,5 +321,161 @@ impl fmt::Display for Position {
 
         writeln!(f, "{}", string_rep).unwrap();
         writeln!(f, "Side To Move: {}", self.side_to_move)
+    }
+}
+
+/// Move represents an Isolation move which can be played on the Board.
+#[derive(Copy, Clone, PartialEq, Eq, Default)]
+pub struct Move(u16);
+
+impl MoveType for Move {
+    const NULL: Self = Move(1 << 15);
+    const MAX_IN_GAME: usize = 48;
+    const MAX_IN_POSITION: usize = 352;
+}
+
+impl From<u16> for Move {
+    fn from(value: u16) -> Self {
+        Move(value)
+    }
+}
+
+impl From<Move> for u16 {
+    fn from(value: Move) -> Self {
+        value.0
+    }
+}
+
+impl Move {
+    // Bit-widths of fields.
+    const PAWN_WIDTH: u16 = 6;
+    const TILE_WIDTH: u16 = 6;
+
+    // Bit-masks of fields.
+    const PAWN_MASK: u16 = (1 << Move::PAWN_WIDTH) - 1;
+    const TILE_MASK: u16 = (1 << Move::TILE_WIDTH) - 1;
+
+    // Bit-offsets of fields.
+    const PAWN_OFFSET: u16 = 0;
+    const TILE_OFFSET: u16 = Move::PAWN_OFFSET + Move::PAWN_WIDTH;
+
+    /// new returns a new jump Move from the given pawn Square to the given
+    /// tile Square. These Squares can be recovered with the [`Move::pawn`] and
+    /// [`Move::tile`] methods respectively.
+    /// ```
+    /// # use tetka_games::games::isolation::*;
+    /// #
+    /// let mov = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert_eq!(mov.pawn(), Square::A1);
+    /// assert_eq!(mov.tile(), Square::A3);
+    /// ```
+    #[rustfmt::skip]
+    pub fn new(pawn: Square, tile: Square) -> Move {
+		Move(
+			(pawn as u16) << Move::PAWN_OFFSET |
+			(tile as u16) << Move::TILE_OFFSET
+		)
+    }
+
+    /// Source returns the pawn Square of the moving piece. This is equal to the
+    /// tile Square if the given Move is of singular type.
+    /// ```
+    /// # use tetka_games::games::isolation::*;
+    /// #
+    /// let mov = Move::new(Square::A1, Square::A3);
+    /// assert_eq!(mov.pawn(), Square::A1);
+    /// ```
+    pub fn pawn(self) -> Square {
+        unsafe {
+            Square::unsafe_from((self.0 >> Move::PAWN_OFFSET) & Move::PAWN_MASK)
+        }
+    }
+
+    /// Target returns the tile Square of the moving piece.
+    /// ```
+    /// # use tetka_games::games::isolation::*;
+    /// #
+    /// let mov = Move::new(Square::A1, Square::A3);
+    /// assert_eq!(mov.tile(), Square::A3);
+    /// ```
+    pub fn tile(self) -> Square {
+        unsafe {
+            Square::unsafe_from((self.0 >> Move::TILE_OFFSET) & Move::TILE_MASK)
+        }
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum MoveParseError {
+    #[error("length of move string should be 2 or 4, not {0}")]
+    BadLength(usize),
+    #[error("bad pawn square string \"{0}\"")]
+    BadSquare(#[from] TypeParseError),
+}
+
+impl FromStr for Move {
+    type Err = MoveParseError;
+
+    /// from_str converts the given string representation of a Move into a [Move].
+    /// The format supported is `<pawn><tile>`. For how `<pawn>` and `<tile>` are
+    /// parsed, take a look at [`Square::FromStr`](Square::from_str). This function
+    /// can be treated as the inverse of the [`fmt::Display`] trait for [Move].
+    /// ```
+    /// # use tetka_games::games::isolation::*;
+    /// # use std::str::FromStr;
+    /// #
+    /// let jump = Move::new(Square::A1, Square::A3);
+    /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
+    /// ```
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 4 {
+            return Err(MoveParseError::BadLength(s.len()));
+        }
+
+        let pawn = Square::from_str(&s[..2])?;
+        let tile = Square::from_str(&s[2..])?;
+
+        Ok(Move::new(pawn, tile))
+    }
+}
+
+impl fmt::Display for Move {
+    /// Display formats the given Move in a human-readable manner. The format used
+    /// for displaying moves is `<pawn><tile>`. For the formatting of `<pawn>` and
+    /// `<tile>`, refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`.
+    /// ```
+    /// # use tetka_games::games::isolation::*;
+    /// # use tetka_games::interface::MoveType;
+    /// #
+    /// let null = Move::NULL;
+    /// let jump = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert_eq!(null.to_string(), "null");
+    /// assert_eq!(jump.to_string(), "a1a3");
+    /// ```
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if *self == Move::NULL {
+            write!(f, "null")
+        } else {
+            write!(f, "{}{}", self.pawn(), self.tile())
+        }
+    }
+}
+
+impl fmt::Debug for Move {
+    /// Debug formats the given Move into a human-readable debug string. It uses
+    /// `Move::Display` trait under the hood for formatting the Move.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl BitBoard {
+    /// singles returns the targets of all singular moves from all the source
+    /// squares given in the provided BitBoard.
+    pub fn singles(bb: BitBoard) -> BitBoard {
+        let bar = bb | bb.east() | bb.west();
+        (bar | bar.north() | bar.south()) ^ bb
     }
 }

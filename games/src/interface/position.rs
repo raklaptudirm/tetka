@@ -1,23 +1,34 @@
-use std::fmt::Display;
-use std::str::FromStr;
+// Copyright © 2024 Rak Laptudirm <rak@laptudirm.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use std::{fmt::Display, str::FromStr};
 
 use super::{
-    BitBoardType, Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType,
-    Piece, Square,
+    Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType, SquareType,
 };
 
-/// Position is a generalized interface for board representations of a wide
-/// range of games. It can be used to create game-agnostic software. Tetka
-/// provides some of the popular board representations out of the box, but
-/// custom ones can also be implemented by the library user.
+/// A generalized interface for board representations of a wide range of games.
+///
+/// It is designed to create game-agnostic software. Tetka provides the logic
+/// for many popular games out of the box, but custom games can easily be
+/// implemented by the library user.
 pub trait PositionType: FromStr + Display
 where
-    Self::BitBoard: BitBoardType,
     Self::ColoredPiece: ColoredPieceType,
     Self::Move: MoveType,
 {
-    /// Type for the bitboards used by this board representation.
-    type BitBoard;
+    /// Type for the squares in the board representation.
+    type Square: SquareType;
 
     /// Type for the pieces (with color) used by this board representation.
     type ColoredPiece;
@@ -25,42 +36,39 @@ where
     /// Type for one move in this board representation.
     type Move;
 
-    // Peeking, insertion, and removal of pieces from the board representation.
+    /// FEN string for the standard starting position of the game.
+    ///
+    /// If the game doesn't have a standard starting a position, any legal
+    /// starting position or a de-facto standard may be used.
+    const STARTPOS: &str;
 
     /// Adds the given Piece to the given Square. If the target Square is
     /// non-empty, the behavior is undefined.
-    fn insert(&mut self, sq: Square<Self>, piece: Self::ColoredPiece);
+    fn insert(&mut self, sq: Self::Square, piece: Self::ColoredPiece);
     /// Removes any Piece on the given Square, and returns the removed Piece.
-    fn remove(&mut self, sq: Square<Self>) -> Option<Self::ColoredPiece>;
+    /// For games where there may be multiple pieces on a single Square,
+    /// it removes only the 'topmost' Piece.
+    fn remove(&mut self, sq: Self::Square) -> Option<Self::ColoredPiece>;
     /// Returns the Piece present at the given Square.
     #[must_use]
-    fn at(
-        &self,
-        sq: <Self::BitBoard as BitBoardType>::Square,
-    ) -> Option<Self::ColoredPiece>;
+    fn at(&self, sq: Self::Square) -> Option<Self::ColoredPiece>;
 
-    /// Returns a BitBoard with all the Squares containing the given Piece.
+    /// Returns the current side to move.
     #[must_use]
-    fn piece_bb(&self, piece: Piece<Self>) -> Self::BitBoard;
-    /// Returns a BitBoard with all the Squares containing the given Color.
-    #[must_use]
-    fn color_bb(&self, color: Color<Self>) -> Self::BitBoard;
-    /// Returns a BitBoard with all the Squares containing the given ColoredPiece.
-    #[must_use]
-    fn colored_piece_bb(&self, piece: Self::ColoredPiece) -> Self::BitBoard;
-
     fn side_to_move(&self) -> Color<Self>;
+    /// Returns the value of half-move draw clock.
+    #[must_use]
     fn half_move_clock(&self) -> usize;
+    /// Returns the number of plys played till now.
+    #[must_use]
     fn ply_count(&self) -> usize;
     /// Returns a semi-unique checksum of the current Position.
     #[must_use]
     fn hash(&self) -> Hash;
 
-    // Game Result functions.
-
     /// Returns the side which has won in the current position, if any.
     #[must_use]
-    fn winner(&self) -> Option<Color<Self>>;
+    fn winner(&self) -> Option<Option<Color<Self>>>;
     /// Returns `true` if the game is over in the current position.
     #[must_use]
     fn is_game_over(&self) -> bool {
@@ -78,8 +86,6 @@ where
         &self,
         mov: Self::Move,
     ) -> Self;
-
-    // Move Generation functions for the board representation.
 
     /// Generates all the moves in the current position and add them into the
     ///  given move storage.
@@ -107,7 +113,7 @@ where
         const NOISY: bool,
     >(
         &self,
-    ) -> MoveList<Self::Move> {
+    ) -> impl MoveStore<Self::Move> {
         let mut movelist: MoveList<Self::Move> = Default::default();
         self.generate_moves_into::<ALLOW_ILLEGAL, QUIET, NOISY, _>(
             &mut movelist,

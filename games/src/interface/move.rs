@@ -1,3 +1,16 @@
+// Copyright © 2024 Rak Laptudirm <rak@laptudirm.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -18,7 +31,7 @@ pub trait MoveType: FromStr + Display + From<u16> + Into<u16> + Copy {
 /// inside themselves and are thus usable in move-generation methods in
 /// [Position](super::PositionType) like
 /// [`generate_moves_into<T>`](super::PositionType::generate_moves_into<T>).
-pub trait MoveStore<M>: Default {
+pub trait MoveStore<M>: Default + IntoIterator<Item = M> {
     /// Appends a move to the back of the [MoveStore].
     fn push(&mut self, m: M);
 
@@ -50,12 +63,10 @@ impl<M> MoveStore<M> for MoveList<M> {
         self.push(m);
     }
 
-    #[must_use]
     fn len(&self) -> usize {
         self.len()
     }
 
-    #[must_use]
     fn is_empty(&self) -> bool {
         self.is_empty()
     }

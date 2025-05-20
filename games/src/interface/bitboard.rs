@@ -1,3 +1,16 @@
+// Copyright © 2024 Rak Laptudirm <rak@laptudirm.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use num_traits::int::PrimInt;
 
 use super::{RepresentableType, SetType, SquareType};
@@ -35,13 +48,7 @@ where
     /// east returns a new Self with all the squares shifted to the east.
     #[must_use]
     fn east(self) -> Self {
-        (self << 1)
-            & (Self::UNIVERSE
-                ^ unsafe {
-                    Self::file(<Self::Square as SquareType>::File::unsafe_from(
-                        0u8,
-                    ))
-                })
+        (self << 1) & (Self::UNIVERSE ^ Self::FIRST_FILE)
     }
 
     /// west returns a new Self with all the squares shifted to the west.
@@ -49,11 +56,8 @@ where
     fn west(self) -> Self {
         (self >> 1)
             & (Self::UNIVERSE
-                ^ unsafe {
-                    Self::file(<Self::Square as SquareType>::File::unsafe_from(
-                        <Self::Square as SquareType>::File::N as u8 - 1,
-                    ))
-                })
+                ^ (Self::FIRST_FILE
+                    << (<Self::Square as SquareType>::File::N - 1)))
     }
 
     /// Returns a BitBoard containing all the squares from the given `File`.
