@@ -539,7 +539,6 @@ macro_rules! representable_type {
 
     (@__impl $type:ident $base:tt) => {
         impl From<$type> for $base {
-            #[must_use]
             fn from(value: $type) -> Self {
                 value as $base
             }
@@ -643,7 +642,6 @@ macro_rules! set_type {
 
         // a -> {a}
         impl From<$sq> for $name {
-            #[must_use]
             fn from(square: $sq) -> Self {
                 Self($typ::from(1u8) << u8::from(square))
             }
@@ -654,7 +652,6 @@ macro_rules! set_type {
             type Output = Self;
 
             /// Returns the complementary BitBoard of `self`.
-            #[must_use]
             fn not(self) -> Self::Output {
                 use $crate::interface::SetType;
                 // ! will set the unused bits so remove them with an &.
@@ -668,7 +665,6 @@ macro_rules! set_type {
             type Output = Self;
 
             /// Returns the difference of `self` and `rhs` as a new BitBoard.
-            #[must_use]
             fn sub(self, rhs: Self) -> Self::Output {
                 self & !rhs
             }
@@ -689,7 +685,6 @@ macro_rules! set_type {
             type Output = Self;
 
             /// Returns the union of `self` and `rhs` as a new BitBoard.
-            #[must_use]
             fn bitor(self, rhs: $sq) -> Self::Output {
                 self | Self::from(rhs)
             }
@@ -700,7 +695,6 @@ macro_rules! set_type {
             type Output = Self;
 
             /// Returns the BitBoard obtained on removing `rhs` from `self`.
-            #[must_use]
             fn sub(self, rhs: $sq) -> Self::Output {
                 self & !Self::from(rhs)
             }
