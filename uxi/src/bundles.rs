@@ -118,7 +118,7 @@ pub(crate) fn new_guarded_ctx<C: Send>(
 /// into a single type for ease of mutex guarding for concurrency. It provides
 /// methods which allow Commands to retrieve information from those contexts.
 /// - [`BundledCtx::protocol`]: Currently active protocol. It starts at ``, but
-///     can change to `ugi` or the engine's protocol string due to commands.
+///   can change to `ugi` or the engine's protocol string due to commands.
 /// - [`BundledCtx::get_check_option`]: Get the value of a check option.
 /// - [`BundledCtx::get_string_option`]: Get the value of a string/combo option.
 /// - [`BundledCtx::get_spin_option`]: Get the value of a spin option.
