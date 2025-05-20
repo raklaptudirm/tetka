@@ -81,10 +81,10 @@ impl<C: Send> Command<C> {
     /// let cmd: Command<Context> =
     ///     // new invocation to create a Command. In this example, a very
     ///     // simple run function which returns `Ok(())` is provided.
-    ///     Command::new(|_ctx, _flg| Ok(()))
+    ///     Command::new(|_ctx| Ok(()))
     ///         // Add flags to the Command's flag schema.
     ///         .flag("flag1", Flag::Boolean)
-    ///         .flag("flag2", Flag::Singular)
+    ///         .flag("flag2", Flag::Single)
     ///         .flag("flag3", Flag::Array(10))
     ///         .flag("flag4", Flag::Variadic)
     ///         // Make the command run in parallel.
