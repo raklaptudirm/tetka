@@ -314,7 +314,7 @@ impl fmt::Display for Position {
         }
 
         // Append the file markers.
-        string_rep += "a b c d e f g\n";
+        string_rep += "\na b c d e f g h\n";
 
         writeln!(f, "{}", string_rep).unwrap();
         writeln!(f, "Side To Move: {}", self.side_to_move)
