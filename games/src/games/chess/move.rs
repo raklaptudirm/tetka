@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{fmt, str::FromStr};
+use std::fmt;
 
 use super::{castling, Piece, Square};
 use crate::interface::{
@@ -38,13 +38,6 @@ impl From<u16> for Move {
 impl From<Move> for u16 {
     fn from(value: Move) -> Self {
         value.0
-    }
-}
-
-impl FromStr for Move {
-    type Err = ();
-    fn from_str(_s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::NULL)
     }
 }
 
