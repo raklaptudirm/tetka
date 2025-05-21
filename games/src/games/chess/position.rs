@@ -15,8 +15,8 @@ use std::{fmt, num::ParseIntError, str::FromStr};
 
 use super::{
     castling::{self, CastlingRightsParseError, Dimension, Rights, Side},
-    movegen, BitBoard, Color, ColoredPiece, File, Move, MoveFlag, Piece, Rank,
-    Square,
+    movegen, BitBoard, Color, ColoredPiece, File, Move, MoveFlag,
+    MoveParseError, Piece, Rank, Square,
 };
 use crate::interface::{
     self, parse::PiecePlacementParseError, ColoredPieceType, Hash, MoveStore,
@@ -52,9 +52,50 @@ impl PositionType for Position {
     type Square = Square;
     type ColoredPiece = ColoredPiece;
     type Move = Move;
+    type MoveParseError = MoveParseError;
 
     const STARTPOS: &str =
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+    fn parse_move(
+        &self,
+        move_str: &str,
+    ) -> Result<Self::Move, Self::MoveParseError> {
+        if move_str.len() < 4 || move_str.len() > 5 {
+            return Err(MoveParseError::BadLength(move_str.len()));
+        }
+
+        let source = Square::from_str(&move_str[0..2])?;
+        let target = Square::from_str(&move_str[2..4])?;
+
+        let source_piece = match self.at(source) {
+            Some(piece) => piece.piece(),
+            None => return Err(MoveParseError::EmptySource),
+        };
+
+        let is_pawn = source_piece == Piece::Pawn;
+
+        let x_dist = (source.file() as u8).abs_diff(target.file() as u8);
+        let y_dist = (source.rank() as u8).abs_diff(target.rank() as u8);
+
+        let flag = if move_str.len() == 5 {
+            MoveFlag::from_str(&move_str[4..])?
+        } else if is_pawn && y_dist == 2 {
+            MoveFlag::DoublePush
+        } else if is_pawn && self.en_passant_target == Some(target) {
+            MoveFlag::EnPassant
+        } else if source_piece == Piece::King && x_dist > 1 {
+            if source as u8 > target as u8 {
+                MoveFlag::CastleASide
+            } else {
+                MoveFlag::CastleHSide
+            }
+        } else {
+            MoveFlag::Normal
+        };
+
+        Ok(Move::new(source, target, flag))
+    }
 
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
         self.piece_bbs[piece.piece()].insert(sq);

@@ -56,8 +56,52 @@ impl PositionType for Position {
     type Square = Square;
     type ColoredPiece = ColoredPiece;
     type Move = Move;
+    type MoveParseError = MoveParseError;
 
     const STARTPOS: &str = "x5o/7/7/7/7/7/o5x x 0 1";
+
+    /// from_str converts the given string representation of a Move into a [Move].
+    /// The formats supported are '0000' for a [Move::PASS], `<target>` for a
+    /// singular Move, and `<source><target>` for a jump Move. For how `<source>`
+    /// and `<target>` are parsed, take a look at
+    /// [`Square::FromStr`](Square::from_str). This function can be treated as the
+    /// inverse of the [`fmt::Display`] trait for [Move].
+    /// ```
+    /// # use tetka_games::games::ataxx::*;
+    /// # use std::str::FromStr;
+    /// #
+    /// let pass = Move::PASS;
+    /// let sing = Move::new_single(Square::A1);
+    /// let jump = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert_eq!(Move::from_str(&pass.to_string()).unwrap(), pass);
+    /// assert_eq!(Move::from_str(&sing.to_string()).unwrap(), sing);
+    /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
+    /// ```
+    fn parse_move(
+        &self,
+        move_str: &str,
+    ) -> Result<Self::Move, Self::MoveParseError> {
+        if move_str == "0000" {
+            return Ok(Move::PASS);
+        };
+
+        if move_str.len() != 2 && move_str.len() != 4 {
+            return Err(MoveParseError::BadLength(move_str.len()));
+        }
+
+        let source = &move_str[..2];
+        let source = Square::from_str(source)?;
+
+        if move_str.len() < 4 {
+            return Ok(Move::new_single(source));
+        }
+
+        let target = &move_str[2..];
+        let target = Square::from_str(target)?;
+
+        Ok(Move::new(source, target))
+    }
 
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
         self.bitboards[piece].insert(sq);
@@ -547,50 +591,6 @@ pub enum MoveParseError {
     BadLength(usize),
     #[error("bad source square string \"{0}\"")]
     BadSquare(#[from] TypeParseError),
-}
-
-impl FromStr for Move {
-    type Err = MoveParseError;
-
-    /// from_str converts the given string representation of a Move into a [Move].
-    /// The formats supported are '0000' for a [Move::PASS], `<target>` for a
-    /// singular Move, and `<source><target>` for a jump Move. For how `<source>`
-    /// and `<target>` are parsed, take a look at
-    /// [`Square::FromStr`](Square::from_str). This function can be treated as the
-    /// inverse of the [`fmt::Display`] trait for [Move].
-    /// ```
-    /// # use tetka_games::games::ataxx::*;
-    /// # use std::str::FromStr;
-    /// #
-    /// let pass = Move::PASS;
-    /// let sing = Move::new_single(Square::A1);
-    /// let jump = Move::new(Square::A1, Square::A3);
-    ///
-    /// assert_eq!(Move::from_str(&pass.to_string()).unwrap(), pass);
-    /// assert_eq!(Move::from_str(&sing.to_string()).unwrap(), sing);
-    /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
-    /// ```
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "0000" {
-            return Ok(Move::PASS);
-        };
-
-        if s.len() != 2 && s.len() != 4 {
-            return Err(MoveParseError::BadLength(s.len()));
-        }
-
-        let source = &s[..2];
-        let source = Square::from_str(source)?;
-
-        if s.len() < 4 {
-            return Ok(Move::new_single(source));
-        }
-
-        let target = &s[2..];
-        let target = Square::from_str(target)?;
-
-        Ok(Move::new(source, target))
-    }
 }
 
 impl fmt::Display for Move {

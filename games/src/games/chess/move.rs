@@ -14,7 +14,11 @@
 use std::{fmt, str::FromStr};
 
 use super::{castling, Piece, Square};
-use crate::interface::{representable_type, MoveType, RepresentableType};
+use crate::interface::{
+    representable_type, MoveType, RepresentableType, TypeParseError,
+};
+
+use thiserror::Error;
 
 #[derive(Copy, Clone, PartialEq, Default)]
 pub struct Move(u16);
@@ -150,6 +154,16 @@ impl MoveFlag {
     pub fn is_castling(&self) -> bool {
         matches!(self, MoveFlag::CastleHSide | MoveFlag::CastleASide)
     }
+}
+
+#[derive(Error, Debug)]
+pub enum MoveParseError {
+    #[error("length of move string should be 2 or 4, not {0}")]
+    BadLength(usize),
+    #[error("bad source square string \"{0}\"")]
+    BadSquare(#[from] TypeParseError),
+    #[error("source square for the move is empty")]
+    EmptySource,
 }
 
 impl fmt::Display for Move {

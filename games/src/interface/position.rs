@@ -35,12 +35,19 @@ where
 
     /// Type for one move in this board representation.
     type Move;
+    type MoveParseError;
 
     /// FEN string for the standard starting position of the game.
     ///
     /// If the game doesn't have a standard starting a position, any legal
     /// starting position or a de-facto standard may be used.
     const STARTPOS: &str;
+
+    /// Parses the given move string into a usable Move value.
+    fn parse_move(
+        &self,
+        move_str: &str,
+    ) -> Result<Self::Move, Self::MoveParseError>;
 
     /// Adds the given Piece to the given Square. If the target Square is
     /// non-empty, the behavior is undefined.

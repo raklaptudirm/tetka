@@ -52,9 +52,35 @@ impl PositionType for Position {
     type Square = Square;
     type ColoredPiece = ColoredPiece;
     type Move = Move;
+    type MoveParseError = MoveParseError;
 
     const STARTPOS: &str =
         "--------/--------/p-------/-------P/--------/-------- w 1";
+
+    /// from_str converts the given string representation of a Move into a [Move].
+    /// The format supported is `<pawn><tile>`. For how `<pawn>` and `<tile>` are
+    /// parsed, take a look at [`Square::FromStr`](Square::from_str). This function
+    /// can be treated as the inverse of the [`fmt::Display`] trait for [Move].
+    /// ```
+    /// # use tetka_games::games::isolation::*;
+    /// # use std::str::FromStr;
+    /// #
+    /// let jump = Move::new(Square::A1, Square::A3);
+    /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
+    /// ```
+    fn parse_move(
+        &self,
+        move_str: &str,
+    ) -> Result<Self::Move, Self::MoveParseError> {
+        if move_str.len() != 4 {
+            return Err(MoveParseError::BadLength(move_str.len()));
+        }
+
+        let pawn = Square::from_str(&move_str[..2])?;
+        let tile = Square::from_str(&move_str[2..])?;
+
+        Ok(Move::new(pawn, tile))
+    }
 
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
         match piece.piece() {
@@ -412,32 +438,6 @@ pub enum MoveParseError {
     BadLength(usize),
     #[error("bad pawn square string \"{0}\"")]
     BadSquare(#[from] TypeParseError),
-}
-
-impl FromStr for Move {
-    type Err = MoveParseError;
-
-    /// from_str converts the given string representation of a Move into a [Move].
-    /// The format supported is `<pawn><tile>`. For how `<pawn>` and `<tile>` are
-    /// parsed, take a look at [`Square::FromStr`](Square::from_str). This function
-    /// can be treated as the inverse of the [`fmt::Display`] trait for [Move].
-    /// ```
-    /// # use tetka_games::games::isolation::*;
-    /// # use std::str::FromStr;
-    /// #
-    /// let jump = Move::new(Square::A1, Square::A3);
-    /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
-    /// ```
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 4 {
-            return Err(MoveParseError::BadLength(s.len()));
-        }
-
-        let pawn = Square::from_str(&s[..2])?;
-        let tile = Square::from_str(&s[2..])?;
-
-        Ok(Move::new(pawn, tile))
-    }
 }
 
 impl fmt::Display for Move {
