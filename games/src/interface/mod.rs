@@ -81,8 +81,8 @@ pub trait RepresentableType<B: Into<usize>>:
 
 #[derive(Error, Debug)]
 pub enum TypeParseError {
-    #[error("invalid string representation for {0}")]
-    StrError(String),
+    #[error("invalid string representation {0} for {1}")]
+    StrError(String, String),
     #[error("invalid integer representation for {0}")]
     RangeError(String),
 }
@@ -345,6 +345,7 @@ macro_rules! game_details {
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 if s.len() != 1 {
                     Err($crate::interface::TypeParseError::StrError(
+                        s.to_string(),
                         stringify!(File).to_string()
                     ))
                 } else {
@@ -356,7 +357,7 @@ macro_rules! game_details {
                         if file_idx < File::N as u8 {
                                 Ok(File::unsafe_from(file_idx))
                         } else {
-                            Err($crate::interface::TypeParseError::StrError(
+                            Err($crate::interface::TypeParseError::RangeError(
                                 stringify!(File).to_string()
                             ))
                         }
@@ -391,12 +392,13 @@ macro_rules! game_details {
                             Rank::unsafe_from(rank_idx - 1)
                         })
                     } else {
-                        Err($crate::interface::TypeParseError::StrError(
+                        Err($crate::interface::TypeParseError::RangeError(
                             stringify!(Rank).to_string()
                         ))
                     }
                 } else {
                     Err($crate::interface::TypeParseError::StrError(
+                        s.to_string(),
                         stringify!(Rank).to_string()
                     ))
                 }
@@ -428,20 +430,15 @@ macro_rules! game_details {
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 if s.len() < 2 {
                     Err($crate::interface::TypeParseError::StrError(
+                        s.to_string(),
                         stringify!(File).to_string()
                     ))
                 } else {
                     // A Square is represented by a Rank and a File.
-                    let file = File::from_str(&s[..1]);
-                    let rank = Rank::from_str(&s[1..]);
+                    let file = File::from_str(&s[..1])?;
+                    let rank = Rank::from_str(&s[1..])?;
 
-                    if let (Ok(file), Ok(rank)) = (file, rank) {
-                        Ok($crate::interface::SquareType::new(file, rank))
-                    } else {
-                        Err($crate::interface::TypeParseError::StrError(
-                            stringify!(File).to_string()
-                        ))
-                    }
+                    Ok($crate::interface::SquareType::new(file, rank))
                 }
             }
         }
@@ -479,6 +476,7 @@ macro_rules! representable_type {
                     $($repr => Ok(Self::$variant),)*
                     _ => Err(
                         $crate::interface::TypeParseError::StrError(
+                            s.to_string(),
                             stringify!($type).to_string()
                         )
                     ),

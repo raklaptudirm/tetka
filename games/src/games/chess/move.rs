@@ -151,9 +151,9 @@ impl MoveFlag {
 
 #[derive(Error, Debug)]
 pub enum MoveParseError {
-    #[error("length of move string should be 2 or 4, not {0}")]
+    #[error("length of move string should be 4 or 5, not {0}")]
     BadLength(usize),
-    #[error("bad source square string \"{0}\"")]
+    #[error("bad source square: {0}")]
     BadSquare(#[from] TypeParseError),
     #[error("source square for the move is empty")]
     EmptySource,
