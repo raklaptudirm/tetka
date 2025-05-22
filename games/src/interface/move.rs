@@ -24,6 +24,14 @@ pub trait MoveType: Display + From<u16> + Into<u16> + Copy {
     /// MAX_IN_POSITION is a suitably high maximum for the number of move in a
     /// single, possibly unreachable position.
     const MAX_IN_POSITION: usize;
+
+    type Position;
+    type MoveParseError;
+
+    fn from_str(
+        move_str: &str,
+        position: &Self::Position,
+    ) -> Result<Self, Self::MoveParseError>;
 }
 
 /// MoveStore is a trait implemented by types which are able to store moves

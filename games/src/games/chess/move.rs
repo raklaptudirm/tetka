@@ -11,11 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
+use std::{fmt, str::FromStr};
 
-use super::{castling, Piece, Square};
+use super::{castling, Piece, Position, Square};
 use crate::interface::{
-    representable_type, MoveType, RepresentableType, TypeParseError,
+    representable_type, ColoredPieceType, MoveType, PositionType,
+    RepresentableType, SquareType, TypeParseError,
 };
 
 use thiserror::Error;
@@ -27,6 +28,49 @@ impl MoveType for Move {
     const NULL: Move = Move(0);
     const MAX_IN_GAME: usize = 256;
     const MAX_IN_POSITION: usize = 256;
+
+    type Position = Position;
+    type MoveParseError = MoveParseError;
+
+    fn from_str(
+        move_str: &str,
+        position: &Self::Position,
+    ) -> Result<Self, Self::MoveParseError> {
+        if move_str.len() < 4 || move_str.len() > 5 {
+            return Err(MoveParseError::BadLength(move_str.len()));
+        }
+
+        let source = Square::from_str(&move_str[0..2])?;
+        let target = Square::from_str(&move_str[2..4])?;
+
+        let source_piece = match position.at(source) {
+            Some(piece) => piece.piece(),
+            None => return Err(MoveParseError::EmptySource),
+        };
+
+        let is_pawn = source_piece == Piece::Pawn;
+
+        let x_dist = (source.file() as u8).abs_diff(target.file() as u8);
+        let y_dist = (source.rank() as u8).abs_diff(target.rank() as u8);
+
+        let flag = if move_str.len() == 5 {
+            MoveFlag::from_str(&move_str[4..])?
+        } else if is_pawn && y_dist == 2 {
+            MoveFlag::DoublePush
+        } else if is_pawn && position.en_passant_target() == Some(target) {
+            MoveFlag::EnPassant
+        } else if source_piece == Piece::King && x_dist > 1 {
+            if source as u8 > target as u8 {
+                MoveFlag::CastleASide
+            } else {
+                MoveFlag::CastleHSide
+            }
+        } else {
+            MoveFlag::Normal
+        };
+
+        Ok(Move::new(source, target, flag))
+    }
 }
 
 impl From<u16> for Move {
