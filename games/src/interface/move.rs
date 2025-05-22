@@ -11,12 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt::Display;
+use std::fmt;
 
 use arrayvec::ArrayVec;
 
+use super::PositionType;
+
 /// The Move trait should be implemented the move representation of a game.
-pub trait MoveType: Display + From<u16> + Into<u16> + Copy {
+pub trait MoveType: From<u16> + Into<u16> + Copy {
     /// NULL represents the null or the 'do nothing' move.
     const NULL: Self;
     /// MAX_IN_GAME is a suitably high maximum for the number of move in a game.
@@ -25,13 +27,48 @@ pub trait MoveType: Display + From<u16> + Into<u16> + Copy {
     /// single, possibly unreachable position.
     const MAX_IN_POSITION: usize;
 
-    type Position;
+    type Position: PositionType;
     type MoveParseError;
 
     fn from_str(
         move_str: &str,
         position: &Self::Position,
     ) -> Result<Self, Self::MoveParseError>;
+
+    fn fmt(
+        &self,
+        position: &Self::Position,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result;
+
+    fn with_position<'a>(
+        self,
+        position: &'a Self::Position,
+    ) -> PositionalMove<'a, Self, Self::Position> {
+        PositionalMove::new(self, position)
+    }
+}
+
+pub struct PositionalMove<'a, M: MoveType<Position = P>, P: PositionType> {
+    position: &'a P,
+    positional_move: M,
+}
+
+impl<'a, M: MoveType<Position = P>, P: PositionType> PositionalMove<'a, M, P> {
+    fn new(positional_move: M, position: &'a P) -> Self {
+        PositionalMove {
+            position,
+            positional_move,
+        }
+    }
+}
+
+impl<'a, M: MoveType<Position = P>, P: PositionType> fmt::Display
+    for PositionalMove<'a, M, P>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.positional_move.fmt(self.position, f)
+    }
 }
 
 /// MoveStore is a trait implemented by types which are able to store moves

@@ -14,9 +14,12 @@
 use std::{fmt, str::FromStr};
 
 use super::{castling, Piece, Position, Square};
-use crate::interface::{
-    representable_type, ColoredPieceType, MoveType, PositionType,
-    RepresentableType, SquareType, TypeParseError,
+use crate::{
+    games::chess::Direction,
+    interface::{
+        representable_type, ColoredPieceType, MoveType, PositionType,
+        RepresentableType, SquareType, TypeParseError,
+    },
 };
 
 use thiserror::Error;
@@ -70,6 +73,39 @@ impl MoveType for Move {
         };
 
         Ok(Move::new(source, target, flag))
+    }
+
+    fn fmt(
+        &self,
+        position: &Self::Position,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        match self.flag() {
+            promotion @ (MoveFlag::NPromotion
+            | MoveFlag::BPromotion
+            | MoveFlag::RPromotion
+            | MoveFlag::QPromotion) => {
+                write!(f, "{}{}{}", self.source(), self.target(), promotion)
+            }
+            castling @ (MoveFlag::CastleHSide | MoveFlag::CastleASide) => {
+                if position.is_frc() {
+                    write!(f, "{}{}", self.source(), self.target())
+                } else {
+                    let source = self.source();
+                    let target = match castling {
+                        MoveFlag::CastleHSide => {
+                            source.shift(Direction::East).shift(Direction::East)
+                        }
+                        MoveFlag::CastleASide => {
+                            source.shift(Direction::West).shift(Direction::West)
+                        }
+                        _ => unreachable!(),
+                    };
+                    write!(f, "{}{}", source, target)
+                }
+            }
+            _ => write!(f, "{}{}", self.source(), self.target()),
+        }
     }
 }
 
@@ -201,10 +237,4 @@ pub enum MoveParseError {
     BadSquare(#[from] TypeParseError),
     #[error("source square for the move is empty")]
     EmptySource,
-}
-
-impl fmt::Display for Move {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}{}", self.source(), self.target())
-    }
 }

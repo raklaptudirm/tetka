@@ -360,6 +360,31 @@ impl MoveType for Move {
 
         Ok(Move::new(pawn, tile))
     }
+
+    /// Display formats the given Move in a human-readable manner. The format used
+    /// for displaying moves is `<pawn><tile>`. For the formatting of `<pawn>` and
+    /// `<tile>`, refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`.
+    /// ```
+    /// # use tetka_games::games::isolation::*;
+    /// # use tetka_games::interface::MoveType;
+    /// #
+    /// let null = Move::NULL;
+    /// let jump = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert_eq!(null.to_string(), "null");
+    /// assert_eq!(jump.to_string(), "a1a3");
+    /// ```
+    fn fmt(
+        &self,
+        _: &Self::Position,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        if *self == Move::NULL {
+            write!(f, "null")
+        } else {
+            write!(f, "{}{}", self.pawn(), self.tile())
+        }
+    }
 }
 
 impl From<u16> for Move {
@@ -442,34 +467,15 @@ pub enum MoveParseError {
     BadSquare(#[from] TypeParseError),
 }
 
-impl fmt::Display for Move {
-    /// Display formats the given Move in a human-readable manner. The format used
-    /// for displaying moves is `<pawn><tile>`. For the formatting of `<pawn>` and
-    /// `<tile>`, refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`.
-    /// ```
-    /// # use tetka_games::games::isolation::*;
-    /// # use tetka_games::interface::MoveType;
-    /// #
-    /// let null = Move::NULL;
-    /// let jump = Move::new(Square::A1, Square::A3);
-    ///
-    /// assert_eq!(null.to_string(), "null");
-    /// assert_eq!(jump.to_string(), "a1a3");
-    /// ```
+impl fmt::Debug for Move {
+    /// Debug formats the given Move into a human-readable debug string. It uses
+    /// `Move::Display` trait under the hood for formatting the Move.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if *self == Move::NULL {
             write!(f, "null")
         } else {
             write!(f, "{}{}", self.pawn(), self.tile())
         }
-    }
-}
-
-impl fmt::Debug for Move {
-    /// Debug formats the given Move into a human-readable debug string. It uses
-    /// `Move::Display` trait under the hood for formatting the Move.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
     }
 }
 

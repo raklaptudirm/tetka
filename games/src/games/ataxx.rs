@@ -461,6 +461,40 @@ impl MoveType for Move {
 
         Ok(Move::new(source, target))
     }
+
+    /// Display formats the given Move in a human-readable manner. The format used
+    /// for displaying jump moves is `<source><target>`, while a singular Move is
+    /// formatted as `<target>`. For the formatting of `<source>` and `<target>`,
+    /// refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`, while
+    /// [`Move::PASS`] is formatted as `0000`.
+    /// ```
+    /// # use tetka_games::games::ataxx::*;
+    /// #
+    /// let null = Move::NULL;
+    /// let pass = Move::PASS;
+    /// let sing = Move::new_single(Square::A1);
+    /// let jump = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert_eq!(null.to_string(), "null");
+    /// assert_eq!(pass.to_string(), "0000");
+    /// assert_eq!(sing.to_string(), "a1");
+    /// assert_eq!(jump.to_string(), "a1a3");
+    /// ```
+    fn fmt(
+        &self,
+        _: &Self::Position,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        if *self == Move::NULL {
+            write!(f, "null")
+        } else if *self == Move::PASS {
+            write!(f, "0000")
+        } else if self.is_single() {
+            write!(f, "{}", self.source())
+        } else {
+            write!(f, "{}{}", self.source(), self.target())
+        }
+    }
 }
 
 impl From<u16> for Move {
@@ -595,25 +629,9 @@ pub enum MoveParseError {
     BadSquare(#[from] TypeParseError),
 }
 
-impl fmt::Display for Move {
-    /// Display formats the given Move in a human-readable manner. The format used
-    /// for displaying jump moves is `<source><target>`, while a singular Move is
-    /// formatted as `<target>`. For the formatting of `<source>` and `<target>`,
-    /// refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`, while
-    /// [`Move::PASS`] is formatted as `0000`.
-    /// ```
-    /// # use tetka_games::games::ataxx::*;
-    /// #
-    /// let null = Move::NULL;
-    /// let pass = Move::PASS;
-    /// let sing = Move::new_single(Square::A1);
-    /// let jump = Move::new(Square::A1, Square::A3);
-    ///
-    /// assert_eq!(null.to_string(), "null");
-    /// assert_eq!(pass.to_string(), "0000");
-    /// assert_eq!(sing.to_string(), "a1");
-    /// assert_eq!(jump.to_string(), "a1a3");
-    /// ```
+impl fmt::Debug for Move {
+    /// Debug formats the given Move into a human-readable debug string. It uses
+    /// `Move::Display` trait under the hood for formatting the Move.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if *self == Move::NULL {
             write!(f, "null")
@@ -624,14 +642,6 @@ impl fmt::Display for Move {
         } else {
             write!(f, "{}{}", self.source(), self.target())
         }
-    }
-}
-
-impl fmt::Debug for Move {
-    /// Debug formats the given Move into a human-readable debug string. It uses
-    /// `Move::Display` trait under the hood for formatting the Move.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::interface::PositionType;
+use crate::interface::{MoveType, PositionType};
 
 /// perft is a function to walk the move generation tree of strictly legal moves
 /// to count all the leaf nodes of a certain depth.
@@ -12,8 +12,12 @@ use crate::interface::PositionType;
 /// the number of move paths of a certain depth. Perft ignores draws by
 /// repetition, by the fifty-move rule and by insufficient material.
 #[must_use]
-pub fn perft<const SPLIT: bool, const BULK: bool, T: PositionType>(
-    position: T,
+pub fn perft<
+    const SPLIT: bool,
+    const BULK: bool,
+    P: PositionType<Move: MoveType<Position = P>>,
+>(
+    position: P,
     depth: u8,
 ) -> u64 {
     // Bulk counting if enabled. Instead of calling make move and perft for each
@@ -37,11 +41,11 @@ pub fn perft<const SPLIT: bool, const BULK: bool, T: PositionType>(
 
         // Spilt should always be disabled for child perft calls, and a child perft
         // should have the same bulk counting behavior as the parent perft call.
-        let new_nodes = perft::<false, BULK, T>(new_position, depth - 1);
+        let new_nodes = perft::<false, BULK, P>(new_position, depth - 1);
 
         // If spilt perft is enabled, print the nodes added due to this move.
         if SPLIT {
-            println!("{}: {}", m, new_nodes);
+            println!("{}: {}", m.with_position(&position), new_nodes);
         }
 
         // Add the new node count to the cumulative total.
