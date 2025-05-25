@@ -12,6 +12,7 @@
 // limitations under the License.
 
 use std::ops::{Deref, DerefMut};
+use std::str::FromStr;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::flag;
@@ -29,6 +30,28 @@ use crate::inbuilt::Context;
 //                     /            \                 //
 //            User::Context   Inbuilt::Context        //
 // -------------------------------------------------- //
+
+#[macro_export]
+/// Locks the given bundle into the given context variable for the scope of the
+/// macro body, and runs all the statemets provided. The lock is released once
+/// the macro body is over but any variables declared in the body is available.
+macro_rules! lock {
+    ($bundle:ident > $ctx:ident => $($stmt:stmt;)*) => {
+        let $ctx = $bundle.lock();
+        $(
+            $stmt
+        )*
+        drop($ctx);
+    };
+
+    ($bundle:ident > mut $ctx:ident => $($stmt:stmt;)*) => {
+        let mut $ctx = $bundle.lock();
+        $(
+            $stmt
+        )*
+        drop($ctx);
+    };
+}
 
 /// Bundle is a packet containing all the relevant context necessary for a
 /// [Command](crate::Command) invocation.
@@ -89,6 +112,22 @@ impl<C: Send> Bundle<C> {
     /// not set during invocation.
     pub fn get_single_flag(&self, name: &str) -> Option<String> {
         self.flags.get_single(name)
+    }
+
+    /// get_parsed_flag parsed the single flag with the given name into the
+    /// required string-parsable type. It returns a result for any errors
+    /// encountered while parsing and an option for if the flag is set.
+    pub fn get_parsed_flag<T: FromStr<Err = E>, E>(
+        &self,
+        name: &str,
+    ) -> Result<Option<T>, E> {
+        match self.get_single_flag(name) {
+            Some(value) => match value.parse() {
+                Ok(val) => Ok(Some(val)),
+                Err(err) => Err(err),
+            },
+            None => Ok(None),
+        }
     }
 
     /// get_single_flag gets the value provided to an [array](crate::Flag::Array)
