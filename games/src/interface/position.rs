@@ -22,7 +22,7 @@ use super::{
 /// It is designed to create game-agnostic software. Tetka provides the logic
 /// for many popular games out of the box, but custom games can easily be
 /// implemented by the library user.
-pub trait PositionType: FromStr + Display
+pub trait PositionType: FromStr + Display + Default
 where
     Self::ColoredPiece: ColoredPieceType,
     Self::Move: MoveType,
