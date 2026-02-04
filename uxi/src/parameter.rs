@@ -16,7 +16,7 @@ pub enum Parameter {
     /// String represents a string parameter which can have any string value.
     ///
     /// Its first field contains the default String value for the parameter.
-    String(String),
+    String(&'static str),
 
     /// Spin represents a spin wheel which can be an integer in a certain range.
     ///
@@ -31,11 +31,11 @@ pub enum Parameter {
     ///
     /// Its first argument is the default value while the second argument is the
     /// list of predefined strings. The default value must be included in the list.
-    Combo(String, Vec<String>),
+    Combo(&'static str, Vec<&'static str>),
 }
 
 #[derive(Clone, Default)]
-pub struct Values {
+pub(crate) struct Values {
     checks: HashMap<String, bool>,
     strings: HashMap<String, String>,
     numbers: HashMap<String, i64>,
@@ -52,6 +52,17 @@ impl Values {
 
     pub fn get_spin(&self, name: &str) -> Option<i64> {
         self.numbers.get(name).copied()
+    }
+
+    pub fn get_string_rep(&self, name: &str) -> String {
+        self.checks.get(name).map(ToString::to_string).unwrap_or(
+            self.strings.get(name).map(ToString::to_string).unwrap_or(
+                self.strings
+                    .get(name)
+                    .map(ToString::to_string)
+                    .unwrap_or("<none>".to_string()),
+            ),
+        )
     }
 }
 
@@ -95,14 +106,13 @@ impl Values {
                 self.numbers.insert(name, value);
             }
             Parameter::Combo(_, strings) => {
-                let value = value_str.to_owned();
-                if strings.contains(&value) {
+                if strings.contains(&value_str) {
                     return Err(format!(
                         "option {}: {} is not one of the combo strings",
-                        name, value
+                        name, value_str
                     ));
                 }
-                self.strings.insert(name, value);
+                self.strings.insert(name, value_str.to_string());
             }
         };
 
@@ -115,13 +125,13 @@ impl Values {
                 self.checks.insert(name, *default);
             }
             Parameter::String(default) => {
-                self.strings.insert(name, default.clone());
+                self.strings.insert(name, default.to_string());
             }
             Parameter::Spin(default, _, _) => {
                 self.numbers.insert(name, *default);
             }
             Parameter::Combo(default, _) => {
-                self.strings.insert(name, default.clone());
+                self.strings.insert(name, default.to_string());
             }
         };
     }
@@ -131,7 +141,9 @@ impl fmt::Display for Parameter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Parameter::Check(default) => write!(f, "check default {}", default),
-            Parameter::String(default) => write!(f, "string default {}", default),
+            Parameter::String(default) => {
+                write!(f, "string default {}", default)
+            }
             Parameter::Spin(default, min, max) => {
                 write!(f, "spin default {} min {} max {}", default, min, max)
             }

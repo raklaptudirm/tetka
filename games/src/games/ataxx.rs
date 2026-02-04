@@ -11,27 +11,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cmp;
-use std::fmt;
-use std::num::ParseIntError;
-use std::str::FromStr;
+use std::{cmp, fmt, num::ParseIntError, str::FromStr, sync::LazyLock};
+
+use crate::interface::{
+    game_details,
+    parse::{self, PiecePlacementParseError},
+    BitBoardType, Hash, MoveStore, MoveType, PositionType, RepresentableType,
+    SetType, SquareType, TypeParseError,
+};
 
 use strum::IntoEnumIterator;
-
-use crate::interface;
-use crate::interface::PiecePlacementParseError;
-use crate::interface::PositionType;
-use crate::interface::TypeParseError;
-use crate::interface::{Hash, RepresentableType, SetType, SquareType};
-
 use thiserror::Error;
 
-#[rustfmt::skip]
-use crate::ataxx::{
-    BitBoard, ColoredPiece, File, Move,
-    Rank, Square, Color, Piece
-};
-use crate::interface::MoveStore;
+// The Ataxx board has 7 Files and 7 Ranks, for a total of 49 Squares. It has
+// two types of pieces, the Piece and the Blocker. Among the two only Piece is
+// colored. The two colors are Black and White respectively, with Black moving
+// first.
+game_details!(
+    Files: A, B, C, D, E, F, G;
+    Ranks: 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth, 7 Seventh;
+    Pieces: Piece "x"; Block "-";
+    Colors: Black "x" ("x"),
+            White "o" ("o");
+);
 
 /// Position represents the snapshot of an Ataxx Board, the state of the an
 /// ataxx game at a single point in time. It also provides all of the methods
@@ -51,18 +53,20 @@ pub struct Position {
 }
 
 impl PositionType for Position {
-    type BitBoard = BitBoard;
+    type Square = Square;
     type ColoredPiece = ColoredPiece;
     type Move = Move;
 
+    const STARTPOS: &str = "x5o/7/7/7/7/7/o5x x 0 1";
+
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
-        self.bitboards[piece as usize].insert(sq);
+        self.bitboards[piece].insert(sq);
     }
 
     fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
         match self.at(sq) {
             Some(piece) => {
-                self.bitboards[piece as usize].remove(sq);
+                self.bitboards[piece].remove(sq);
                 Some(piece)
             }
             None => None,
@@ -74,19 +78,7 @@ impl PositionType for Position {
             .find(|piece| self.colored_piece_bb(*piece).contains(sq))
     }
 
-    fn piece_bb(&self, piece: Piece) -> BitBoard {
-        self.bitboards[piece as usize]
-    }
-
-    fn color_bb(&self, color: Color) -> BitBoard {
-        self.bitboards[color as usize]
-    }
-
-    fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
-        self.bitboards[piece as usize]
-    }
-
-    fn side_to_move(&self) -> interface::Color<Self> {
+    fn side_to_move(&self) -> Color {
         self.side_to_move
     }
 
@@ -103,8 +95,8 @@ impl PositionType for Position {
     }
 
     fn is_game_over(&self) -> bool {
-        let black = self.colored_piece_bb(ColoredPiece::Black);
-        let white = self.colored_piece_bb(ColoredPiece::White);
+        let black = self.colored_piece_bb(ColoredPiece::BlackPiece);
+        let white = self.colored_piece_bb(ColoredPiece::WhitePiece);
         let block = self.colored_piece_bb(ColoredPiece::Block);
 
         self.half_move_clock >= 100 ||                           // Fifty-move rule
@@ -112,22 +104,22 @@ impl PositionType for Position {
 			white == BitBoard::EMPTY || black == BitBoard::EMPTY // No pieces left
     }
 
-    fn winner(&self) -> Option<Color> {
+    fn winner(&self) -> Option<Option<Color>> {
         if self.half_move_clock >= 100 {
             // Draw by 50 move rule.
             return None;
         }
 
-        let black = self.colored_piece_bb(ColoredPiece::Black);
-        let white = self.colored_piece_bb(ColoredPiece::White);
+        let black = self.colored_piece_bb(ColoredPiece::BlackPiece);
+        let white = self.colored_piece_bb(ColoredPiece::WhitePiece);
         let block = self.colored_piece_bb(ColoredPiece::Block);
 
         if black == BitBoard::EMPTY {
             // Black lost all its pieces, White won.
-            return Some(Color::White);
+            return Some(Some(Color::White));
         } else if white == BitBoard::EMPTY {
             // White lost all its pieces, Black won.
-            return Some(Color::Black);
+            return Some(Some(Color::Black));
         }
 
         debug_assert!(black | white | block == BitBoard::UNIVERSE);
@@ -139,12 +131,12 @@ impl PositionType for Position {
         let white_n = white.len();
 
         match black_n.cmp(&white_n) {
-            cmp::Ordering::Less => Some(Color::White),
-            cmp::Ordering::Greater => Some(Color::Black),
+            cmp::Ordering::Less => Some(Some(Color::White)),
+            cmp::Ordering::Greater => Some(Some(Color::Black)),
             // Though there can't be an equal number of black and white pieces
             // on an empty ataxx board, it is possible with an odd number of
             // blocker pieces.
-            cmp::Ordering::Equal => None,
+            cmp::Ordering::Equal => Some(None),
         }
     }
 
@@ -282,6 +274,17 @@ impl PositionType for Position {
 }
 
 impl Position {
+    pub fn piece_bb(&self, piece: Piece) -> BitBoard {
+        self.bitboards[piece]
+    }
+
+    pub fn color_bb(&self, color: Color) -> BitBoard {
+        self.bitboards[color]
+    }
+
+    pub fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
+        self.bitboards[piece]
+    }
     fn get_hash(black: BitBoard, white: BitBoard, stm: Color) -> Hash {
         let a = black.into();
         let b = white.into();
@@ -359,23 +362,26 @@ impl FromStr for Position {
             half_move_clock: 0,
         };
 
-        interface::parse_piece_placement(&mut position, pos)?;
+        parse::piece_placement(&mut position, pos)?;
 
         position.side_to_move = Color::from_str(stm)?;
         position.half_move_clock = hmc.parse::<u8>()?;
-        position.ply_count = fmc.parse::<u16>()? * 2 - 1;
-        if position.side_to_move == Color::Black {
-            position.ply_count -= 1;
-        }
+        position.ply_count = parse::ply_count(fmc, position.side_to_move)?;
 
         // Calculate the Hash value for the Position.
         position.checksum = Self::get_hash(
-            position.colored_piece_bb(ColoredPiece::Black),
-            position.colored_piece_bb(ColoredPiece::White),
+            position.colored_piece_bb(ColoredPiece::BlackPiece),
+            position.colored_piece_bb(ColoredPiece::WhitePiece),
             position.side_to_move,
         );
 
         Ok(position)
+    }
+}
+
+impl Default for Position {
+    fn default() -> Self {
+        Self::from_str(Self::STARTPOS).unwrap()
     }
 }
 
@@ -406,3 +412,278 @@ impl fmt::Display for Position {
         writeln!(f, "Side To Move: {}", self.side_to_move)
     }
 }
+
+/// Move represents an Ataxx move which can be played on the Board.
+#[derive(Copy, Clone, PartialEq, Eq, Default)]
+pub struct Move(u16);
+
+impl MoveType for Move {
+    const NULL: Self = Move(1 << 15);
+    const MAX_IN_GAME: usize = 256;
+    const MAX_IN_POSITION: usize = 256;
+
+    type Position = Position;
+    type MoveParseError = MoveParseError;
+
+    /// from_str converts the given string representation of a Move into a [Move].
+    /// The formats supported are '0000' for a [Move::PASS], `<target>` for a
+    /// singular Move, and `<source><target>` for a jump Move. For how `<source>`
+    /// and `<target>` are parsed, take a look at
+    /// [`Square::FromStr`](Square::from_str). This function can be treated as the
+    /// inverse of the [`fmt::Display`] trait for [Move].
+    /// ```
+    /// # use tetka_games::games::ataxx::*;
+    /// # use std::str::FromStr;
+    /// #
+    /// let pass = Move::PASS;
+    /// let sing = Move::new_single(Square::A1);
+    /// let jump = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert_eq!(Move::from_str(&pass.to_string()).unwrap(), pass);
+    /// assert_eq!(Move::from_str(&sing.to_string()).unwrap(), sing);
+    /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
+    /// ```
+    fn from_str(
+        move_str: &str,
+        _: &Self::Position,
+    ) -> Result<Self, Self::MoveParseError> {
+        if move_str == "0000" {
+            return Ok(Move::PASS);
+        };
+
+        if move_str.len() != 2 && move_str.len() != 4 {
+            return Err(MoveParseError::BadLength(move_str.len()));
+        }
+
+        let source = &move_str[..2];
+        let source = Square::from_str(source)?;
+
+        if move_str.len() < 4 {
+            return Ok(Move::new_single(source));
+        }
+
+        let target = &move_str[2..];
+        let target = Square::from_str(target)?;
+
+        Ok(Move::new(source, target))
+    }
+
+    /// Display formats the given Move in a human-readable manner. The format used
+    /// for displaying jump moves is `<source><target>`, while a singular Move is
+    /// formatted as `<target>`. For the formatting of `<source>` and `<target>`,
+    /// refer to `Square::Display`. [`Move::NULL`] is  formatted as `null`, while
+    /// [`Move::PASS`] is formatted as `0000`.
+    /// ```
+    /// # use tetka_games::games::ataxx::*;
+    /// #
+    /// let null = Move::NULL;
+    /// let pass = Move::PASS;
+    /// let sing = Move::new_single(Square::A1);
+    /// let jump = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert_eq!(null.to_string(), "null");
+    /// assert_eq!(pass.to_string(), "0000");
+    /// assert_eq!(sing.to_string(), "a1");
+    /// assert_eq!(jump.to_string(), "a1a3");
+    /// ```
+    fn fmt(
+        &self,
+        _: &Self::Position,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        if *self == Move::NULL {
+            write!(f, "null")
+        } else if *self == Move::PASS {
+            write!(f, "0000")
+        } else if self.is_single() {
+            write!(f, "{}", self.source())
+        } else {
+            write!(f, "{}{}", self.source(), self.target())
+        }
+    }
+}
+
+impl From<u16> for Move {
+    fn from(value: u16) -> Self {
+        Move(value)
+    }
+}
+
+impl From<Move> for u16 {
+    fn from(value: Move) -> Self {
+        value.0
+    }
+}
+
+impl Move {
+    // Bit-widths of fields.
+    const SOURCE_WIDTH: u16 = 6;
+    const TARGET_WIDTH: u16 = 6;
+
+    // Bit-masks of fields.
+    const SOURCE_MASK: u16 = (1 << Move::SOURCE_WIDTH) - 1;
+    const TARGET_MASK: u16 = (1 << Move::TARGET_WIDTH) - 1;
+
+    // Bit-offsets of fields.
+    const SOURCE_OFFSET: u16 = 0;
+    const TARGET_OFFSET: u16 = Move::SOURCE_OFFSET + Move::SOURCE_WIDTH;
+
+    /// NULL Move represents an invalid move.
+    pub const NULL: Move = Move(1 << 15);
+    /// PASS Move represents a no move, where only the side to move changes.
+    /// ```
+    /// # use tetka_games::games::ataxx::*;
+    /// # use tetka_games::interface::PositionType;
+    /// # use std::str::FromStr;
+    /// #
+    /// let old_pos = Position::from_str("x5o/7/7/7/7/7/o5x x 0 1").unwrap();
+    /// let new_pos = old_pos.after_move::<true>(Move::PASS);
+    ///
+    /// assert_eq!(old_pos.color_bb(Color::Black), new_pos.color_bb(Color::Black));
+    /// assert_eq!(old_pos.color_bb(Color::White), new_pos.color_bb(Color::White));
+    /// assert_eq!(old_pos.side_to_move, !new_pos.side_to_move);
+    /// ```
+    pub const PASS: Move = Move(1 << 15 | 1 << 14);
+
+    /// new_single returns a new singular Move, where a piece is cloned to its
+    /// target Square. For a singular Move, [`Move::source`] and [`Move::target`]
+    /// are equal since the source Square is irrelevant to the Move.
+    /// ```
+    /// # use tetka_games::games::ataxx::*;
+    /// #
+    /// let mov = Move::new_single(Square::A1);
+    ///
+    /// assert_eq!(mov.source(), mov.target());
+    /// assert_eq!(mov.target(), Square::A1);
+    /// ```
+    pub fn new_single(square: Square) -> Move {
+        Move::new(square, square)
+    }
+
+    /// new returns a new jump Move from the given source Square to the given
+    /// target Square. These Squares can be recovered with the [`Move::source`] and
+    /// [`Move::target`] methods respectively.
+    /// ```
+    /// # use tetka_games::games::ataxx::*;
+    /// #
+    /// let mov = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert_eq!(mov.source(), Square::A1);
+    /// assert_eq!(mov.target(), Square::A3);
+    /// ```
+    #[rustfmt::skip]
+    pub fn new(source: Square, target: Square) -> Move {
+		Move(
+			(source as u16) << Move::SOURCE_OFFSET |
+			(target as u16) << Move::TARGET_OFFSET
+		)
+    }
+
+    /// Source returns the source Square of the moving piece. This is equal to the
+    /// target Square if the given Move is of singular type.
+    /// ```
+    /// # use tetka_games::games::ataxx::*;
+    /// #
+    /// let mov = Move::new(Square::A1, Square::A3);
+    /// assert_eq!(mov.source(), Square::A1);
+    /// ```
+    pub fn source(self) -> Square {
+        unsafe {
+            Square::unsafe_from(
+                (self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK,
+            )
+        }
+    }
+
+    /// Target returns the target Square of the moving piece.
+    /// ```
+    /// # use tetka_games::games::ataxx::*;
+    /// #
+    /// let mov = Move::new(Square::A1, Square::A3);
+    /// assert_eq!(mov.target(), Square::A3);
+    /// ```
+    pub fn target(self) -> Square {
+        unsafe {
+            Square::unsafe_from(
+                (self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK,
+            )
+        }
+    }
+
+    /// is_single checks if the given Move is singular in nature. The result of this
+    /// function for [`Move::NULL`] and [`Move::PASS`] is undefined.
+    /// ```
+    /// # use tetka_games::games::ataxx::*;
+    /// #
+    /// let sing = Move::new_single(Square::A1);
+    /// let jump = Move::new(Square::A1, Square::A3);
+    ///
+    /// assert!(sing.is_single());
+    /// assert!(!jump.is_single());
+    /// ```
+    #[inline(always)]
+    pub fn is_single(self) -> bool {
+        self.source() == self.target()
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum MoveParseError {
+    #[error("length of move string should be 2 or 4, not {0}")]
+    BadLength(usize),
+    #[error("bad source square string \"{0}\"")]
+    BadSquare(#[from] TypeParseError),
+}
+
+impl fmt::Debug for Move {
+    /// Debug formats the given Move into a human-readable debug string. It uses
+    /// `Move::Display` trait under the hood for formatting the Move.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if *self == Move::NULL {
+            write!(f, "null")
+        } else if *self == Move::PASS {
+            write!(f, "0000")
+        } else if self.is_single() {
+            write!(f, "{}", self.source())
+        } else {
+            write!(f, "{}{}", self.source(), self.target())
+        }
+    }
+}
+
+impl BitBoard {
+    /// singles returns the targets of all singular moves from all the source
+    /// squares given in the provided BitBoard.
+    pub fn singles(bb: BitBoard) -> BitBoard {
+        let bar = bb | bb.east() | bb.west();
+        bar | bar.north() | bar.south()
+    }
+
+    /// single returns the targets of a singular Move from the given Square.
+    pub fn single(square: Square) -> BitBoard {
+        SINGLES[square]
+    }
+
+    /// double returns the targets of a jump Move from the given Square.
+    pub fn double(square: Square) -> BitBoard {
+        DOUBLES[square]
+    }
+}
+
+static SINGLES: LazyLock<[BitBoard; Square::N]> = LazyLock::new(|| {
+    let mut singles = [BitBoard::EMPTY; Square::N];
+    for square in Square::iter() {
+        let square_bb = BitBoard::from(square);
+        singles[square] = BitBoard::singles(square_bb) ^ square_bb;
+    }
+    singles
+});
+
+static DOUBLES: LazyLock<[BitBoard; Square::N]> = LazyLock::new(|| {
+    let mut doubles = [BitBoard::EMPTY; Square::N];
+    for square in Square::iter() {
+        let singles = BitBoard::singles(BitBoard::from(square));
+        doubles[square] = BitBoard::singles(singles) ^ singles;
+    }
+    doubles
+});

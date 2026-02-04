@@ -11,34 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
-use std::num::ParseIntError;
-use std::str::FromStr;
+use std::{fmt, num::ParseIntError, str::FromStr};
+
+use super::{
+    castling::{self, CastlingRightsParseError, Dimension, Rights, Side},
+    movegen, BitBoard, Color, ColoredPiece, File, Move, MoveFlag, Piece, Rank,
+    Square,
+};
+use crate::interface::{
+    self, parse::PiecePlacementParseError, ColoredPieceType, Hash, MoveStore,
+    PositionType, RepresentableType, SetType, SquareType, TypeParseError,
+};
 
 use strum::IntoEnumIterator;
-
-use crate::interface;
-use crate::interface::ColoredPieceType;
-use crate::interface::PiecePlacementParseError;
-use crate::interface::PositionType;
-use crate::interface::TypeParseError;
-use crate::interface::{Hash, RepresentableType, SetType, SquareType};
-
 use thiserror::Error;
-
-#[rustfmt::skip]
-use crate::chess::{
-    BitBoard, ColoredPiece, File, Move,
-    Rank, Square, Color, Piece, castling
-};
-use crate::interface::MoveStore;
-
-use super::castling::CastlingRightsParseError;
-use super::castling::Dimension;
-use super::castling::Rights;
-use super::castling::Side;
-use super::movegen;
-use super::MoveFlag;
 
 /// Position represents the snapshot of an Ataxx Board, the state of the an
 /// ataxx game at a single point in time. It also provides all of the methods
@@ -46,40 +32,40 @@ use super::MoveFlag;
 #[derive(Clone)]
 pub struct Position {
     // BitBoard board representation.
-    pub color_bbs: [BitBoard; Color::N],
-    pub piece_bbs: [BitBoard; Piece::N],
+    color_bbs: [BitBoard; Color::N],
+    piece_bbs: [BitBoard; Piece::N],
 
     // Position metadata.
     side_to_move: Color,
     ply_count: u16,
     half_move_clock: u8,
 
-    #[allow(dead_code)]
-    pub en_passant_target: Option<Square>,
+    en_passant_target: Option<Square>,
 
     // Game metadata.
-    #[allow(dead_code)]
     is_fischer_random: bool,
-    #[allow(dead_code)]
-    pub castling: castling::Info,
+    castling: castling::Info,
     checksum: Hash,
 }
 
 impl PositionType for Position {
-    type BitBoard = BitBoard;
+    type Square = Square;
     type ColoredPiece = ColoredPiece;
     type Move = Move;
 
+    const STARTPOS: &str =
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
     fn insert(&mut self, sq: Square, piece: ColoredPiece) {
-        self.piece_bbs[piece.piece() as usize].insert(sq);
-        self.color_bbs[piece.color() as usize].insert(sq);
+        self.piece_bbs[piece.piece()].insert(sq);
+        self.color_bbs[piece.color()].insert(sq);
     }
 
     fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
         match self.at(sq) {
             Some(piece) => {
-                self.piece_bbs[piece.piece() as usize].remove(sq);
-                self.color_bbs[piece.color() as usize].remove(sq);
+                self.piece_bbs[piece.piece()].remove(sq);
+                self.color_bbs[piece.color()].remove(sq);
                 Some(piece)
             }
             None => None,
@@ -89,18 +75,6 @@ impl PositionType for Position {
     fn at(&self, sq: Square) -> Option<ColoredPiece> {
         ColoredPiece::iter()
             .find(|piece| self.colored_piece_bb(*piece).contains(sq))
-    }
-
-    fn piece_bb(&self, piece: Piece) -> BitBoard {
-        self.piece_bbs[piece as usize]
-    }
-
-    fn color_bb(&self, color: Color) -> BitBoard {
-        self.color_bbs[color as usize]
-    }
-
-    fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
-        self.piece_bb(piece.piece()) & self.color_bb(piece.color())
     }
 
     fn side_to_move(&self) -> interface::Color<Self> {
@@ -123,7 +97,7 @@ impl PositionType for Position {
         false
     }
 
-    fn winner(&self) -> Option<Color> {
+    fn winner(&self) -> Option<Option<Color>> {
         None
     }
 
@@ -208,6 +182,31 @@ impl PositionType for Position {
     }
 }
 
+impl Position {
+    pub fn piece_bb(&self, piece: Piece) -> BitBoard {
+        self.piece_bbs[piece]
+    }
+
+    pub fn color_bb(&self, color: Color) -> BitBoard {
+        self.color_bbs[color]
+    }
+
+    pub fn colored_piece_bb(&self, piece: ColoredPiece) -> BitBoard {
+        self.piece_bb(piece.piece()) & self.color_bb(piece.color())
+    }
+    pub fn en_passant_target(&self) -> Option<Square> {
+        self.en_passant_target
+    }
+
+    pub fn castling(&self) -> &castling::Info {
+        &self.castling
+    }
+
+    pub fn is_frc(&self) -> bool {
+        self.is_fischer_random
+    }
+}
+
 /// PositionParseErr represents an error encountered while parsing
 /// the given FEN position field into a valid Position.
 #[derive(Error, Debug)]
@@ -267,7 +266,7 @@ impl FromStr for Position {
             ),
         };
 
-        interface::parse_piece_placement(&mut position, pos)?;
+        interface::parse::piece_placement(&mut position, pos)?;
 
         let kings = position.piece_bb(Piece::King);
         let white_king = (kings & position.color_bb(Color::White)).next();
@@ -287,12 +286,16 @@ impl FromStr for Position {
             Some(Square::from_str(ept)?)
         };
         position.half_move_clock = hmc.parse::<u8>()?;
-        position.ply_count = fmc.parse::<u16>()? * 2 - 1;
-        if position.side_to_move == Color::Black {
-            position.ply_count -= 1;
-        }
+        position.ply_count =
+            interface::parse::ply_count(fmc, position.side_to_move)?;
 
         Ok(position)
+    }
+}
+
+impl Default for Position {
+    fn default() -> Self {
+        Self::from_str(Self::STARTPOS).unwrap()
     }
 }
 
@@ -317,7 +320,7 @@ impl fmt::Display for Position {
         }
 
         // Append the file markers.
-        string_rep += "a b c d e f g\n";
+        string_rep += "\n a b c d e f g h\n";
 
         writeln!(f, "{}", string_rep).unwrap();
         writeln!(f, "Side To Move: {}", self.side_to_move)

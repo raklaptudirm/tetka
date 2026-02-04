@@ -13,12 +13,16 @@
 
 use std::{fmt, str::FromStr};
 
+use super::{castling, Piece, Position, Square};
 use crate::{
-    chess,
-    interface::{representable_type, MoveType, RepresentableType},
+    games::chess::Direction,
+    interface::{
+        representable_type, ColoredPieceType, MoveType, PositionType,
+        RepresentableType, SquareType, TypeParseError,
+    },
 };
 
-use super::{castling, Piece};
+use thiserror::Error;
 
 #[derive(Copy, Clone, PartialEq, Default)]
 pub struct Move(u16);
@@ -27,6 +31,82 @@ impl MoveType for Move {
     const NULL: Move = Move(0);
     const MAX_IN_GAME: usize = 256;
     const MAX_IN_POSITION: usize = 256;
+
+    type Position = Position;
+    type MoveParseError = MoveParseError;
+
+    fn from_str(
+        move_str: &str,
+        position: &Self::Position,
+    ) -> Result<Self, Self::MoveParseError> {
+        if move_str.len() < 4 || move_str.len() > 5 {
+            return Err(MoveParseError::BadLength(move_str.len()));
+        }
+
+        let source = Square::from_str(&move_str[0..2])?;
+        let target = Square::from_str(&move_str[2..4])?;
+
+        let source_piece = match position.at(source) {
+            Some(piece) => piece.piece(),
+            None => return Err(MoveParseError::EmptySource),
+        };
+
+        let is_pawn = source_piece == Piece::Pawn;
+
+        let x_dist = (source.file() as u8).abs_diff(target.file() as u8);
+        let y_dist = (source.rank() as u8).abs_diff(target.rank() as u8);
+
+        let flag = if move_str.len() == 5 {
+            MoveFlag::from_str(&move_str[4..])?
+        } else if is_pawn && y_dist == 2 {
+            MoveFlag::DoublePush
+        } else if is_pawn && position.en_passant_target() == Some(target) {
+            MoveFlag::EnPassant
+        } else if source_piece == Piece::King && x_dist > 1 {
+            if source as u8 > target as u8 {
+                MoveFlag::CastleASide
+            } else {
+                MoveFlag::CastleHSide
+            }
+        } else {
+            MoveFlag::Normal
+        };
+
+        Ok(Move::new(source, target, flag))
+    }
+
+    fn fmt(
+        &self,
+        position: &Self::Position,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        match self.flag() {
+            promotion @ (MoveFlag::NPromotion
+            | MoveFlag::BPromotion
+            | MoveFlag::RPromotion
+            | MoveFlag::QPromotion) => {
+                write!(f, "{}{}{}", self.source(), self.target(), promotion)
+            }
+            castling @ (MoveFlag::CastleHSide | MoveFlag::CastleASide) => {
+                if position.is_frc() {
+                    write!(f, "{}{}", self.source(), self.target())
+                } else {
+                    let source = self.source();
+                    let target = match castling {
+                        MoveFlag::CastleHSide => {
+                            source.shift(Direction::East).shift(Direction::East)
+                        }
+                        MoveFlag::CastleASide => {
+                            source.shift(Direction::West).shift(Direction::West)
+                        }
+                        _ => unreachable!(),
+                    };
+                    write!(f, "{}{}", source, target)
+                }
+            }
+            _ => write!(f, "{}{}", self.source(), self.target()),
+        }
+    }
 }
 
 impl From<u16> for Move {
@@ -38,13 +118,6 @@ impl From<u16> for Move {
 impl From<Move> for u16 {
     fn from(value: Move) -> Self {
         value.0
-    }
-}
-
-impl FromStr for Move {
-    type Err = ();
-    fn from_str(_s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::NULL)
     }
 }
 
@@ -64,11 +137,7 @@ impl Move {
     const TARGET_OFFSET: u16 = Move::SOURCE_OFFSET + Move::SOURCE_WIDTH;
     const MVFLAG_OFFSET: u16 = Move::TARGET_OFFSET + Move::TARGET_WIDTH;
 
-    pub fn new(
-        source: chess::Square,
-        target: chess::Square,
-        mvflag: MoveFlag,
-    ) -> Move {
+    pub fn new(source: Square, target: Square, mvflag: MoveFlag) -> Move {
         Move(
             (mvflag as u16) << Move::MVFLAG_OFFSET
                 | (source as u16) << Move::SOURCE_OFFSET
@@ -77,8 +146,8 @@ impl Move {
     }
 
     pub fn new_castling(
-        king: chess::Square,
-        rook: chess::Square,
+        king: Square,
+        rook: Square,
         side: castling::Side,
     ) -> Move {
         Self::new(
@@ -92,9 +161,9 @@ impl Move {
     }
 
     pub fn new_with_promotion(
-        source: chess::Square,
-        target: chess::Square,
-        promotion: chess::Piece,
+        source: Square,
+        target: Square,
+        promotion: Piece,
     ) -> Move {
         Move(
             (promotion as u16) << Move::MVFLAG_OFFSET
@@ -103,17 +172,17 @@ impl Move {
         )
     }
 
-    pub fn source(self) -> chess::Square {
+    pub fn source(self) -> Square {
         unsafe {
-            chess::Square::unsafe_from(
+            Square::unsafe_from(
                 (self.0 >> Move::SOURCE_OFFSET) & Move::SOURCE_MASK,
             )
         }
     }
 
-    pub fn target(self) -> chess::Square {
+    pub fn target(self) -> Square {
         unsafe {
-            chess::Square::unsafe_from(
+            Square::unsafe_from(
                 (self.0 >> Move::TARGET_OFFSET) & Move::TARGET_MASK,
             )
         }
@@ -160,8 +229,12 @@ impl MoveFlag {
     }
 }
 
-impl fmt::Display for Move {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}{}", self.source(), self.target())
-    }
+#[derive(Error, Debug)]
+pub enum MoveParseError {
+    #[error("length of move string should be 4 or 5, not {0}")]
+    BadLength(usize),
+    #[error("bad source square: {0}")]
+    BadSquare(#[from] TypeParseError),
+    #[error("source square for the move is empty")]
+    EmptySource,
 }

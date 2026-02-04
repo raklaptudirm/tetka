@@ -16,39 +16,38 @@ use std::error::Error;
 use std::fmt;
 use std::thread;
 
-use crate::context::{new_bundle, GuardedBundledCtx};
-use crate::{flag, Bundle, Flag};
+use crate::bundles::{Bundle, GuardedBundledCtx};
+use crate::{flag, Flag};
 
-/// Command represents a runnable UAI command. It contains all the metadata
-/// needed to parse and verify a Command request from the GUI for a Command, and
-/// to run that Command with the current context and the provided flag values.
-/// `T` is the context type of the Client, while `E` is the error type. `E`
-/// must implement the [`RunError`] trait to be usable.
+/// Command represents a runnable UXI command.
 ///
-/// A Command's schema is composed of its name, run function, flag schema, and
-/// whether it is run in parallel. When a Command is invoked by a GUI, the
-/// invocation starts with its name followed by any number of flags from its
-/// flag schema. See the documentation of [`Flag`] for more details.
-pub struct Command<T: Send> {
+/// It contains all the metadata needed to parse and verify a Command request
+/// from the GUI for a Command, and to run that Command with the current context
+/// and the provided flag values. The `C` type parameter is the same type as the
+/// context used by Client to maintain its state across different commands.
+///
+/// A new Command can be created using the [`Command::new`] function, and its
+/// builder methods can be used for defining other properties of the command.
+pub struct Command<C: Send> {
     /// run_fn is the function used to run this Command.
-    pub run_fn: RunFn<T>,
+    run_fn: RunFn<C>,
     /// flags is the schema of the Flags this Command accepts.
-    pub flags: HashMap<String, Flag>,
+    pub(crate) flags: HashMap<String, Flag>,
     /// parallel says whether to run this command in a separate thread.
-    pub parallel: bool,
+    parallel: bool,
 }
 
-impl<T: Send + 'static> Command<T> {
+impl<C: Send + 'static> Command<C> {
     /// run runs the current Command with the given context and flag values.
     /// A new thread is spawned and detached to run parallel Commands. It returns
     /// the error returned by the Command's execution, or [`Ok`] for parallel.
-    pub fn run<const PARALLEL: bool>(
+    pub(crate) fn run<const PARALLEL: bool>(
         &self,
-        context: &GuardedBundledCtx<T>,
+        context: &GuardedBundledCtx<C>,
         flags: flag::Values,
     ) -> CmdResult {
         // Clone values which might be moved by spawning a new thread.
-        let context = new_bundle(context, flags);
+        let context = Bundle::new(context, flags);
         let func = self.run_fn;
 
         if PARALLEL && self.parallel {
@@ -64,30 +63,34 @@ impl<T: Send + 'static> Command<T> {
     }
 }
 
-impl<T: Send> Command<T> {
+impl<C: Send> Command<C> {
     /// new creates a new Command with the given run function.
     ///
-    /// By default the flag schema is empty the the Command is run synchronously.
+    /// A Command has a body function along with two main properties, its flag
+    /// schema and whether it blocks the main command loop. By default the flag
+    /// schema is empty the the command blocks the main command loop. The body
+    /// function needs to be passed as the argument of type [`RunFn<Context>`].
     ///
     /// Further configuration of the Command can be done using the builder style
-    /// methods provided on Command, like [`Self::flag`] and [`Self::parallelize`].
-    /// These methods take the ownership of the given Command, make the necessary
-    /// changes and then return it. These allows them to be chained in builder
-    /// pattern style to create fully configured Commands.
-    /// ```rust,ignore
-    /// let cmd: Command<T> =
+    /// methods provided on Command, like [`Command::flag`] and
+    /// [`Command::parallelize`]. These methods take the ownership of the given
+    /// Command, make the necessary changes and then return it.
+    /// ```
+    /// # use uxi::{Command, Flag};
+    /// # type Context = u64;
+    /// let cmd: Command<Context> =
     ///     // new invocation to create a Command. In this example, a very
     ///     // simple run function which returns `Ok(())` is provided.
-    ///     Command::new(|_ctx, _flg| Ok(()))
+    ///     Command::new(|_ctx| Ok(()))
     ///         // Add flags to the Command's flag schema.
     ///         .flag("flag1", Flag::Boolean)
-    ///         .flag("flag2", Flag::Singular)
+    ///         .flag("flag2", Flag::Single)
     ///         .flag("flag3", Flag::Array(10))
     ///         .flag("flag4", Flag::Variadic)
     ///         // Make the command run in parallel.
     ///         .parallelize(true);
     /// ```
-    pub fn new(func: RunFn<T>) -> Command<T> {
+    pub fn new(func: RunFn<C>) -> Command<C> {
         Command {
             run_fn: func,
             flags: Default::default(),
@@ -121,10 +124,18 @@ impl<T: Send> Command<T> {
     }
 }
 
-/// `RunFn<T>` represents the run function of a Command. This function is called
-/// with the context ([`Bundle<T>`]) and the flag values whenever the Command
-/// is invoked. It returns a `CmdResult` which is then handled by the Client.
-pub type RunFn<T> = fn(Bundle<T>) -> CmdResult;
+/// `RunFn<C>` represents the body function of a Command.
+///
+/// The generic argument `C` is the same as the `C` in [`Client`](super::Client).
+///
+/// It takes a single argument of type [`Bundle<Context>`]. A bundle, as the
+/// name suggests, bundles the command's flag values, the current option values,
+/// the user specified internal context (`Context`), and the uxi provided
+/// internal context into a single value.
+///
+/// A value of type [`CmdResult`] is returned, which is a [`Result`] with
+/// [`RunError`] as the error type.
+pub type RunFn<C> = fn(Bundle<C>) -> CmdResult;
 
 /// CmdResult is the [Result] type returned by a [run function](RunFn). It is
 /// a shorthand for `Result<(), RunError>`.
@@ -161,8 +172,14 @@ macro_rules! fatal {
     };
 }
 
-/// RunError is the error that is used internally in Client. All user errors
-/// must support conversion into this type so that the Client can handle them.
+/// RunError is the error type returned when running a Command.
+///
+/// Its a powerful dynamic error type which supports conversion from most error
+/// types which allows for idiomatic error handling with rust language features
+/// like the `?` operator.
+///
+/// A blanket implementation of [`Into<RunError>`] is available for all types
+/// which are [`Error`], [`Send`], [`Sync`], and `'static`.
 #[derive(Debug, Clone)]
 pub enum RunError {
     /// Quit directs the Client to quit itself, without reporting any errors.

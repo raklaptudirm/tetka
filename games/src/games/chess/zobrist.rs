@@ -11,10 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::chess::{ColoredPiece, File, Square};
+use super::{castling, ColoredPiece, File, Square};
 use crate::interface::{Hash, RepresentableType, SquareType};
-
-use super::castling;
 
 #[rustfmt::skip]
 const PIECE_SQUARE_KEYS: [[u64; Square::N]; ColoredPiece::N] = [
@@ -45,12 +43,12 @@ const EN_PASSANT_KEYS: [u64; File::N] = [
 
 #[inline(always)]
 pub fn piece_square_key(piece: ColoredPiece, square: Square) -> Hash {
-    Hash::new(PIECE_SQUARE_KEYS[piece as usize][square as usize])
+    Hash::new(PIECE_SQUARE_KEYS[piece][square])
 }
 
 #[inline(always)]
 pub fn en_passant_key(ep_square: Square) -> Hash {
-    Hash::new(EN_PASSANT_KEYS[ep_square.file() as usize])
+    Hash::new(EN_PASSANT_KEYS[ep_square.file()])
 }
 
 #[inline(always)]

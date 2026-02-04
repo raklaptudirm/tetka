@@ -1,4 +1,4 @@
-name: Mexx - Continuous Integration
+name: tetka - Continuous Integration
 
 on:
   - push
@@ -30,7 +30,7 @@ jobs:
       # update rust to latest stable version
       - run: rustup update stable && rustup default stable
 
-      - run: cargo clippy           # look for lint errors
-      - run: cargo build            # look for build errors
-      - run: cargo test --workspace # look for test errors
-      - run: cargo doc              # look for bad documentation
+      - run: cargo clippy # look for lint errors
+      - run: cargo build  # look for build errors
+      - run: cargo test --release --workspace # look for test errors
+      - run: cargo doc    # look for bad documentation

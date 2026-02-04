@@ -46,7 +46,7 @@ impl Flag {
 /// FlagValues stores the arguments provided to each Flag during a single
 /// invocation of the parent Command. It is provided to the run function.
 #[derive(Default)]
-pub struct Values {
+pub(crate) struct Values {
     bool_flags: HashSet<String>,
     sing_flags: HashMap<String, String>,
     arry_flags: HashMap<String, Vec<String>>,
@@ -93,7 +93,10 @@ impl Values {
 
 impl Values {
     /// parses converts the given arguments flags into a Flag [Values] value.
-    pub fn parse(value: &[&str], flag_set: &HashMap<String, Flag>) -> Result<Self, String> {
+    pub fn parse(
+        value: &[&str],
+        flag_set: &HashMap<String, Flag>,
+    ) -> Result<Self, String> {
         let mut flags: Self = Default::default();
 
         let mut args = value;
@@ -108,7 +111,7 @@ impl Values {
             let flag = flag_set.get(flag_name);
             if flag.is_none() {
                 // Flag not found, return error and continue.
-                return Err(format!("info error flag {} not found", flag_name));
+                return Err(format!("flag {} not found", flag_name));
             }
 
             // The Option<Flag> in not None, so it can be safely unwrapped.
@@ -120,7 +123,7 @@ impl Values {
             // Check if args has the required number of arguments.
             if args.len() < yank {
                 return Err(format!(
-                    "info error flag {} expects {} arguments, found {}",
+                    "flag {} expects {} arguments, found {}",
                     flag_name,
                     yank,
                     args.len(),

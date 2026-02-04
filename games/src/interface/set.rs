@@ -1,9 +1,25 @@
-use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr, Sub};
+// Copyright © 2024 Rak Laptudirm <rak@laptudirm.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr};
 
 use super::RepresentableType;
 
 use num_traits::PrimInt;
 
+/// SetTypes behave like a set of a given type of objects.
+///
+/// The API has been adapted from set-like types from the standard libary.
 pub trait SetType<B: PrimInt, E: RepresentableType<u8>>:
     Sized
     + Copy
@@ -11,7 +27,6 @@ pub trait SetType<B: PrimInt, E: RepresentableType<u8>>:
     + Into<B>
     + From<E>
     + Not<Output = Self>
-    + Sub<usize, Output = Self>
     + Shr<usize, Output = Self>
     + Shl<usize, Output = Self>
     + BitOr<Self, Output = Self>

@@ -1,10 +1,24 @@
-use std::fmt::Display;
-use std::str::FromStr;
+// Copyright © 2024 Rak Laptudirm <rak@laptudirm.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use std::fmt;
 
 use arrayvec::ArrayVec;
 
+use super::PositionType;
+
 /// The Move trait should be implemented the move representation of a game.
-pub trait MoveType: FromStr + Display + From<u16> + Into<u16> + Copy {
+pub trait MoveType: From<u16> + Into<u16> + Copy {
     /// NULL represents the null or the 'do nothing' move.
     const NULL: Self;
     /// MAX_IN_GAME is a suitably high maximum for the number of move in a game.
@@ -12,13 +26,56 @@ pub trait MoveType: FromStr + Display + From<u16> + Into<u16> + Copy {
     /// MAX_IN_POSITION is a suitably high maximum for the number of move in a
     /// single, possibly unreachable position.
     const MAX_IN_POSITION: usize;
+
+    type Position: PositionType;
+    type MoveParseError;
+
+    fn from_str(
+        move_str: &str,
+        position: &Self::Position,
+    ) -> Result<Self, Self::MoveParseError>;
+
+    fn fmt(
+        &self,
+        position: &Self::Position,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result;
+
+    fn with_position<'a>(
+        self,
+        position: &'a Self::Position,
+    ) -> PositionalMove<'a, Self, Self::Position> {
+        PositionalMove::new(self, position)
+    }
+}
+
+pub struct PositionalMove<'a, M: MoveType<Position = P>, P: PositionType> {
+    position: &'a P,
+    positional_move: M,
+}
+
+impl<'a, M: MoveType<Position = P>, P: PositionType> PositionalMove<'a, M, P> {
+    fn new(positional_move: M, position: &'a P) -> Self {
+        PositionalMove {
+            position,
+            positional_move,
+        }
+    }
+}
+
+impl<'a, M: MoveType<Position = P>, P: PositionType> fmt::Display
+    for PositionalMove<'a, M, P>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.positional_move.fmt(self.position, f)
+    }
 }
 
 /// MoveStore is a trait implemented by types which are able to store moves
 /// inside themselves and are thus usable in move-generation methods in
 /// [Position](super::PositionType) like
 /// [`generate_moves_into<T>`](super::PositionType::generate_moves_into<T>).
-pub trait MoveStore<M>: Default {
+pub trait MoveStore<M>: Default + IntoIterator<Item = M> {
     /// Appends a move to the back of the [MoveStore].
     fn push(&mut self, m: M);
 
@@ -50,12 +107,10 @@ impl<M> MoveStore<M> for MoveList<M> {
         self.push(m);
     }
 
-    #[must_use]
     fn len(&self) -> usize {
         self.len()
     }
 
-    #[must_use]
     fn is_empty(&self) -> bool {
         self.is_empty()
     }
