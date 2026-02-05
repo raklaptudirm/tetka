@@ -35,6 +35,7 @@ pub use self::client::*;
 pub use self::cmd::*;
 pub use self::flag::*;
 pub use self::parameter::*;
+pub use self::server::*;
 
 // Non-namespaced modules.
 mod bundles;
@@ -43,3 +44,4 @@ mod cmd;
 mod flag;
 mod inbuilt;
 mod parameter;
+mod server;
