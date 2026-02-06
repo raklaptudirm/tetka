@@ -17,8 +17,8 @@ use super::{castling, Piece, Position, Square};
 use crate::{
     games::chess::Direction,
     interface::{
-        representable_type, ColoredPieceType, MoveType, PositionType,
-        RepresentableType, SquareType, TypeParseError,
+        parse::FENParsablePosition, representable_type, ColoredPieceType,
+        MoveType, RepresentableType, SquareType, TypeParseError,
     },
 };
 

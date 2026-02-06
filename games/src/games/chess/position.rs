@@ -19,8 +19,10 @@ use super::{
     Square,
 };
 use crate::interface::{
-    self, parse::PiecePlacementParseError, ColoredPieceType, Hash, MoveStore,
-    PositionType, RepresentableType, SetType, SquareType, TypeParseError,
+    self,
+    parse::{FENParsablePosition, PiecePlacementParseError},
+    ColoredPieceType, Hash, MoveStore, PositionType, RepresentableType,
+    SetType, SquareType, TypeParseError,
 };
 
 use strum::IntoEnumIterator;
@@ -49,41 +51,11 @@ pub struct Position {
 }
 
 impl PositionType for Position {
-    type Square = Square;
-    type ColoredPiece = ColoredPiece;
+    type Color = Color;
     type Move = Move;
 
     const STARTPOS: &str =
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-    fn insert(&mut self, sq: Square, piece: ColoredPiece) {
-        self.piece_bbs[piece.piece()].insert(sq);
-        self.color_bbs[piece.color()].insert(sq);
-    }
-
-    fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
-        match self.at(sq) {
-            Some(piece) => {
-                self.piece_bbs[piece.piece()].remove(sq);
-                self.color_bbs[piece.color()].remove(sq);
-                Some(piece)
-            }
-            None => None,
-        }
-    }
-
-    fn at(&self, sq: Square) -> Option<ColoredPiece> {
-        ColoredPiece::iter()
-            .find(|piece| self.colored_piece_bb(*piece).contains(sq))
-    }
-
-    fn side_to_move(&self) -> interface::Color<Self> {
-        self.side_to_move
-    }
-
-    fn half_move_clock(&self) -> usize {
-        self.half_move_clock as usize
-    }
 
     fn ply_count(&self) -> usize {
         self.ply_count as usize
@@ -182,7 +154,41 @@ impl PositionType for Position {
     }
 }
 
+impl FENParsablePosition for Position {
+    type Square = Square;
+    type ColoredPiece = ColoredPiece;
+
+    fn insert(&mut self, sq: Square, piece: ColoredPiece) {
+        self.piece_bbs[piece.piece()].insert(sq);
+        self.color_bbs[piece.color()].insert(sq);
+    }
+
+    fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
+        match self.at(sq) {
+            Some(piece) => {
+                self.piece_bbs[piece.piece()].remove(sq);
+                self.color_bbs[piece.color()].remove(sq);
+                Some(piece)
+            }
+            None => None,
+        }
+    }
+
+    fn at(&self, sq: Square) -> Option<ColoredPiece> {
+        ColoredPiece::iter()
+            .find(|piece| self.colored_piece_bb(*piece).contains(sq))
+    }
+}
+
 impl Position {
+    pub fn side_to_move(&self) -> <Self as PositionType>::Color {
+        self.side_to_move
+    }
+
+    pub fn half_move_clock(&self) -> usize {
+        self.half_move_clock as usize
+    }
+
     pub fn piece_bb(&self, piece: Piece) -> BitBoard {
         self.piece_bbs[piece]
     }

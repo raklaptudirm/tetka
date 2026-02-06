@@ -14,7 +14,7 @@
 use std::{fmt, num::ParseIntError, str::FromStr};
 
 use crate::interface::{
-    parse::{self, PiecePlacementParseError},
+    parse::{self, FENParsablePosition, PiecePlacementParseError},
     BitBoardType, ColoredPieceType, Hash, MoveStore, MoveType, PositionType,
     RepresentableType, SetType, SquareType, TypeParseError,
 };
@@ -49,37 +49,11 @@ pub struct Position {
 }
 
 impl PositionType for Position {
-    type Square = Square;
-    type ColoredPiece = ColoredPiece;
+    type Color = Color;
     type Move = Move;
 
     const STARTPOS: &str =
         "--------/--------/p-------/-------P/--------/-------- w 1";
-
-    fn insert(&mut self, sq: Square, piece: ColoredPiece) {
-        match piece.piece() {
-            Piece::Pawn => self.set_pawn(piece.color(), sq),
-            Piece::Tile => self.tiles.insert(sq),
-        }
-    }
-
-    fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
-        if self.pawn(Color::White) == sq {
-            Some(ColoredPiece::WhitePawn)
-        } else if self.pawn(Color::Black) == sq {
-            Some(ColoredPiece::BlackPawn)
-        } else if self.tiles.contains(sq) {
-            self.tiles ^= BitBoard::from(sq);
-            Some(ColoredPiece::Tile)
-        } else {
-            None
-        }
-    }
-
-    fn at(&self, sq: Square) -> Option<ColoredPiece> {
-        ColoredPiece::iter()
-            .find(|piece| self.colored_piece_bb(*piece).contains(sq))
-    }
 
     fn hash(&self) -> Hash {
         self.checksum
@@ -161,20 +135,50 @@ impl PositionType for Position {
         (BitBoard::singles(stm) & allowed).count() * (allowed.count() - 1)
     }
 
-    fn side_to_move(&self) -> Color {
-        self.side_to_move
-    }
-
-    fn half_move_clock(&self) -> usize {
-        0
-    }
-
     fn ply_count(&self) -> usize {
         self.ply_count as usize
     }
 }
 
+impl FENParsablePosition for Position {
+    type Square = Square;
+    type ColoredPiece = ColoredPiece;
+
+    fn insert(&mut self, sq: Square, piece: ColoredPiece) {
+        match piece.piece() {
+            Piece::Pawn => self.set_pawn(piece.color(), sq),
+            Piece::Tile => self.tiles.insert(sq),
+        }
+    }
+
+    fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
+        if self.pawn(Color::White) == sq {
+            Some(ColoredPiece::WhitePawn)
+        } else if self.pawn(Color::Black) == sq {
+            Some(ColoredPiece::BlackPawn)
+        } else if self.tiles.contains(sq) {
+            self.tiles ^= BitBoard::from(sq);
+            Some(ColoredPiece::Tile)
+        } else {
+            None
+        }
+    }
+
+    fn at(&self, sq: Square) -> Option<ColoredPiece> {
+        ColoredPiece::iter()
+            .find(|piece| self.colored_piece_bb(*piece).contains(sq))
+    }
+}
+
 impl Position {
+    pub fn side_to_move(&self) -> Color {
+        self.side_to_move
+    }
+
+    pub fn half_move_clock(&self) -> usize {
+        0
+    }
+
     pub fn piece_bb(&self, piece: Piece) -> BitBoard {
         match piece {
             Piece::Pawn => BitBoard::from(self.pawns[0]) | self.pawns[1],

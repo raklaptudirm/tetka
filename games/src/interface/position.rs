@@ -13,9 +13,9 @@
 
 use std::{fmt::Display, str::FromStr};
 
-use super::{
-    Color, ColoredPieceType, Hash, MoveList, MoveStore, MoveType, SquareType,
-};
+use crate::interface::ColorType;
+
+use super::{Hash, MoveList, MoveStore};
 
 /// A generalized interface for board representations of a wide range of games.
 ///
@@ -24,14 +24,9 @@ use super::{
 /// implemented by the library user.
 pub trait PositionType: FromStr + Display + Default
 where
-    Self::ColoredPiece: ColoredPieceType,
-    Self::Move: MoveType,
+    Self::Color: ColorType,
 {
-    /// Type for the squares in the board representation.
-    type Square: SquareType;
-
-    /// Type for the pieces (with color) used by this board representation.
-    type ColoredPiece;
+    type Color;
 
     /// Type for one move in this board representation.
     type Move;
@@ -42,24 +37,6 @@ where
     /// starting position or a de-facto standard may be used.
     const STARTPOS: &str;
 
-    /// Adds the given Piece to the given Square. If the target Square is
-    /// non-empty, the behavior is undefined.
-    fn insert(&mut self, sq: Self::Square, piece: Self::ColoredPiece);
-    /// Removes any Piece on the given Square, and returns the removed Piece.
-    /// For games where there may be multiple pieces on a single Square,
-    /// it removes only the 'topmost' Piece.
-    fn remove(&mut self, sq: Self::Square) -> Option<Self::ColoredPiece>;
-    /// Returns the Piece present at the given Square.
-    #[must_use]
-    fn at(&self, sq: Self::Square) -> Option<Self::ColoredPiece>;
-
-    /// Returns the current side to move.
-    #[must_use]
-    fn side_to_move(&self) -> Color<Self>;
-    /// Returns the value of half-move draw clock.
-    #[must_use]
-    fn half_move_clock(&self) -> usize;
-    /// Returns the number of plys played till now.
     #[must_use]
     fn ply_count(&self) -> usize;
     /// Returns a semi-unique checksum of the current Position.
@@ -68,7 +45,7 @@ where
 
     /// Returns the side which has won in the current position, if any.
     #[must_use]
-    fn winner(&self) -> Option<Option<Color<Self>>>;
+    fn winner(&self) -> Option<Option<Self::Color>>;
     /// Returns `true` if the game is over in the current position.
     #[must_use]
     fn is_game_over(&self) -> bool {

@@ -15,7 +15,7 @@ use std::{cmp, fmt, num::ParseIntError, str::FromStr, sync::LazyLock};
 
 use crate::interface::{
     game_details,
-    parse::{self, PiecePlacementParseError},
+    parse::{self, FENParsablePosition, PiecePlacementParseError},
     BitBoardType, Hash, MoveStore, MoveType, PositionType, RepresentableType,
     SetType, SquareType, TypeParseError,
 };
@@ -53,38 +53,10 @@ pub struct Position {
 }
 
 impl PositionType for Position {
-    type Square = Square;
-    type ColoredPiece = ColoredPiece;
+    type Color = Color;
     type Move = Move;
 
     const STARTPOS: &str = "x5o/7/7/7/7/7/o5x x 0 1";
-
-    fn insert(&mut self, sq: Square, piece: ColoredPiece) {
-        self.bitboards[piece].insert(sq);
-    }
-
-    fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
-        match self.at(sq) {
-            Some(piece) => {
-                self.bitboards[piece].remove(sq);
-                Some(piece)
-            }
-            None => None,
-        }
-    }
-
-    fn at(&self, sq: Square) -> Option<ColoredPiece> {
-        ColoredPiece::iter()
-            .find(|piece| self.colored_piece_bb(*piece).contains(sq))
-    }
-
-    fn side_to_move(&self) -> Color {
-        self.side_to_move
-    }
-
-    fn half_move_clock(&self) -> usize {
-        self.half_move_clock as usize
-    }
 
     fn ply_count(&self) -> usize {
         self.ply_count as usize
@@ -273,7 +245,39 @@ impl PositionType for Position {
     }
 }
 
+impl FENParsablePosition for Position {
+    type Square = Square;
+    type ColoredPiece = ColoredPiece;
+
+    fn insert(&mut self, sq: Square, piece: ColoredPiece) {
+        self.bitboards[piece].insert(sq);
+    }
+
+    fn remove(&mut self, sq: Square) -> Option<ColoredPiece> {
+        match self.at(sq) {
+            Some(piece) => {
+                self.bitboards[piece].remove(sq);
+                Some(piece)
+            }
+            None => None,
+        }
+    }
+
+    fn at(&self, sq: Square) -> Option<ColoredPiece> {
+        ColoredPiece::iter()
+            .find(|piece| self.colored_piece_bb(*piece).contains(sq))
+    }
+}
+
 impl Position {
+    pub fn side_to_move(&self) -> Color {
+        self.side_to_move
+    }
+
+    pub fn half_move_clock(&self) -> usize {
+        self.half_move_clock as usize
+    }
+
     pub fn piece_bb(&self, piece: Piece) -> BitBoard {
         self.bitboards[piece]
     }
