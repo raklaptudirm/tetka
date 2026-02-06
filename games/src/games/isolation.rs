@@ -354,10 +354,12 @@ impl MoveType for Move {
     /// can be treated as the inverse of the [`fmt::Display`] trait for [Move].
     /// ```
     /// # use tetka_games::games::isolation::*;
+    /// # use tetka_games::interface::MoveType;
     /// # use std::str::FromStr;
     /// #
+    /// let position = Position::default();
     /// let jump = Move::new(Square::A1, Square::A3);
-    /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
+    /// assert_eq!(Move::from_str("a1a3", &position).unwrap(), jump);
     /// ```
     fn from_str(
         move_str: &str,
@@ -380,11 +382,12 @@ impl MoveType for Move {
     /// # use tetka_games::games::isolation::*;
     /// # use tetka_games::interface::MoveType;
     /// #
+    /// let position = Position::default();
     /// let null = Move::NULL;
     /// let jump = Move::new(Square::A1, Square::A3);
     ///
-    /// assert_eq!(null.to_string(), "null");
-    /// assert_eq!(jump.to_string(), "a1a3");
+    /// assert_eq!(null.with_position(&position).to_string(), "null");
+    /// assert_eq!(jump.with_position(&position).to_string(), "a1a3");
     /// ```
     fn fmt(
         &self,

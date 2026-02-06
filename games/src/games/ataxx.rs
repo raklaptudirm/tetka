@@ -438,15 +438,17 @@ impl MoveType for Move {
     /// inverse of the [`fmt::Display`] trait for [Move].
     /// ```
     /// # use tetka_games::games::ataxx::*;
+    /// # use tetka_games::interface::MoveType;
     /// # use std::str::FromStr;
     /// #
+    /// let position = Position::default();
     /// let pass = Move::PASS;
     /// let sing = Move::new_single(Square::A1);
     /// let jump = Move::new(Square::A1, Square::A3);
     ///
-    /// assert_eq!(Move::from_str(&pass.to_string()).unwrap(), pass);
-    /// assert_eq!(Move::from_str(&sing.to_string()).unwrap(), sing);
-    /// assert_eq!(Move::from_str(&jump.to_string()).unwrap(), jump);
+    /// assert_eq!(Move::from_str("0000", &position).unwrap(), pass);
+    /// assert_eq!(Move::from_str(  "a1", &position).unwrap(), sing);
+    /// assert_eq!(Move::from_str("a1a3", &position).unwrap(), jump);
     /// ```
     fn from_str(
         move_str: &str,
@@ -480,16 +482,18 @@ impl MoveType for Move {
     /// [`Move::PASS`] is formatted as `0000`.
     /// ```
     /// # use tetka_games::games::ataxx::*;
+    /// # use tetka_games::interface::MoveType;
     /// #
+    /// let position = Position::default();
     /// let null = Move::NULL;
     /// let pass = Move::PASS;
     /// let sing = Move::new_single(Square::A1);
     /// let jump = Move::new(Square::A1, Square::A3);
     ///
-    /// assert_eq!(null.to_string(), "null");
-    /// assert_eq!(pass.to_string(), "0000");
-    /// assert_eq!(sing.to_string(), "a1");
-    /// assert_eq!(jump.to_string(), "a1a3");
+    /// assert_eq!(null.with_position(&position).to_string(), "null");
+    /// assert_eq!(pass.with_position(&position).to_string(), "0000");
+    /// assert_eq!(sing.with_position(&position).to_string(), "a1");
+    /// assert_eq!(jump.with_position(&position).to_string(), "a1a3");
     /// ```
     fn fmt(
         &self,
