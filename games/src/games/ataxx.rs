@@ -14,7 +14,6 @@
 use std::{cmp, fmt, num::ParseIntError, str::FromStr, sync::LazyLock};
 
 use crate::interface::{
-    game_details,
     parse::{self, FENParsablePosition, PiecePlacementParseError},
     BitBoardType, Hash, MoveStore, MoveType, PositionType, RepresentableType,
     SetType, SquareType, TypeParseError,
@@ -27,9 +26,11 @@ use thiserror::Error;
 // two types of pieces, the Piece and the Blocker. Among the two only Piece is
 // colored. The two colors are Black and White respectively, with Black moving
 // first.
-game_details!(
+crate::interface::cartesian_square!(
     Files: A, B, C, D, E, F, G;
     Ranks: 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth, 7 Seventh;
+);
+crate::interface::cartesian_piece!(
     Pieces: Piece "x"; Block "-";
     Colors: Black "x" ("x"),
             White "o" ("o");

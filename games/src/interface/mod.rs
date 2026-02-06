@@ -88,17 +88,12 @@ pub enum TypeParseError {
 //
 // The undecorated macro essentially does the work of all the sub-macros put
 // together. Use the undecorated macro unless more precise control is needed.
-macro_rules! game_details {
+macro_rules! cartesian_square {
     (
         Files: $($file_variant:ident),* ;
         Ranks: $($rank_number:literal $rank_variant:ident),* ;
-
-        Pieces: $($piece_variant:ident $piece_repr:literal),*;
-                $($other_variant:ident $other_repr:literal),*;
-        Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
-                $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
     ) => {
-        $crate::interface::game_details!(
+        $crate::interface::cartesian_square!(
             @bitboard
             u64 {
                 Square = Square;
@@ -108,44 +103,10 @@ macro_rules! game_details {
             }
         );
 
-        $crate::interface::game_details!(
-            @bitboard_less
-            Files: $($file_variant),* ;
-            Ranks: $($rank_number $rank_variant),* ;
-
-            Pieces: $($piece_variant $piece_repr),*;
-                    $($other_variant $other_repr),*;
-            Colors: $color_1 $color_1_repr ($($piece_1_repr),*),
-                    $color_2 $color_2_repr ($($piece_2_repr),*);
-        );
-    };
-
-    // @bitboard_less generates all the board representation backing types
-    // except BitBoard from the given game specific information.
-    (
-        @bitboard_less
-        Files: $($file_variant:ident),* ;
-        Ranks: $($rank_number:literal $rank_variant:ident),* ;
-
-        Pieces: $($piece_variant:ident $piece_repr:literal),*;
-                $($other_variant:ident $other_repr:literal),*;
-        Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
-                $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
-    ) => {
-        // Square types.
-        $crate::interface::game_details!(
+        $crate::interface::cartesian_square!(
             @squares
             Files: $($file_variant),* ;
             Ranks: $($rank_number $rank_variant),* ;
-        );
-
-        // Piece types.
-        $crate::interface::game_details!(
-            @pieces
-            Pieces: $($piece_variant $piece_repr),*;
-                    $($other_variant $other_repr),*;
-            Colors: $color_1 $color_1_repr ($($piece_1_repr),*),
-                    $color_2 $color_2_repr ($($piece_2_repr),*);
         );
     };
 
@@ -200,109 +161,6 @@ macro_rules! game_details {
         }
     };
 
-    // @pieces generates the piece types, which include Piece, Color, and
-    // ColoredPiece from the given game specific details like their string
-    // representations.
-    (
-        @pieces
-        Pieces: $($piece_variant:ident $piece_repr:literal),*;
-                $($other_variant:ident $other_repr:literal),*;
-        Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
-                $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
-    ) => {
-        $crate::interface::game_details!(
-            @color $color_1 $color_1_repr; $color_2 $color_2_repr;
-        );
-
-        // The Piece type.
-        $crate::interface::representable_type!(
-            enum Piece: u8 {
-                $($piece_variant $piece_repr,)*
-                $($other_variant $other_repr,)*
-            }
-        );
-
-        // The ColoredPiece type.
-        paste::paste!(
-            $crate::interface::representable_type!(
-                enum ColoredPiece: u8 {
-                    $([< $color_1 $piece_variant >] $piece_1_repr,)*
-                    $([< $color_2 $piece_variant >] $piece_2_repr,)*
-                    $($other_variant $other_repr,)*
-                }
-            );
-        );
-
-        impl $crate::interface::ColoredPieceType for ColoredPiece {
-            type Piece = Piece;
-            type Color = Color;
-
-            fn piece(self) -> Self::Piece {
-                paste::paste!(
-                    match self {
-                        // For colored pieces, the ColoredPiece with the same
-                        // ::piece() but different ::color() should map to the
-                        // same Piece variant.
-                        $(
-                            Self:: [< $color_1 $piece_variant >] | // Color 1 Piece
-                            Self:: [< $color_2 $piece_variant >]   // Color 2 Piece
-                                => Self::Piece::$piece_variant,
-                        )*
-
-                        // For uncolored pieces, each variant maps to a unique
-                        // Piece variant.
-                        $(Self:: $other_variant => Self::Piece::$other_variant)*
-                    }
-                )
-            }
-
-            #[allow(unreachable_patterns)]
-            fn color(self) -> Self::Color {
-                paste::paste!(
-                    match self {
-                        // For colored pieces, all variants with a common color
-                        // map to that single Color variant.
-                        $(Self:: [< $color_1 $piece_variant >])|* => Self::Color::$color_1,
-                        $(Self:: [< $color_2 $piece_variant >])|* => Self::Color::$color_2,
-
-                        // Uncolored pieces don't have a Color, so panic if
-                        // ::color() is called on one. TODO: maybe return Option?
-                        _ => panic!("ColoredPiece::color() called on uncolored piece")
-                    }
-                )
-            }
-        }
-    };
-
-    // @color generates a Color type conforming to the ColorType trait.
-    (
-        @color
-        $first:tt $first_repr:expr;
-        $second:tt $second_repr:expr;
-    ) => {
-        // ColorType requires conformance to RepresentableType<u8>.
-        crate::interface::representable_type! {
-            enum Color: u8 {
-                $first $first_repr, $second $second_repr,
-            }
-        }
-
-        // ColorType requires conformance to ops::Not.
-        impl std::ops::Not for Color {
-            type Output = Self;
-
-            fn not(self) -> Self::Output {
-                use $crate::interface::RepresentableType;
-                unsafe { Self::unsafe_from(self as usize ^ 1) }
-            }
-        }
-
-        // Other methods needed for ColorType conformance.
-        impl crate::interface::ColorType for Color {
-            const FIRST: Self = Self::$first;
-        }
-    };
-
     // @squares generates the square types, which include Square, File, and Rank
     // from the given game specific details like the number of Files and Ranks.
     (
@@ -312,7 +170,7 @@ macro_rules! game_details {
     ) => {
         // The Square type's variants are the cartesian product of the variants
         // of its File and Rank types.
-        $crate::interface::game_details!(
+        $crate::interface::cartesian_square!(
             @file_rank_product $($rank_number),*;$($file_variant),*
         );
 
@@ -446,7 +304,112 @@ macro_rules! game_details {
         }
     };
 }
-pub(crate) use game_details;
+pub(crate) use cartesian_square;
+
+macro_rules! cartesian_piece {
+    // @pieces generates the piece types, which include Piece, Color, and
+    // ColoredPiece from the given game specific details like their string
+    // representations.
+    (
+        Pieces: $($piece_variant:ident $piece_repr:literal),*;
+                $($other_variant:ident $other_repr:literal),*;
+        Colors: $color_1:ident $color_1_repr:literal ($($piece_1_repr:literal),*),
+                $color_2:ident $color_2_repr:literal ($($piece_2_repr:literal),*);
+    ) => {
+        $crate::interface::cartesian_piece!(
+            @color $color_1 $color_1_repr; $color_2 $color_2_repr;
+        );
+
+        // The Piece type.
+        $crate::interface::representable_type!(
+            enum Piece: u8 {
+                $($piece_variant $piece_repr,)*
+                $($other_variant $other_repr,)*
+            }
+        );
+
+        // The ColoredPiece type.
+        paste::paste!(
+            $crate::interface::representable_type!(
+                enum ColoredPiece: u8 {
+                    $([< $color_1 $piece_variant >] $piece_1_repr,)*
+                    $([< $color_2 $piece_variant >] $piece_2_repr,)*
+                    $($other_variant $other_repr,)*
+                }
+            );
+        );
+
+        impl $crate::interface::ColoredPieceType for ColoredPiece {
+            type Piece = Piece;
+            type Color = Color;
+
+            fn piece(self) -> Self::Piece {
+                paste::paste!(
+                    match self {
+                        // For colored pieces, the ColoredPiece with the same
+                        // ::piece() but different ::color() should map to the
+                        // same Piece variant.
+                        $(
+                            Self:: [< $color_1 $piece_variant >] | // Color 1 Piece
+                            Self:: [< $color_2 $piece_variant >]   // Color 2 Piece
+                                => Self::Piece::$piece_variant,
+                        )*
+
+                        // For uncolored pieces, each variant maps to a unique
+                        // Piece variant.
+                        $(Self:: $other_variant => Self::Piece::$other_variant)*
+                    }
+                )
+            }
+
+            #[allow(unreachable_patterns)]
+            fn color(self) -> Self::Color {
+                paste::paste!(
+                    match self {
+                        // For colored pieces, all variants with a common color
+                        // map to that single Color variant.
+                        $(Self:: [< $color_1 $piece_variant >])|* => Self::Color::$color_1,
+                        $(Self:: [< $color_2 $piece_variant >])|* => Self::Color::$color_2,
+
+                        // Uncolored pieces don't have a Color, so panic if
+                        // ::color() is called on one. TODO: maybe return Option?
+                        _ => panic!("ColoredPiece::color() called on uncolored piece")
+                    }
+                )
+            }
+        }
+    };
+
+    // @color generates a Color type conforming to the ColorType trait.
+    (
+        @color
+        $first:tt $first_repr:expr;
+        $second:tt $second_repr:expr;
+    ) => {
+        // ColorType requires conformance to RepresentableType<u8>.
+        crate::interface::representable_type! {
+            enum Color: u8 {
+                $first $first_repr, $second $second_repr,
+            }
+        }
+
+        // ColorType requires conformance to ops::Not.
+        impl std::ops::Not for Color {
+            type Output = Self;
+
+            fn not(self) -> Self::Output {
+                use $crate::interface::RepresentableType;
+                unsafe { Self::unsafe_from(self as usize ^ 1) }
+            }
+        }
+
+        // Other methods needed for ColorType conformance.
+        impl crate::interface::ColorType for Color {
+            const FIRST: Self = Self::$first;
+        }
+    };
+}
+pub(crate) use cartesian_piece;
 
 // The representable_type macro generates a type conforming to the
 // RepresentableType trait.

@@ -26,9 +26,11 @@ use thiserror::Error;
 // has two types of pieces, the Pawn and the Tile. Among the two only Pawn is
 // colored. The two colors are White and Black respectively, with White moving
 // first.
-crate::interface::game_details!(
+crate::interface::cartesian_square!(
     Files: A, B, C, D, E, F, G, H;
     Ranks: 1 First, 2 Second, 3 Third, 4 Fourth, 5 Fifth, 6 Sixth;
+);
+crate::interface::cartesian_piece!(
     Pieces: Pawn "p"; Tile "-";
     Colors: White "w" ("P"),
             Black "b" ("p");
