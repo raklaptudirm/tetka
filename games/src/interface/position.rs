@@ -13,7 +13,7 @@
 
 use std::{fmt::Display, str::FromStr};
 
-use crate::interface::ColorType;
+use crate::interface::{ColorType, MoveType};
 
 use super::{Hash, MoveList, MoveStore};
 
@@ -24,12 +24,13 @@ use super::{Hash, MoveList, MoveStore};
 /// implemented by the library user.
 pub trait PositionType: FromStr + Display + Default
 where
+    Self::Move: MoveType<Position = Self>,
     Self::Color: ColorType,
 {
-    type Color;
-
     /// Type for one move in this board representation.
     type Move;
+
+    type Color;
 
     /// FEN string for the standard starting position of the game.
     ///

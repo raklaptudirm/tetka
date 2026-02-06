@@ -12,11 +12,7 @@ use crate::interface::{MoveType, PositionType};
 /// the number of move paths of a certain depth. Perft ignores draws by
 /// repetition, by the fifty-move rule and by insufficient material.
 #[must_use]
-pub fn perft<
-    const SPLIT: bool,
-    const BULK: bool,
-    P: PositionType<Move: MoveType<Position = P>>,
->(
+pub fn perft<const SPLIT: bool, const BULK: bool, P: PositionType>(
     position: P,
     depth: u8,
 ) -> u64 {
